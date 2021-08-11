@@ -233,7 +233,7 @@ the interface that:</p>
 abstract type (so we do not concern ourselves with its implementation).</p>
 <p>More information about various typed being used and the meaning of type
 parameters of the <cite>(‘a, ‘b) injected</cite> could be get from
-<a class="reference internal" href="../digTypes/README.html#digesting-the-types"><span class="std std-ref">Digesting the Types</span></a>.</p>
+<span class="xref std std-ref">digesting-the-types</span>.</p>
 <div class="section" id="logic-variables">
 <h3>Logic Variables<a class="headerlink" href="#logic-variables" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">logic</span></code> type constructor which appears in the type of <code class="docutils literal notranslate"><span class="pre">!!</span></code> above
@@ -326,10 +326,14 @@ syntactic level the <code class="docutils literal notranslate"><span class="pre"
 intuitive calls of OCanren’s functions. As a reference, the rules by
 which the preprocessing is done is given in <code class="docutils literal notranslate"><span class="pre">pa_ocanren.ml</span></code>
 <a class="reference external" href="../../Installation/ocanren/camlp5/pa_ocanren.ml#L238">where</a> we
-could find, for example, the <code class="docutils literal notranslate"><span class="pre">==</span></code> symbol is transformed into the name
+could find, for example, the <code class="docutils literal notranslate"><span class="pre">==</span></code>  symbol is transformed into the name
 <code class="docutils literal notranslate"><span class="pre">unify</span></code>.</p>
+<div class="admonition-todo admonition" id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">fix links</p>
+</div>
 <p>The number of parameters shall agree with the size indicator, where
-<code class="docutils literal notranslate"><span class="pre">q</span></code>…<code class="docutils literal notranslate"><span class="pre">qrstu</span></code> are just alternative names for <code class="docutils literal notranslate"><span class="pre">one</span></code>…<code class="docutils literal notranslate"><span class="pre">five</span></code>
+<code class="docutils literal notranslate"><span class="pre">q</span></code> … <code class="docutils literal notranslate"><span class="pre">qrstu</span></code> are just alternative names for <code class="docutils literal notranslate"><span class="pre">one</span></code> … <code class="docutils literal notranslate"><span class="pre">five</span></code>
 respectively. If there are more than five parameters, the successor
 function <code class="docutils literal notranslate"><span class="pre">succ</span></code> can be applied to build larger size indicators, e.g.,
 <code class="docutils literal notranslate"><span class="pre">(succ</span> <span class="pre">(succ</span> <span class="pre">five))</span></code> is for seven parameters.</p>
@@ -339,8 +343,12 @@ logic variables in the answer we use <code class="docutils literal notranslate">
 exeption (provided by OCanren.Logic) is thrown if we use <code class="docutils literal notranslate"><span class="pre">project</span></code> as
 the handler but the answer contains free logic variables: in this case
 some other handler shall be used.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">run</span></code> function and the size indicators are provided by Core. Basic
-answer handlers are provided by Logic.</p>
+<div class="admonition-todo admonition" id="index-1">
+<p class="first admonition-title">Todo</p>
+<p class="last">Reference reifiers</p>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">run</span></code> function and the size indicators are provided by module <code class="docutils literal notranslate"><span class="pre">OCanren.Core</span></code>. Basic
+answer handlers are provided by module <code class="docutils literal notranslate"><span class="pre">OCanren.Logic</span></code>.</p>
 </div>
 <div class="section" id="taking-and-displaying-answers">
 <h2>Taking and Displaying Answers<a class="headerlink" href="#taking-and-displaying-answers" title="Permalink to this headline">¶</a></h2>
