@@ -96,19 +96,28 @@ of understand that you are saying about ifinite list of phormulas
 connected with disjunction, but 1st idea that will come to mind of the
 reader is that we allow infinite programs \*\*
 
-**Example.** Atomic, compound, named and infinite formulae: - ``x == y``
-and ``1 =/= 2`` are two atomic formulae. - By the definition
-``foo x y :=  x == 1 & y =/= 2``, we can use ``foo x y`` to abbreviate
-the compound formula ``x == 1 & y =/= 2``. - By the recursive definition
-``is_nat x := x == O | fresh y in x == S y & is_nat y`` we can use
-``is_nat x`` to abbreviate the infinitely long formula:
-``x == O   | fresh y1 in     x == S y1 & { y1 == O                 | fresh y2 in                   y1 == S y2 & { y2 == O                    | fresh y3 in                      y2 == S y3 & { ... }}}``
+**Example.** Atomic, compound, named and infinite formulae:
+
+- ``x == y`` and ``1 =/= 2`` are two atomic formulae.
+- By the definition ``foo x y :=  x == 1 & y =/= 2``, we can use ``foo x y`` to abbreviate the compound formula ``x == 1 & y =/= 2``.
+- By the recursive definition ``is_nat x := x == O | fresh y in x == S y & is_nat y`` we can use ``is_nat x`` to abbreviate the infinitely long formula:
+
+  .. code:: ocaml
+
+    x == O
+    | fresh y1 in
+      x == S y1 & { y1 == O
+                  | fresh y2 in
+                    y1 == S y2 & { y2 == O
+                | fresh y3 in
+                  y2 == S y3 & { ... }}}
+
 We now give the concrete syntax of a formula in OCanren.
 
 .. code:: ebnf
 
    formula  = atomic formula
-            | compound formula
+        | compound formula
         | named formula
         | '{', formula, '}' ;
 
@@ -142,12 +151,10 @@ In logic programming, we call the formula which we want to refute a
 logic programming, which is called *relational programming*. However,
 the semantics of a *goal* nevertheless changes: it is no longer
 something that we want to refute, but something for which we want to
-find variable substitutions so that it is true. In other words: - Logic
-programming is proof by contradiction: we want to find variable
-substitutions so that a formula *F* is true, but what we do is to find
-substitutions so that the negation of F is false. - Relational
-programming is proof by straightforward construction without the logical
-detour of “negation of negation”.
+find variable substitutions so that it is true. In other words:
+
+  - Logic programming is proof by contradiction: we want to find variable substitutions so that a formula *F* is true, but what we do is to find substitutions so that the negation of F is false.
+  - Relational programming is proof by straightforward construction without the logical detour of “negation of negation”.
 
 The Semantics of a Formula
 --------------------------
@@ -177,19 +184,23 @@ natural numbers, whilst members of a stream can be put on one-on-one
 correspondence with members of some possibly infinite subset of the
 natural numbers. Intuitively, the imaginary, infinitely long sequence of
 all natural numbers itself is an example of a stream. The sequence of
-all integers ``...-3 -2 -1 0 1 2 3...`` or equivalently
-``0 1 -1 2 -2 3 -3 ...`` is another.
+all integers ``...-3 -2 -1 0 1 2 3...`` is a stream too, equivalently
+``0 1 -1 2 -2 3 -3 ...`` is a stream of integers too, but they are in different order than in previous stream.
 
 The set of all streams can also be defined in the more technical,
-*coinductive* manner as follows: 1. Let **FS** be an operator whose
-input is a set of sequences and whose output is also a set of sequences.
-A sequence is said to be composed of its members drawn from a set of
-possible members. 1. The output of **FS** is constructed by: 1. Starting
-with an empty set, to add members to it incrementally; 1. Adding the
-empty stream; 1. Prefixing each sequence of the input set with an
-arbitrary member, then adding the results. 1. The set St of all streams
-is the *largest* set that is a fixed-point of **FS**, in other words,
-**FS**\ (St) = St and St is a superset of st for all **FS**\ (st) = st.
+*coinductive* manner as follows:
+
+#. Let **FS** be an operator whose input is a set of sequences and     whose output is also a set of sequences. A sequence is said to be     composed of its members drawn from a set of possible members.
+
+#. The output of **FS** is constructed by:
+
+   #. Starting with an empty set, to add members to it incrementally;
+
+   #. Adding the empty stream;
+
+   #. Extending each sequence of the input set with an arbitrary member, then adding the results.
+
+#. The set St of all streams is the *largest* set that is a fixed-point of **FS**, in other words, **FS** (St) = St and St is a superset of st for all **FS** (st) = st.
 
 **Example** If we restrict sequence members to integers, and let the
 input be ``{123, 111}``, which is the set whose members are the
@@ -202,12 +213,11 @@ of all finite and infinite sequences of integers. They are both
 fixed-points of **FS**, known as the *least fixpoint* and the *greatest
 fixpoint*. Lmax is also the set of all streams of integers.
 
-Note that in a typical inductive specification we could require that the
-set being defined is the samllest fixed-point. Here instead we ask for
-the *largest*, hence the *coinductive manner*.
+Note that in a typical inductive specification we could require that the set being defined is the samllest fixed-point. Here instead we ask for the *largest*, hence the *coinductive manner*.
 
-\*\* It looks like very complex description of a stream but maybe it is
-only for me \*\*
+.. todo::
+
+  It looks like very complex description of a stream but maybe it is only for me
 
 Substitution
 ~~~~~~~~~~~~
@@ -221,7 +231,7 @@ result is another value *valuepost*. A component is *applicable* if
 applying it would make a difference. To apply a substitution is to
 repeatedly apply its components until none is applicable.
 
-**Example** Applying ``[(x, Cons(1,y));(y, Cons(2,z));(z, Nil)]`` to
+**Example** Applying ``[(x, Cons(1,y)); (y, Cons(2,z)); (z, Nil)]`` to
 ``Cons(0,x)`` results in: ``Cons(0,Cons(1,Cons(2,Nil)))``.
 
 Formulae as Stream Builders
@@ -231,48 +241,34 @@ A formula is a stream builder as far as the operational semantics is
 concerned. It takes a substitution *substin* as input and returns a
 stream of substitutions as output:
 
-substin —> Formula—> substout, substout, substout, …
+substin —[Formula]—> substout, substout, substout, …
 
 For each substitution *substout* in the returned stream, applying the
 concatenation *substin ^ substout* makes the formula true in the sense
 of the declarational semantics.
 
-**Example.** Given as input the empty substitution ``[]``: - The formula
-``x == Cons(1,Nil)`` returns the stream that consists of the
-substitution ``[(x, Cons(1,Nil))]``. - The formula
-``x == Cons(1,Nil) & y == Cons(2,x)`` returns the stream that consists
-of the substitution ``[(x, Cons(1,Nil));(y, Cons(2,x))]``. - The formula
-``is_nat x`` returns the stream that consists of the substitutions
-``[(x, O)]``, ``[(x, S(y1));(y1, O)]``,
-``[(x, S(y1));(y1, S(y2));(y2, O)]``, … - The formula ``1 == 1`` returns
-the stream whose only member is ``[]``. - The formula ``1 == 2`` returns
-the empty stream: there is no way to make the formula true.
+**Example.** Given as input the empty substitution ``[]``:
+
+- The formula ``x == Cons(1,Nil)`` returns the stream that consists of the substitution ``[(x, Cons(1,Nil))]``.
+- The formula ``x == Cons(1,Nil) & y == Cons(2,x)`` returns the stream that consists of the substitution ``[(x, Cons(1,Nil));(y, Cons(2,x))]``.
+- The formula ``is_nat x`` returns the stream that consists of the substitutions ``[(x, O)]``, ``[(x, S(y1));(y1, O)]``, ``[(x, S(y1));(y1, S(y2));(y2, O)]``, …
+- The formula ``1 == 1`` returns the stream whose only member is ``[]``.
+- The formula ``1 == 2`` returns the empty stream: there is no way to make the formula true.
 
 Disjunction as a Stream Zipper
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To *zip* two streams means to merge them by interleaving their members.
 
-\*\* I think that Zipper in literature has different meaning, so it is
-not wise to use this term here \*\*
+**Example.** Let :math:`s_1` denote the stream of all positive intergers, and :math:`s_2` the stream of all negative intergers. The result of zipping :math:`s_2` with :math:`s_2`, denoted :math:`s_1 |zip| s_2` is ``1, -1, 2, -2, ...``, and :math:`s_2 |zip| s_1` is ``-1, 1, -2, 2, ...``.
 
-**Example.** Let *s*\ 1 denote the stream of all positive intergers, and
-*s*\ 2 the stream of all negative intergers. The result of zipping
-*s*\ 1 with *s*\ 2, denoted *s*\ 1 \|zip *s*\ 2 , is
-``1, -1, 2, -2, ...`` or ``-1, 1, -2, 2, ...``.
-
-\*\* The reader may think that ``zip`` operation is nondeterministic…
-\*\*
-
-The disjunction *F*\ 1 ``|`` *F*\ 2 of two formulae *F*\ 1, *F*\ 2 is
-itself a formula on the top level, so it is a stream builder, taking a
+The disjunction :math:`F_1 \mid F_2` of two formulae :math:`F_1`, :math:`F_2` is itself a formula on the top level, so it is a stream builder, taking a
 substitution as input and returns a stream of substitutions. It builds
-the output stream by zipping the two streams built separately by *F*\ 1
-and *F*\ 2, both of which share the same input as their immediate top
-level formula. In more formal terms:
+the output stream by zipping the two streams built separately by :math:`F_1` and :math:`F_2`, both of which share the same input as their immediate top level formula. In more formal terms:
 
-``(`` *F*\ 1 ``|`` *F*\ 2 ``)`` substin = ``(`` *F*\ 1 substin ``)``
-\|zip ``(`` *F*\ 2 substin ``)``
+.. math::
+
+  (F_1 \mid F_2)\ substin\quad =\quad (F_1\ substin)\ |zip| \ (F_2\ substin)
 
 Every substitution from the output stream (concatenated with the input)
 makes either of the two disjuncts true.
@@ -285,29 +281,38 @@ To *map-zip* a stream builder *F* with a stream *s* := *m*\ 1, *m*\ 2,
 member *m*\ k of the stream, resulting in streams *s*\ k, and then zip
 all *s*\ k together.
 
-*F* &mzip *s*
+        .. math::
+          :nowrap:
 
-= *F* &mzip *m*\ 1, *m*\ 2, *m*\ 3, …
+          \begin{eqnarray}
+              & F mzip s\\
+            =& F mzip m1, m2, m3, \dots\\
+            =& F m1 |zip (F m2 |zip (F m3 |zip (…))) \\
+            =& s1 |zip (s2 |zip (s3 \|zip (…)))
+          \end{eqnarray}
 
-= *F* *m*\ 1 \|zip (*F* *m*\ 2 \|zip (*F* *m*\ 3 \|zip (…)))
+..      .. math::
+..         :nowrap:
+..
+..         \begin{eqnarray}
+..            y    & = & ax^2 + bx + c \\
+..            f(x) & = & x^2 + 2xy + y^2
+..         \end{eqnarray}
 
-= *s*\ 1 \|zip (*s*\ 2 \|zip (*s*\ 3 \|zip (…)))
+**Example.** Let F be a stream builder that works like this: :math:`F\  n = n,n,n,…` Then:
 
-**Example.** Let *F* be a stream builder that works like this: *F n =
-n,n,n,…* Then:
+        .. math::
+          :nowrap:
 
-*F* &mzip 1,2,3
+          \begin{eqnarray}
+             & *F* mzip 1,2,3
+            =&  F 1 \|zip (F 2 \|zip F 3)
+            =& 1,1,1,… \|zip (2,2,2,… \|zip 3,3,3,…)
+            =& 1,1,1,… \|zip 2,3,2,3,…
+            =& 1,2,1,3,1,2,1,3, …
+         \end{eqnarray}
 
-= F 1 \|zip (F 2 \|zip F 3)
-
-=1,1,1,… \|zip (2,2,2,… \|zip 3,3,3,…)
-
-= 1,1,1,… \|zip 2,3,2,3,…
-
-= 1,2,1,3,1,2,1,3, …
-
-A conjunction F1 ``&`` F2 provides the input substitution to F1 first,
-and then map-zips the output of F1 with F2:
+A conjunction :math:`F_1 & F_2` provides the input substitution to F1 first, and then map-zips the output of F1 with F2:
 
 ``(`` *F*\ 1 ``&`` *F*\ 2 ``)`` substin = *F*\ 2 &mzip ``(`` *F*\ 1
 substin ``)``
@@ -318,13 +323,7 @@ makes both of the two conjuncts true.
 Working with GT and Camlp5
 --------------------------
 
-We use packages GT and Camlp5 in OCanren programs. The influence of GT
-is that we can use the ``@type`` syntax to define types, which
-convenienty generates useful functions for the defined type, for
-example, a *show* function that converts values of the defined type into
-a string, which we use to print the result of a query. Camlp5 expands
-the content of the ``ocanren{}`` quotation, allowing us to write
-readable code.
+We use packages GT and Camlp5 in OCanren programs. The influence of GT Camlp5 syntax extension is that we can use the ``@type`` syntax to define types, which convenienty generates useful functions for the defined type, for example, a *show* function that converts values of the defined type into a string, which we use to print the result of a query. Camlp5 expands the content of the ``ocanren{}`` quotation, allowing us to write readable code.
 
 The @type syntax
 ~~~~~~~~~~~~~~~~
@@ -343,16 +342,17 @@ where the syntactic category ``typedef`` is the same as
 `that <https://ocaml.org/releases/4.11/htmlman/typedecl.html>`__ of
 OCaml, and the category ``etc`` signifies omission: the most frequently
 used plugins in OCanren are *show* and *gmap*, providing for the defined
-type a string converson function (like
+type a string conversion function (like
 `Stdlib.string_of_int <https://ocaml.org/releases/4.11/htmlman/libref/Stdlib.html>`__)
 and a structure preserving map function (a generalization of
 `List.map <https://ocaml.org/releases/4.11/htmlman/libref/List.html>`__)
 respectively. The other less used plugins are not shown here.
 
-A type definition of the form ``@type <typedef> with <plugins>`` is
-expanded at the syntactic level by GT into: 1) A type definition of the
-usual form ``type <typedef>``, where the value of ``<typedef>`` is
-preserved, and 1) Several (auto-generated) plugin definitions.
+A type definition of the form ``@type <typedecl> with <plugins>`` is
+expanded at the syntactic level by GT into:
+
+#. A type definition of the usual form ``type <typedecl>``, where the value of ``<typedecl>`` is preserved, and
+#. Several (auto-generated) plugin definitions.
 
 The effect of syntactic transformation, including what the ``@type``
 definitions become after expansion, can be viewed by adding the “dump
@@ -363,10 +363,10 @@ line there. For instance, the ``LString`` module:
 
     (** {2  The logic string type} *)
    module LString = struct
-     @type t = GT.string with show;;
-     @type ground = t with show;;
-     @type logic = t OCanren.logic with show;;
-     type groundi = (ground, logic) injected;;
+     @type t = GT.string with show
+     @type ground = t with show
+     @type logic = t OCanren.logic with show
+     type groundi = (ground, logic) injected
    end;;
 
 would be expanded into `this <lstring.ml>`__, where we could see that
