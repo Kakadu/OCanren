@@ -15,12 +15,18 @@ of relational programs.
 Reading the Program
 -------------------
 
-The structure of the program is as follows: 1. The initial opening
-statement 1. Type definitions and utilities 1. The ASCII control
-characters type - Injection utilities 1. The logic string type 1. The
-data base as a relation ``ascii_ctrl`` 1. Some queries on the data base
+The structure of the program is as follows:
 
-Read the definition of ``ascii_ctrl`` as: > *c*, *n* and *s* form the
+#. The initial opening statement
+#. Type definitions and utilities
+#. The ASCII control characters type - Injection utilities
+#. The logic string type
+#. The data base as a relation ``ascii_ctrl``
+#. Some queries on the database
+
+Read the definition of ``ascii_ctrl`` as:
+
+Values *c*, *n* and *s* form the
 relation *ascii_ctrl* iff *c* is NUL and *n* is 0 and *s* is the string
 “Null”, or *c* is SOH and *n* is 1 and *s* is the string “Start of
 heading”, or …, or *c* is US and *n* is 31 and *s* is the string “Unit
@@ -37,7 +43,7 @@ Read the query:
          run q (fun s ->
              ocanren {fresh c,n in Std.Nat.(<=) 0 n
                                    & Std.Nat.(<=) n 10
-                                   & ascii_ctrl c n s}) project;;
+                                   & ascii_ctrl c n s}) project
 
 \*\* ``Std.Nat.(<=) 0 n`` in real OCanren is better to be written as
 ``Std.Nat.(0 <= n)`` \*\*

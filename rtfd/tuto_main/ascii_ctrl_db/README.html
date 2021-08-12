@@ -194,11 +194,17 @@ straightforward listing of the data base, which is the very basic form
 of relational programs.</p>
 <div class="section" id="reading-the-program">
 <h2>Reading the Program<a class="headerlink" href="#reading-the-program" title="Permalink to this headline">¶</a></h2>
-<p>The structure of the program is as follows: 1. The initial opening
-statement 1. Type definitions and utilities 1. The ASCII control
-characters type - Injection utilities 1. The logic string type 1. The
-data base as a relation <code class="docutils literal notranslate"><span class="pre">ascii_ctrl</span></code> 1. Some queries on the data base</p>
-<p>Read the definition of <code class="docutils literal notranslate"><span class="pre">ascii_ctrl</span></code> as: &gt; <em>c</em>, <em>n</em> and <em>s</em> form the
+<p>The structure of the program is as follows:</p>
+<ol class="arabic simple">
+<li>The initial opening statement</li>
+<li>Type definitions and utilities</li>
+<li>The ASCII control characters type - Injection utilities</li>
+<li>The logic string type</li>
+<li>The data base as a relation <code class="docutils literal notranslate"><span class="pre">ascii_ctrl</span></code></li>
+<li>Some queries on the database</li>
+</ol>
+<p>Read the definition of <code class="docutils literal notranslate"><span class="pre">ascii_ctrl</span></code> as:</p>
+<p>Values <em>c</em>, <em>n</em> and <em>s</em> form the
 relation <em>ascii_ctrl</em> iff <em>c</em> is NUL and <em>n</em> is 0 and <em>s</em> is the string
 “Null”, or <em>c</em> is SOH and <em>n</em> is 1 and <em>s</em> is the string “Start of
 heading”, or …, or <em>c</em> is US and <em>n</em> is 31 and <em>s</em> is the string “Unit
@@ -211,7 +217,7 @@ separator”.</p>
       <span class="n">run</span> <span class="n">q</span> <span class="p">(</span><span class="n">fun</span> <span class="n">s</span> <span class="o">-&gt;</span>
           <span class="n">ocanren</span> <span class="p">{</span><span class="n">fresh</span> <span class="n">c</span><span class="p">,</span><span class="n">n</span> <span class="ow">in</span> <span class="n">Std</span><span class="o">.</span><span class="n">Nat</span><span class="o">.</span><span class="p">(</span><span class="o">&lt;=</span><span class="p">)</span> <span class="mi">0</span> <span class="n">n</span>
                                 <span class="o">&amp;</span> <span class="n">Std</span><span class="o">.</span><span class="n">Nat</span><span class="o">.</span><span class="p">(</span><span class="o">&lt;=</span><span class="p">)</span> <span class="n">n</span> <span class="mi">10</span>
-                                <span class="o">&amp;</span> <span class="n">ascii_ctrl</span> <span class="n">c</span> <span class="n">n</span> <span class="n">s</span><span class="p">})</span> <span class="n">project</span><span class="p">;;</span>
+                                <span class="o">&amp;</span> <span class="n">ascii_ctrl</span> <span class="n">c</span> <span class="n">n</span> <span class="n">s</span><span class="p">})</span> <span class="n">project</span>
 </pre></div>
 </div>
 <p>** <code class="docutils literal notranslate"><span class="pre">Std.Nat.(&lt;=)</span> <span class="pre">0</span> <span class="pre">n</span></code> in real OCanren is better to be written as
