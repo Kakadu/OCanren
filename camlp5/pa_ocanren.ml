@@ -1,7 +1,7 @@
 (*
  * pa_ocanren: a camlp5 extension to implement syntax-level
  * miniKanren constructs.
- * Copyright (C) 2015-2020
+ * Copyright (C) 2015-2021
  * Dmitri Boulytchev, St.Petersburg State University
  *
  * This software is free software; you can redistribute it and/or
@@ -41,11 +41,25 @@ let decapitalize s =
   String.init (String.length s) (function 0 -> Char.lowercase_ascii s.[0] | i -> s.[i])
 
 let rec ctor e =
+  Format.eprintf "%s\n%!" (Eprinter.apply pr_expr Pprintf.empty_pc e);
   let loc = MLast.loc_of_expr e in
   match e with
+  | <:expr< $longid:m$ >> -> begin
+    (* Execution doesn't got here. It look like 'Nat.((<=))' is not a long ident *)
+    Format.eprintf "%s %d\n%!" __FILE__ __LINE__;
+    match m with
+    | LiUid (_, VaVal s)  -> Some (<:expr< $lid:decapitalize s$ >>)
+    | LiAcc (loc, prefix, VaVal s)  -> Some (<:expr< $longid: (MLast.LiAcc (loc, prefix, VaVal (decapitalize s)))$ >>)
+    | _ -> failwith "should not happen"
+  end
   | <:expr< $uid:u$ >>   -> Some (<:expr< $lid:decapitalize u$ >>)
-  | <:expr< $longid:m$ . ($e$) >> -> (match ctor e with Some e -> Some (<:expr< $longid:m$ . ($e$) >>) | _ -> None)
-  | <:expr< $m$ . ($e$) >> -> (match ctor e with Some e -> Some (<:expr< $m$ . ($e$) >>) | _ -> None)
+  | <:expr< $longid:m$ . ($e$) >> ->
+      (* Execution doesn't got here. It look like 'Nat.((<=))' is not an access of longident to some field *)
+      Format.eprintf "%s %d\n%!" __FILE__ __LINE__;
+      (match ctor e with Some e -> Some (<:expr< $longid:m$ . ($e$) >>) | _ -> None)
+  | <:expr< $m$ . ($e$) >> ->
+      Format.eprintf "%s %d\n%!" __FILE__ __LINE__;
+      (match ctor e with Some e -> Some (<:expr< $m$ . ($e$) >>) | _ -> None)
   | _                    -> None
 
 let list_of_list es =
