@@ -90,6 +90,8 @@ let rec fix_term e =
       | [e] -> fix_term e
       | _   -> fold_right1 (fun e tup -> <:expr< OCanren.Std.pair $e$ $tup$ >> ) @@ List.map fix_term ts
      )
+  | <:expr< $prefix$ .( $lid:s$ ) >> ->
+      ExFle (loc, prefix, Ploc.VaVal (None, VaVal s))
   | _ ->
     (* everything else *)
     (match ctor e with
