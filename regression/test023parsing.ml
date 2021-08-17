@@ -38,9 +38,9 @@ let _ =
 let even_parser v =
   let open OCanren.Parser in
   let rec helper n (v: M.injected) =
-    (List.Parser.nil v >>= fun () -> return (n mod 2 = 0))
+    (Std.List.Parser.nil v >>= fun () -> return (n mod 2 = 0))
     <|>
-    (List.Parser.cons v >>= fun (_,tl) -> helper (n+1) tl)
+    (Std.List.Parser.cons v >>= fun (_,tl) -> helper (n+1) tl)
     <|>
     (var v >>= fun () -> return true)
   in
