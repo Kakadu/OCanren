@@ -2,33 +2,18 @@ A Library for Peano Arithmetic
 ==============================
 
 We hope the reader will learn the following techniques (labeled as
-**T.1**, **T.2**, etc) from this lesson: -
-`T.1 <#t1-advanced-injection-functions>`__ Defining injection functions
-for value constructors of variant types, using the Fmap family of module
-functors ``Fmap``, ``Fmap2``, ``Fmap3``, etc., which are provided by the
-module `Logic <../../Installation/ocanren/src/core/Logic.mli>`__. -
-`T.2 <#t2-reification-and-reifiers>`__ Defining reifiers to convert data
-from the injected level to the logic level, again with help from the
-Fmap family of module functors. -
-`T.3 <#t3-overwriting-the-show-function>`__ Overwriting, or redefining
-the “show” function for values of a logic type, to allow for more
-concise and human readable printing of them. -
-`T.4 <#t4-relations-on-peano-numbers>`__ Defining (possibly recursive)
-relations, e.g., comparison, addition and division on Peano numbers. -
-`T.5 <#t5-scrutinizing-relations>`__ Making queries to relations using
-combinations of unknown arguments. -
-`T.6 <#t6-analyzing-the-search-behaviour>`__ Analyzing why a query
-returns certain answers. - `T.7 <#t7-modifying-the-search-behaviour>`__
-Reordering the conjuncts within the body of a relation definition to
-modify the way in which the relation searches for answers in a given
-query. - `T.8 <#t8-the-trick-of-generate-and-test>`__ Programming a
-relation so that answers to certain queries are found by brute-force. -
-`T.9 <#t9-the-formula-parser>`__ Observing that the implementation of
-the ``ocanren {}`` quotation takes care of the precedence, associativity
-and scope of the logic connectives, and replaces constructors of variant
-types by injection function names, and primitive values by their
-injected versions. - `T.10 <#t10-building-a-library>`__ Writing and
-testing a library in OCanren.
+**T.1**, **T.2**, etc) from this lesson:
+
+- `Advanced injection functions <#advanced-injection-functions>`__ Defining injection functions for value constructors of variant types, using the Fmap family of module functors ``Fmap``, ``Fmap2``, ``Fmap3``, etc., which are provided by the module `Logic <../../Installation/ocanren/src/core/Logic.mli>`__.
+- `Reification and Reifiers <#reification-and-reifiers>`__ Defining reifiers to convert data from the injected level to the logic level, again with help from the Fmap family of module functors.
+- `Overwriting the show Function <#overwriting-the-show-function>`__ Overwriting, or redefining the “show” function for values of a logic type, to allow for more concise and human readable printing of them.
+- `Relations on Peano Numbers <#relations-on-peano-numbers>`__ Defining (possibly recursive) relations, e.g., comparison, addition and division on Peano numbers.
+- `Scrutinizing Relations <#scrutinizing-relations>`__ Making queries to relations using combinations of unknown arguments.
+- `Analyzing the search behaviour <#analyzing-the-search-behaviour>`__ Analyzing why a query returns certain answers.
+- `Modifying the search behaviour <#modifying-the-search-behaviour>`__ Reordering the conjuncts within the body of a relation definition to modify the way in which the relation searches for answers in a given query.
+- `The trick of generate and test <#the-trick-of-generate-and-test>`__ Programming a relation so that answers to certain queries are found by brute-force.
+- `The formula parser <#the-formula-parser>`__ Observing that the implementation of the ``ocanren {}`` quotation takes care of the precedence, associativity and scope of the logic connectives, and replaces constructors of variant types by injection function names, and primitive values by their injected versions.
+- `Building a library <#building-a-library>`__ Writing and testing a library in OCanren.
 
 The techniques are presented in detail in sections below, to which the
 labels ( **T.1**, **T.2**, etc) are linked. Each section is
@@ -45,8 +30,8 @@ local copy of) the lesson directory:
 A copy of the result of the test is `answers.txt <answers.txt>`__ that
 is obtained using the shell command ``./peano.opt > answers.txt``.
 
-(T.1) Advanced Injection Functions
-----------------------------------
+Advanced Injection Functions
+----------------------------
 
 The primary injection operator is ``!!`` which is used to cast primitive
 values (such as characters and strings) and constant constructors of
@@ -60,21 +45,21 @@ together with the injection helper ``inj``, all from the module Logic.
 In our Peano Arithmetic `library implementation <peano.ml>`__, the
 following block of code defines advanced injection functions ``o`` and
 ``s`` for the abstract Peano number type ``Ty.t``, which correspond
-respectively to the value constructors ``O`` and ``S``:
+respectively to the value constructors ``O`` and ``S`` :
 
 .. code:: ocaml
 
    module Ty = struct
-     @type 'a t = O | S of 'a with show, gmap;;
-     let fmap = fun f d -> GT.gmap(t) f d;;
+     @type 'a t = O | S of 'a with show, gmap
+     let fmap = fun f d -> GT.gmap(t) f d
    end;;
 
-   include Ty;;
+   include Ty
+   module F = Fmap(Ty)
 
-   module F = Fmap(Ty);;
+   let o () = inj @@ F.distrib O
+   let s n = inj @@ F.distrib (S n)
 
-   let o = fun () -> inj @@ F.distrib O;;
-   let s = fun n  -> inj @@ F.distrib (S n);;
 
 The general workflow of defining advanced injection functions is as
 follows:
@@ -84,13 +69,11 @@ follows:
    as the abstract Peano number type or the abstract list type.
 2. We count the number of type parameters of the type constructor in
    order to choose the suitable module functor from the Fmap family: for
-   one type parameter, use ``Fmap``; for two type parameters, use
+   one type parameter, use ``Fmap`` ; for two type parameters, use
    ``Fmap2``; three type parameters, ``Fmap3`` and so on.
 3. We request the ``gmap`` plugin for the type constructor, and use it
    to define a function named ``fmap`` simply by renaming.
-4. We put the definitions of the type constructor ``t`` and the ``fmap``
-   function in one module, and suppy that module as a parameter to the
-   chosen Fmap family module functor. The result is a module ``F`` with
+4. We put the definitions of the type constructor ``t`` and the ``fmap`` function in one module, and suppy that module as a parameter to the chosen Fmap family module functor. The result is a module ``F`` with
    three functions one of which is ``distrib``, the distribution
    function.
 5. For each value constructor of the type ``t``, we define a function
@@ -98,26 +81,38 @@ follows:
    initial letter is set to lower case. For example, ``Cons``, ``S`` and
    ``NUL`` become respectively ``cons``, ``s`` and ``nUL``.
 
-\*\* Question: did you intentionally used syntax with
-lambda-abstractions instead of ``let const1 x = Logic.inj ...``? \*\*
 
--  For each value constructor ``Constr0`` of no argument, define:
-   ``ocaml      let constr0 = fun () -> Logic.inj @@ F.distrib Constr0``
--  For each value constructor ``Constr1`` of one argument, define:
-   ``ocaml      let constr1 = fun x -> Logic.inj @@ F.distrib (Constr1 x)``
--  For each value constructor ``Constru`` of *u* (> 1) arguments,
-   define:
-   ``ocaml      let constru = fun x1 ... xu -> Logic.inj @@ F.distrib @@ Constru (x1, ..., xu)``
-   In the definition of a typical advanced injection function, the value
-   constructor takes arguments which are at the injected level, and the
-   combination of ``inj`` and ``distrib`` serves to inject the top level
-   value while preserving the structure of constructor application. If
-   we explain by a schematic where a pair of enclosing square brackets
-   ``[]`` signifies the injected status of the enclosed data, we would
-   say that:
+- For each value constructor ``Constr0`` of no argument, define:
+
+  .. code:: ocaml
+
+      let constr0 = fun () -> Logic.inj @@ F.distrib Constr0
+
+- For each value constructor ``Constr1`` of one argument, define:
+
+   .. code:: ocaml
+
+      let constr1 = fun x -> Logic.inj @@ F.distrib (Constr1 x)
+
+- For each value constructor ``Constru`` of *u* (> 1) arguments,  define:
+
+  .. code:: ocaml
+
+      let constru = fun x1 ... xu -> Logic.inj @@ F.distrib @@ Constru (x1, ..., xu)
+
+
+  In the definition of a typical advanced injection function, the value
+  constructor takes arguments which are at the injected level, and the
+  combination of ``inj`` and ``distrib`` serves to inject the top level
+  value while preserving the structure of constructor application. If
+  we explain by a schematic where a pair of enclosing square brackets
+  ``[]`` signifies the injected status of the enclosed data, we would
+  say that:
+
 -  An advanced injection function ``constr`` converts a value of the
    form ``Constr ([arg1], ..., [argn])`` to a value of the form
    ``[Constr (arg1, ..., argn)]``. In other words,
+
 -  The injection function ``constr`` takes arguments
    ``[arg1], ..., [argn]`` and builds a value of the form
    ``[Constr (arg1, ..., argn)]``.
@@ -129,19 +124,19 @@ types (which are module types): that would provide a more formal
 explanation of what advanced injection functions do and why they are
 defined in the given manner.
 
-(T.2) Reification and Reifiers
-------------------------------
+Reification and Reifiers
+------------------------
 
 Say we have a logic variable ``x`` and a substitution
-``[(x, Lam(z,y));(y, App(a,b))]`` that associates ``x`` with the term
+``[(x, Lam(z,y)); (y, App(a,b))]`` that associates ``x`` with the term
 ``Lam(z,y)`` and ``y`` with ``App(a,b)`` where ``y, z`` are also logic
 variables. We would like to know what ``x`` is with respect to the
 substitution. It is straightforward to replace ``x`` by ``Lam(z,y)`` but
 since ``y`` is associated with ``App(a,b)`` we can further replace ``y``
-in ``Lam(z,y)``, and finally we get the term ``Lam(z,App(a,b))``.
+in ``Lam(z,y)``, and finally we get the term ``Lam(z,App(a,b))`` .
 Although there is still an unbound part ``z``, we have no further
 information about how ``z`` might be instantiated, so we leave it there.
-What we have done is called *reification* of the logic variable ``x``:
+What we have done is called *reification* of the logic variable ``x`` :
 we instantiate it as much as possible, but allowing unbound logic
 variables to occur in the result. A *reifier* is a function that reifies
 logic variables.
@@ -175,8 +170,8 @@ Peano number type is recursive: the reader should refer to the
 ``F.reify`` and see how the types of the reifier and the reifier builder
 fit together.
 
-(T.3) Overwriting the *show* Function
--------------------------------------
+Overwriting the *show* Function
+-------------------------------
 
 The default *show* function for a variant type converts values of that
 type to strings in a straightforward way, e.g., a logic Peano number
@@ -195,7 +190,7 @@ the record value ``logic`` which has a field ``GT.plugins``. This record
 value origins from the ``@type`` definition of the type constructor
 ``Logic.logic`` and is auto-generated by the GT package. The field
 ``GT.plugins`` is an object with several methods, one of which is
-``show``: other plugins (or methods) keep their default meanings but
+``show`` : other plugins (or methods) keep their default meanings but
 ``show`` is redefined.
 
 However, when there are too many repetitions of the constructor ``S``,
@@ -210,7 +205,8 @@ In like manner, the reader may: - Redefine the *show* function to behave
 in other ways, or - Redefine other plugins by modifying the
 ``GT.plugins`` field, or - Redefine plugins for other types.
 
-Some additional remarks on the last point: the ``@type`` definition of a
+Some additional remarks on the last point: the ``@type``
+definition of a
 type constructor ``typeconstr-name`` generates a record value also named
 ``typeconstr-name`` of the type ``GT.t``. This could be viewed by adding
 the ``-i`` option as indicated in the `Makefile <Makefile#L10>`__:
@@ -222,8 +218,8 @@ the ``-i`` option as indicated in the `Makefile <Makefile#L10>`__:
 See also the `GT
 source <https://github.com/JetBrains-Research/GT/blob/039193385e6cb1a67bc8a9d00c662d9d1dc5478b/src/GT.ml4#L37>`__.
 
-(T.4) Relations on Peano Numbers
---------------------------------
+Relations on Peano Numbers
+--------------------------
 
 This section teaches the reader how to read and write relation
 definitions.
@@ -255,7 +251,7 @@ relation:
    let rec add a b c =
      ocanren{ a == O & b == c
             | fresh n, m in
-              a == S n & c == S m & add n b m};;
+              a == S n & c == S m & add n b m}
 
 It says nothing about how to compute the sum ``c`` of two numbers ``a``
 and ``b``, instead it only says what conditions must be satisfied so
@@ -275,7 +271,7 @@ Another example is the “less than” relation:
                 { a == O
                 | fresh n' in
                   a == S n'
-                  & lt n' n }};;
+                  & lt n' n }}
 
 It says that ``a`` is less than ``b`` if there exist ``n``, such that
 ``b`` equals ``S n``, and either ``a`` equals ``O`` or there exist
@@ -287,13 +283,15 @@ encouraged to write a relation for subtraction: ``sub a b c`` iff
 ``a - b = c``, or, put in another way: iff ``b`` is ``O`` and ``a`` is
 ``c``, or ``b`` is ``S n`` and ``a`` is ``S n'`` and ``sub n' n c``.
 
-(T.5) Scrutinizing Relations
-----------------------------
+Scrutinizing Relations
+----------------------
 
 Taking the “less than” relation as an example, we can ask questions
-like: - Is zero less than one ? Is one less than two ? Is one less than
-zero ? Is two less than one? - What is less than five ? Five is less
-than what ? - What is less than what ?
+like:
+
+   - Is zero less than one ? Is one less than two ? Is one less than zero ? Is two less than one?
+   - What is less than five ? Five is less than what ?
+   - What is less than what ?
 
 The first set of questions above is for *checking*: we provide concrete
 numbers and ask if they satisfy the relation. The remaining two sets of
@@ -309,16 +307,16 @@ NC0 + NC1 + NC2 + … + NCN-1 + NCN
 Running the `test <test.ml#L53>`__ shows that OCanren answers all the
 questions well. For example, the goal:
 
-::
+.. code:: ocaml
 
    fun q -> ocanren { lt O (S O) & lt (S O) (S(S O)) }
 
 asks about what is ``q`` so that zero is less than one and one is less
-than two, and the answer is just ``n`` meaning that ``q`` could be any
+than two, and the answer is just a free variable ``n`` meaning that ``q`` could be any
 number and the relation always holds between the given numbers. The
 similar goal:
 
-::
+.. code:: ocaml
 
    fun q -> ocanren { lt (S O) O | lt (S(S O)) (S O) }
 
@@ -328,7 +326,7 @@ relation hold between the given numbers.
 
 The goal below asks what is less than five:
 
-::
+.. code:: ocaml
 
    fun q -> ocanren { lt q (S(S(S(S(S O))))) }
 
@@ -342,25 +340,25 @@ Note that the addition relation can perform subtraction, and the
 division relation can do multiplication. For instance, the goal below
 asks “What adds 4 equals to 7 ?” and whose answer is “3”:
 
-::
+.. code:: ocaml
 
    fun q -> ocanren { add q (S(S(S(S O)))) (S(S(S(S(S(S(S O))))))) }
 
 This amounts to performing the subtraction ``7 - 4``. The next goal asks
 “What divided by 5 equals 3 with remainder 0 ?” and the answer is “15”:
 
-::
+.. code:: ocaml
 
    fun q -> ocanren { div q (S(S(S(S(S O))))) (S(S(S O))) O }
 
 It amounts to the multiplication ``3 * 5``.
 
-(T.6) Analyzing the Search Behaviour
-------------------------------------
+Analyzing the Search Behaviour
+------------------------------
 
 When asking the ``lt`` relation “what is less than 5” using the goal:
 
-::
+.. code:: ocaml
 
    fun q -> ocanren { lt q (S(S(S(S(S O))))) }                                  (G.1)
 
@@ -372,14 +370,15 @@ literally says ``a`` shall be 0, 1, 2, 3 or 4. Below are the details.
 
 We reproduce the definition of ``lt`` in the followinig simplified form:
 
-::
+.. code:: ocaml
 
-   lt a b = fresh n in b == S n & { a == O | fresh n' in a == S n' & lt n' n }
+   lt a b = fresh n in b == S n
+          & { a == O | fresh n' in a == S n' & lt n' n }
                                                                                 (Eq.1)
 
 Now replace ``b`` by ``(S(S(S(S(S O)))))`` in ``(Eq.1)``, we get:
 
-::
+.. code:: ocaml
 
    lt a (S(S(S(S(S O))))) = fresh n in (S(S(S(S(S O))))) == S n
                             & { a == O | fresh n' in a == S n' & lt n' n }
@@ -388,7 +387,7 @@ Now replace ``b`` by ``(S(S(S(S(S O)))))`` in ``(Eq.1)``, we get:
 Replace ``(S(S(S(S(S O))))) == S n`` by ``(S(S(S(S O)))) == n`` in
 ``(Eq.2)``, we get:
 
-::
+.. code:: ocaml
 
    lt a (S(S(S(S(S O))))) = fresh n in (S(S(S(S O)))) == n
                             & { a == O | fresh n' in a == S n' & lt n' n }
@@ -398,7 +397,7 @@ In ``(Eq.3)``, remove ``fresh n in (S(S(S(S O)))) == n``, then replace
 all free occurences of ``n`` by ``(S(S(S(S O))))``. The top level ``&``
 and the braces are no longer needed, so also being removed. We get:
 
-::
+.. code:: ocaml
 
    lt a (S(S(S(S(S O))))) = a == O
                           | fresh n' in a == S n'
@@ -428,38 +427,39 @@ Using the result of unification we can simplify ``(Eq.5)`` into:
 
    lt n' (S(S(S(S O)))) = n' == O
                         | fresh n'' in n' == S n''
-                  & lt n'' (S(S(S O)))                                  (Eq.6)
+                        & lt n'' (S(S(S O)))                      (Eq.6)
 
 Now in ``(Eq.4)`` replace ``lt n' (S(S(S(S O))))`` by the right hand
 side of ``(Eq.6)``:
 
-::
+.. code:: ocaml
 
    lt a (S(S(S(S(S O))))) = a == O
                           | fresh n' in a == S n'
-                    & { n' == O
-                               | fresh n'' in n' == S n''
-                     & lt n'' (S(S(S O))) }                         (Eq.7)
+                          & { n' == O
+                            | fresh n'' in n' == S n''
+                              & lt n'' (S(S(S O))) }           (Eq.7)
 
-The right hand side of ``(Eq.7)`` produces another value of ``a`` which
+The right hand side of ``(Eq.7)``
+produces another value of ``a`` which
 is ``S O``, as follows. In ``(Eq.7)``, distribute ``a == S n'`` we get:
 
-::
+.. code:: ocaml
 
-   lt a (S(S(S(S(S O))))) =  a == O
-                          |  fresh n' in
-                       a == S n' &  n' == O
-                             | a == S n' & fresh n'' in n' == S n'' & lt n'' (S(S(S O)))
+   lt a (S(S(S(S(S O))))) = a == O
+                          | fresh n' in
+                              a == S n' &  n' == O
+                            | a == S n' & fresh n'' in n' == S n'' & lt n'' (S(S(S O)))
 
                                                         (Eq.8)
 
 Replace ``a == S n' &  n' == O`` by ``a == S O`` in ``(Eq.8)``, we get:
 
-::
+.. code:: ocaml
 
    lt a (S(S(S(S(S O))))) =  a == O
                           |  fresh n' in
-                       a == S O
+                               a == S O
                              | a == S n' & fresh n'' in  n' == S n'' & lt n'' (S(S(S O)))
 
                                                                                 (Eq.9)
@@ -467,12 +467,12 @@ Replace ``a == S n' &  n' == O`` by ``a == S O`` in ``(Eq.8)``, we get:
 In the right hand side of ``(Eq.9)`` move ``a == S O`` out of the scope
 of the ``fresh n' in``, we have:
 
-::
+.. code:: ocaml
 
    lt a (S(S(S(S(S O))))) =  a == O
                           |  a == S O
-                  |  fresh n' in
-                     a == S n' & fresh n'' in n' == S n'' & lt n'' (S(S(S O)))
+                          |  fresh n' in
+                             a == S n' & fresh n'' in n' == S n'' & lt n'' (S(S(S O)))
 
                                                                                 (Eq.10)
 
@@ -482,30 +482,30 @@ the initial formula ``lt a (S(S(S(S(S O)))))`` is gradually unfolded so
 that values of ``a`` are revealed one by one. Continue this way, the
 last but one equation would be:
 
-::
+.. code:: ocaml
 
-   lt a (S(S(S(S(S O))))) =  a == O
-                          |  a == S O
-                  |  a == S (S O)
-                  |  a == S (S (S O))
-                  |  a == S (S (S (S O)))
-                  |  fresh n' in a == S n'
-                  &  fresh n'' in n' == S n''
-                  &  fresh n''' in n'' == S n'''
-                  &  fresh n'''' in n''' == S n''''
-                  &  fresh n''''' in n'''' == S n''''' & lt n''''' O
+   lt a (S(S(S(S(S O)))))  =  a == O
+                           |  a == S O
+                           |  a == S (S O)
+                           |  a == S (S (S O))
+                           |  a == S (S (S (S O)))
+                           |  fresh n' in a == S n'
+                           &  fresh n'' in n' == S n''
+                           &  fresh n''' in n'' == S n'''
+                           &  fresh n'''' in n''' == S n''''
+                           &  fresh n''''' in n'''' == S n''''' & lt n''''' O
                                                                     (Eq.11)
 
 Note that ``lt n''''' O`` expands to ``fresh n in O == S n & ...`` which
 is false, therefore the last equation is:
 
-::
+.. code:: ocaml
 
-   lt a (S(S(S(S(S O))))) =  a == O
-                          |  a == S O
-                  |  a == S (S O)
-                  |  a == S (S (S O))
-                  |  a == S (S (S (S O)))                               (Eq.12)
+   lt a (S(S(S(S(S O)))))  =  a == O
+                           |  a == S O
+                           |  a == S (S O)
+                           |  a == S (S (S O))
+                           |  a == S (S (S (S O)))                               (Eq.12)
 
 From ``(Eq.12)`` we read off the answers to the query.
 
@@ -517,42 +517,46 @@ goal ``(G.1)``.
 The reader may take an exercise to show that one plus one equals two by
 simplifying the formula ``add (S O) (S O) c``.
 
-(T.7) Modifying the Search Behaviour
-------------------------------------
+Modifying the Search Behaviour
+------------------------------
 
 We compare two versions of the *simplify* relation, differing from each
 other only by a swap of conjuncts.
 
 Both versions share the logic that the simplest form of ``a/b`` is
-``a'/b'`` where ``a'`` (``b'``) is ``a``\ (resp. ``b``) divided by the
+``a'/b'`` where ``a'`` (``b'``) is ``a`` (resp. ``b``) divided by the
 greatest common divisor of ``a`` and ``b``, provided ``b`` is non-zero.
 There is a short cut for the case where ``a`` is zero, then ``b'`` is
 set to one directly.
 
-The difference is that: - In one version we say, “``a`` (``b``) divided
-by ``c`` equals ``a'`` (resp. ``b'``), and ``c`` is the gcd of ``a`` and
-``b``.” - In the other version we say, “``c`` is the gcd of ``a`` and
-``b``, and ``a`` (``b``) divided by ``c`` equals ``a'`` (resp. ``b'``).”
+The difference is that:
+
+- In one version we say, “``a`` (``b``) divided by ``c`` equals ``a'`` (resp. ``b'``), and ``c`` is the gcd of ``a`` and ``b``.”
+- In the other version we say, “``c`` is the gcd of ``a`` and ``b``, and ``a`` (``b``) divided by ``c`` equals ``a'`` (resp. ``b'``).”
 
 In OCanren:
 
 .. code:: ocaml
 
    let simplify a b a' b' =
-         ocanren {  fresh n in b == S n &
-         { a == O & a' == O & b' == S O
-         | fresh c, m in a == S m
-                         & div a c a' O             (* div first, then gcd *)
-                         & div b c b' O
-                         & gcd a b c } };;
+     ocanren {  fresh n in
+       b == S n &
+       { a == O & a' == O & b' == S O
+       | fresh c, m in
+           a == S m
+         & div a c a' O             (* div first, then gcd *)
+         & div b c b' O
+         & gcd a b c } }
 
    let simplify' a b a' b' =
-         ocanren {  fresh n in b == S n &
-         { a == O & a' == O & b' == S O
-         | fresh c, m in a == S m
-                         & gcd a b c                (* gcd first, then div *)
-                         & div a c a' O
-                         & div b c b' O  } };;
+     ocanren { fresh n in
+        b == S n &
+        { a == O & a' == O & b' == S O
+        | fresh c, m in
+            a == S m
+          & gcd a b c                (* gcd first, then div *)
+          & div a c a' O
+          & div b c b' O  } }
 
 The test file offers a `comparison <test.ml#L199>`__ of these two
 versions over their forward and backward search behaviours. By *forward
@@ -569,56 +573,60 @@ varaibles and the search behaviour of the sub-relations, results in
 apparently different operational meaning of the conjunctions in backward
 search, as follows:
 
-+------------+----------------+-----------------+---------------------+
-| Ordering   | Operational    | State of        | Knowledge on        |
-| of         | Meaning        | Variables       | Sub-relations       |
-| Conjuncts  |                |                 |                     |
-+============+================+=================+=====================+
-| di         | Find ``a`` and | Before the      | This analysis       |
-| v a c a’ O | ``c``\ such    | execution of    | requires knowledge  |
-| & di       | that ``a``     | the first       | of the search       |
-| v b c b’ O | divided by     | conjunct, both  | behaviour of        |
-| &          | ``c`` equals   | ``a,c`` are     | ``div ar            |
-|  gcd a b c | ``a'``         | unknowns. When  | g1 arg2 arg3 arg4`` |
-|            | exactly. Then  | the second      | in the following    |
-|            | find ``b``     | conjunct is to  | two cases: i. Both  |
-|            | such that      | be executed,    | ``arg1, arg2`` are  |
-|            | ``b`` divided  | ``c`` has       | unknowns, but       |
-|            | by ``c``       | already been    | ``arg3, arg4`` are  |
-|            | equals ``b'``  | found by the    | known. ii. Only     |
-|            | exactly. Now   | first conjunct, | ``arg1`` is         |
-|            | check that the | and only ``b``  | unknown, the other  |
-|            | gcd of ``a``   | is the unknown. | three are known.    |
-|            | and ``b`` is   | Right before    |                     |
-|            | ``c``.         | the execution   |                     |
-|            |                | of the thrid    |                     |
-|            |                | conjunct, all   |                     |
-|            |                | ``a,b,c`` have  |                     |
-|            |                | been found so   |                     |
-|            |                | only a check is |                     |
-|            |                | due.            |                     |
-+------------+----------------+-----------------+---------------------+
-| gcd a b c  | Find three     | Before the      | This analysis       |
-| & di       | unkno          | first conjunct  | requires knowledge  |
-| v a c a’ O | wns\ ``a,b,c`` | is executed,    | of the search       |
-| & di       | such that the  | all ``a,b,c``   | behaviour of        |
-| v b c b’ O | relation       | are unknown,    | ``gcd`` when        |
-|            | ``gcd a b c``  | but by the time | provided with three |
-|            | holds, then    | the second and  | free logic          |
-|            | check that     | third conjuncts | variables for its   |
-|            | ``a`` (``b``)  | are to be       | three arguments.    |
-|            | is exactly     | executed, the   |                     |
-|            | dividable by   | variables       |                     |
-|            | ``c`` with     | ``a,b,c`` are   |                     |
-|            | quotient       | already         |                     |
-|            | ``a'`` (resp.  | computed by the |                     |
-|            | ``b'``).       | first conjunct, |                     |
-|            |                | therefore the   |                     |
-|            |                | last two        |                     |
-|            |                | conjuncts       |                     |
-|            |                | merely check    |                     |
-|            |                | the result.     |                     |
-+------------+----------------+-----------------+---------------------+
+.. todo::
+
+   Rewrite the table completely
+
++--------------------+----------------+-----------------+---------------------+
+| Ordering           | Operational    | State of        | Knowledge on        |
+| of                 | Meaning        | Variables       | Sub-relations       |
+| Conjuncts          |                |                 |                     |
++====================+================+=================+=====================+
+| ``div a c a' O`` & | Find ``a`` and | Before the      | This analysis       |
+| ``div a c a’ O`` & | ``c``\ such    | execution of    | requires knowledge  |
+| ``div b c b’ O`` & | that ``a``     | the first       | of the search       |
+| ``gcd a b c``      | divided by     | conjunct, both  | behaviour of        |
+|                    | ``c`` equals   | ``a,c`` are     | ``div ar            |
+|                    | ``a'``         | unknowns. When  | g1 arg2 arg3 arg4`` |
+|                    | exactly. Then  | the second      | in the following    |
+|                    | find ``b``     | conjunct is to  | two cases: i. Both  |
+|                    | such that      | be executed,    | ``arg1, arg2`` are  |
+|                    | ``b`` divided  | ``c`` has       | unknowns, but       |
+|                    | by ``c``       | already been    | ``arg3, arg4`` are  |
+|                    | equals ``b'``  | found by the    | known. ii. Only     |
+|                    | exactly. Now   | first conjunct, | ``arg1`` is         |
+|                    | check that the | and only ``b``  | unknown, the other  |
+|                    | gcd of ``a``   | is the unknown. | three are known.    |
+|                    | and ``b`` is   | Right before    |                     |
+|                    | ``c``.         | the execution   |                     |
+|                    |                | of the thrid    |                     |
+|                    |                | conjunct, all   |                     |
+|                    |                | ``a,b,c`` have  |                     |
+|                    |                | been found so   |                     |
+|                    |                | only a check is |                     |
+|                    |                | due.            |                     |
++--------------------+----------------+-----------------+---------------------+
+| gcd a b c          | Find three     | Before the      | This analysis       |
+| & di               | unkno          | first conjunct  | requires knowledge  |
+| v a c a’ O         | wns\ ``a,b,c`` | is executed,    | of the search       |
+| & di               | such that the  | all ``a,b,c``   | behaviour of        |
+| v b c b’ O         | relation       | are unknown,    | ``gcd`` when        |
+|                    | ``gcd a b c``  | but by the time | provided with three |
+|                    | holds, then    | the second and  | free logic          |
+|                    | check that     | third conjuncts | variables for its   |
+|                    | ``a`` (``b``)  | are to be       | three arguments.    |
+|                    | is exactly     | executed, the   |                     |
+|                    | dividable by   | variables       |                     |
+|                    | ``c`` with     | ``a,b,c`` are   |                     |
+|                    | quotient       | already         |                     |
+|                    | ``a'`` (resp.  | computed by the |                     |
+|                    | ``b'``).       | first conjunct, |                     |
+|                    |                | therefore the   |                     |
+|                    |                | last two        |                     |
+|                    |                | conjuncts       |                     |
+|                    |                | merely check    |                     |
+|                    |                | the result.     |                     |
++--------------------+----------------+-----------------+---------------------+
 
 The relevant search behaviours of the sub-relations mentioned in the
 table can be observed by running the test file or found in
@@ -629,7 +637,7 @@ unknown, we can make the specific query:
 .. code:: ocaml
 
    printf "\n What divided by what equals 3 with remainder 2 ? (give %d answers) \n\n" ans_no;
-   ocrun2 ~n:ans_no (fun q r-> ocanren { div q r (S(S(S O))) (S(S O)) })
+   ocrun2 ~n:ans_no (fun q r -> ocanren { div q r (S(S(S O))) (S(S O)) })
 
 The answers are:
 
@@ -664,7 +672,8 @@ which is 3 (the divisor must be greater than the remainder 2), together
 with the corresponding dividends.
 
 In backward search, therefore, the ``simplify`` relation first finds a
-``c``-multiple of ``a'`` for some ``c``, and then finds a ``c``-multiple
+``c``-multiple of ``a'`` for some ``c``, and then finds a
+``c`` -multiple
 of ``b'`` for the same ``c``. Its check of the gcd relation as the last
 step is starighforward if ``a'/b'`` is already in the simplest form.
 Note that the programmer provides ``a'`` and ``b'`` so practically
@@ -687,14 +696,15 @@ divisor of ``b`` and the gcd of ``a,b`` — less efficient but still
 acceptable for small numbers.
 
 As an exercise, the reader could experiment with reordering the
-conjuncts so that ``gcd`` is placed in between the two ``div``\ ’s. How
+conjuncts so that ``gcd`` is placed in between the two ``div`` ’s.
+How
 would forward and backward search be influenced? A second question: what
 will happen and why, if we use ``simplify`` to find ``a`` and ``b``, but
 give ``a'`` and ``b'`` as 4 and 2 respectively, i.e., a ratio not in the
 simplest form?
 
-(T.8) The Trick of Generate-and-test
-------------------------------------
+The Trick of Generate-and-test
+------------------------------
 
 When using the ``gcd`` relation to answer the question: “What and what
 have gcd 7 ?”, the distribution of `the answers <answers.txt#L432>`__
@@ -739,10 +749,10 @@ relation. When ``a,b`` are given but ``a',b'`` are left unknown, the
 `first ``div`` <peano.ml#L91>`__ generates all possible divisor-quotient
 pairs for ``a``, and for each such pair the `second
 ``div`` <peano.ml#L92>`__ tests if the divisor also divides ``b`` and if
-so generates the quotient. The sequence of two ``div``\ ’s then plays
+so generates the quotient. The sequence of two ``div`` ’s then plays
 the role of a generator of all common divisors of ``a,b`` together with
 the corresponding pairs of numbers which are ``a,b`` divided by their
-common divisors. The ```gcd`` sub-relation <peano.ml#L93>`__ finally
+common divisors. The ```gcd`` sub-relation `<peano.ml#L93>`__ finally
 checks for the greatest common divisor, and the corresponding pair of
 quotients is the answer for ``a',b'``.
 
@@ -752,8 +762,8 @@ way in which relational programs search for answers even if the
 programmer does not intentionally apply it (e.g., the ``simplify``
 case).
 
-(T.9) The Formula Parser
-------------------------
+The Formula Parser
+------------------
 
 In the library implementation and the test file, we often see formulae
 enclosed by the ``ocanren{}`` quotation which takes care of, among
@@ -1073,7 +1083,7 @@ ground level where they seem to be. For example, the occurrence of
 
 .. code:: ocaml
 
-   ocanren { fresh x in S (S O) == x };;
+   ocanren { fresh x in S (S O) == x }
 
 Such conversion bridges the gap between the programmer’s intuition of
 writing OCaml values and OCanren’s internal representation of the same
@@ -1193,8 +1203,8 @@ error like “unbound identifier”. This explains why the injection
 function names are always differ from the corresponding constructor
 names by one letter: the initial letter.
 
-(T.10) Building a Library
--------------------------
+Building a Library
+------------------
 
 Being essentially an OCaml library, an OCanren library shall have its
 interface ``.mli`` and implementation ``.ml``. The interface typically

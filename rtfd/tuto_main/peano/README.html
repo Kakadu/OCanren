@@ -87,15 +87,15 @@
 <li class="toctree-l2"><a class="reference internal" href="../digTypes/README.html">Digesting the Types</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../ascii_ctrl_db/README.html">A Simple Data Base</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">A Library for Peano Arithmetic</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#t-1-advanced-injection-functions">(T.1) Advanced Injection Functions</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#t-2-reification-and-reifiers">(T.2) Reification and Reifiers</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#t-3-overwriting-the-show-function">(T.3) Overwriting the <em>show</em> Function</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#t-4-relations-on-peano-numbers">(T.4) Relations on Peano Numbers</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#t-5-scrutinizing-relations">(T.5) Scrutinizing Relations</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#t-6-analyzing-the-search-behaviour">(T.6) Analyzing the Search Behaviour</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#t-7-modifying-the-search-behaviour">(T.7) Modifying the Search Behaviour</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#t-8-the-trick-of-generate-and-test">(T.8) The Trick of Generate-and-test</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#t-9-the-formula-parser">(T.9) The Formula Parser</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#advanced-injection-functions">Advanced Injection Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#reification-and-reifiers">Reification and Reifiers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#overwriting-the-show-function">Overwriting the <em>show</em> Function</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#relations-on-peano-numbers">Relations on Peano Numbers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#scrutinizing-relations">Scrutinizing Relations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#analyzing-the-search-behaviour">Analyzing the Search Behaviour</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#modifying-the-search-behaviour">Modifying the Search Behaviour</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#the-trick-of-generate-and-test">The Trick of Generate-and-test</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#the-formula-parser">The Formula Parser</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#the-structure-of-the-parser-an-overview">The structure of the parser: an overview</a><ul>
 <li class="toctree-l5"><a class="reference internal" href="#what-we-see">What we see</a></li>
 <li class="toctree-l5"><a class="reference internal" href="#how-it-works">How it works</a></li>
@@ -108,7 +108,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#local-entries-ii-ocanren-term-and-ocanren-term">Local entries II: <code class="docutils literal notranslate"><span class="pre">ocanren_term</span></code> and <code class="docutils literal notranslate"><span class="pre">ocanren_term'</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#t-10-building-a-library">(T.10) Building a Library</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#building-a-library">Building a Library</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../aircraft_fleet/README.html">The Range of a Fleet of Aircraft</a></li>
@@ -189,33 +189,19 @@
   <div class="section" id="a-library-for-peano-arithmetic">
 <h1>A Library for Peano Arithmetic<a class="headerlink" href="#a-library-for-peano-arithmetic" title="Permalink to this headline">¶</a></h1>
 <p>We hope the reader will learn the following techniques (labeled as
-<strong>T.1</strong>, <strong>T.2</strong>, etc) from this lesson: -
-<a class="reference external" href="#t1-advanced-injection-functions">T.1</a> Defining injection functions
-for value constructors of variant types, using the Fmap family of module
-functors <code class="docutils literal notranslate"><span class="pre">Fmap</span></code>, <code class="docutils literal notranslate"><span class="pre">Fmap2</span></code>, <code class="docutils literal notranslate"><span class="pre">Fmap3</span></code>, etc., which are provided by the
-module <a class="reference external" href="../../Installation/ocanren/src/core/Logic.mli">Logic</a>. -
-<a class="reference external" href="#t2-reification-and-reifiers">T.2</a> Defining reifiers to convert data
-from the injected level to the logic level, again with help from the
-Fmap family of module functors. -
-<a class="reference external" href="#t3-overwriting-the-show-function">T.3</a> Overwriting, or redefining
-the “show” function for values of a logic type, to allow for more
-concise and human readable printing of them. -
-<a class="reference external" href="#t4-relations-on-peano-numbers">T.4</a> Defining (possibly recursive)
-relations, e.g., comparison, addition and division on Peano numbers. -
-<a class="reference external" href="#t5-scrutinizing-relations">T.5</a> Making queries to relations using
-combinations of unknown arguments. -
-<a class="reference external" href="#t6-analyzing-the-search-behaviour">T.6</a> Analyzing why a query
-returns certain answers. - <a class="reference external" href="#t7-modifying-the-search-behaviour">T.7</a>
-Reordering the conjuncts within the body of a relation definition to
-modify the way in which the relation searches for answers in a given
-query. - <a class="reference external" href="#t8-the-trick-of-generate-and-test">T.8</a> Programming a
-relation so that answers to certain queries are found by brute-force. -
-<a class="reference external" href="#t9-the-formula-parser">T.9</a> Observing that the implementation of
-the <code class="docutils literal notranslate"><span class="pre">ocanren</span> <span class="pre">{}</span></code> quotation takes care of the precedence, associativity
-and scope of the logic connectives, and replaces constructors of variant
-types by injection function names, and primitive values by their
-injected versions. - <a class="reference external" href="#t10-building-a-library">T.10</a> Writing and
-testing a library in OCanren.</p>
+<strong>T.1</strong>, <strong>T.2</strong>, etc) from this lesson:</p>
+<ul class="simple">
+<li><a class="reference external" href="#advanced-injection-functions">Advanced injection functions</a> Defining injection functions for value constructors of variant types, using the Fmap family of module functors <code class="docutils literal notranslate"><span class="pre">Fmap</span></code>, <code class="docutils literal notranslate"><span class="pre">Fmap2</span></code>, <code class="docutils literal notranslate"><span class="pre">Fmap3</span></code>, etc., which are provided by the module <a class="reference external" href="../../Installation/ocanren/src/core/Logic.mli">Logic</a>.</li>
+<li><a class="reference external" href="#reification-and-reifiers">Reification and Reifiers</a> Defining reifiers to convert data from the injected level to the logic level, again with help from the Fmap family of module functors.</li>
+<li><a class="reference external" href="#overwriting-the-show-function">Overwriting the show Function</a> Overwriting, or redefining the “show” function for values of a logic type, to allow for more concise and human readable printing of them.</li>
+<li><a class="reference external" href="#relations-on-peano-numbers">Relations on Peano Numbers</a> Defining (possibly recursive) relations, e.g., comparison, addition and division on Peano numbers.</li>
+<li><a class="reference external" href="#scrutinizing-relations">Scrutinizing Relations</a> Making queries to relations using combinations of unknown arguments.</li>
+<li><a class="reference external" href="#analyzing-the-search-behaviour">Analyzing the search behaviour</a> Analyzing why a query returns certain answers.</li>
+<li><a class="reference external" href="#modifying-the-search-behaviour">Modifying the search behaviour</a> Reordering the conjuncts within the body of a relation definition to modify the way in which the relation searches for answers in a given query.</li>
+<li><a class="reference external" href="#the-trick-of-generate-and-test">The trick of generate and test</a> Programming a relation so that answers to certain queries are found by brute-force.</li>
+<li><a class="reference external" href="#the-formula-parser">The formula parser</a> Observing that the implementation of the <code class="docutils literal notranslate"><span class="pre">ocanren</span> <span class="pre">{}</span></code> quotation takes care of the precedence, associativity and scope of the logic connectives, and replaces constructors of variant types by injection function names, and primitive values by their injected versions.</li>
+<li><a class="reference external" href="#building-a-library">Building a library</a> Writing and testing a library in OCanren.</li>
+</ul>
 <p>The techniques are presented in detail in sections below, to which the
 labels ( <strong>T.1</strong>, <strong>T.2</strong>, etc) are linked. Each section is
 self-contained and could be read independent of other sections.</p>
@@ -227,8 +213,8 @@ local copy of) the lesson directory:</p>
 </div>
 <p>A copy of the result of the test is <a class="reference external" href="answers.txt">answers.txt</a> that
 is obtained using the shell command <code class="docutils literal notranslate"><span class="pre">./peano.opt</span> <span class="pre">&gt;</span> <span class="pre">answers.txt</span></code>.</p>
-<div class="section" id="t-1-advanced-injection-functions">
-<h2>(T.1) Advanced Injection Functions<a class="headerlink" href="#t-1-advanced-injection-functions" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="advanced-injection-functions">
+<h2>Advanced Injection Functions<a class="headerlink" href="#advanced-injection-functions" title="Permalink to this headline">¶</a></h2>
 <p>The primary injection operator is <code class="docutils literal notranslate"><span class="pre">!!</span></code> which is used to cast primitive
 values (such as characters and strings) and constant constructors of
 variant types (particularly whose type constructors do not have a type
@@ -241,18 +227,17 @@ together with the injection helper <code class="docutils literal notranslate"><s
 In our Peano Arithmetic <a class="reference external" href="peano.ml">library implementation</a>, the
 following block of code defines advanced injection functions <code class="docutils literal notranslate"><span class="pre">o</span></code> and
 <code class="docutils literal notranslate"><span class="pre">s</span></code> for the abstract Peano number type <code class="docutils literal notranslate"><span class="pre">Ty.t</span></code>, which correspond
-respectively to the value constructors <code class="docutils literal notranslate"><span class="pre">O</span></code> and <code class="docutils literal notranslate"><span class="pre">S</span></code>:</p>
+respectively to the value constructors <code class="docutils literal notranslate"><span class="pre">O</span></code> and <code class="docutils literal notranslate"><span class="pre">S</span></code> :</p>
 <div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">module</span> <span class="n">Ty</span> <span class="o">=</span> <span class="n">struct</span>
-  <span class="nd">@type</span> <span class="s1">&#39;a t = O | S of &#39;</span><span class="n">a</span> <span class="k">with</span> <span class="n">show</span><span class="p">,</span> <span class="n">gmap</span><span class="p">;;</span>
-  <span class="n">let</span> <span class="n">fmap</span> <span class="o">=</span> <span class="n">fun</span> <span class="n">f</span> <span class="n">d</span> <span class="o">-&gt;</span> <span class="n">GT</span><span class="o">.</span><span class="n">gmap</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="n">f</span> <span class="n">d</span><span class="p">;;</span>
+  <span class="nd">@type</span> <span class="s1">&#39;a t = O | S of &#39;</span><span class="n">a</span> <span class="k">with</span> <span class="n">show</span><span class="p">,</span> <span class="n">gmap</span>
+  <span class="n">let</span> <span class="n">fmap</span> <span class="o">=</span> <span class="n">fun</span> <span class="n">f</span> <span class="n">d</span> <span class="o">-&gt;</span> <span class="n">GT</span><span class="o">.</span><span class="n">gmap</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="n">f</span> <span class="n">d</span>
 <span class="n">end</span><span class="p">;;</span>
 
-<span class="n">include</span> <span class="n">Ty</span><span class="p">;;</span>
+<span class="n">include</span> <span class="n">Ty</span>
+<span class="n">module</span> <span class="n">F</span> <span class="o">=</span> <span class="n">Fmap</span><span class="p">(</span><span class="n">Ty</span><span class="p">)</span>
 
-<span class="n">module</span> <span class="n">F</span> <span class="o">=</span> <span class="n">Fmap</span><span class="p">(</span><span class="n">Ty</span><span class="p">);;</span>
-
-<span class="n">let</span> <span class="n">o</span> <span class="o">=</span> <span class="n">fun</span> <span class="p">()</span> <span class="o">-&gt;</span> <span class="n">inj</span> <span class="o">@@</span> <span class="n">F</span><span class="o">.</span><span class="n">distrib</span> <span class="n">O</span><span class="p">;;</span>
-<span class="n">let</span> <span class="n">s</span> <span class="o">=</span> <span class="n">fun</span> <span class="n">n</span>  <span class="o">-&gt;</span> <span class="n">inj</span> <span class="o">@@</span> <span class="n">F</span><span class="o">.</span><span class="n">distrib</span> <span class="p">(</span><span class="n">S</span> <span class="n">n</span><span class="p">);;</span>
+<span class="n">let</span> <span class="n">o</span> <span class="p">()</span> <span class="o">=</span> <span class="n">inj</span> <span class="o">@@</span> <span class="n">F</span><span class="o">.</span><span class="n">distrib</span> <span class="n">O</span>
+<span class="n">let</span> <span class="n">s</span> <span class="n">n</span> <span class="o">=</span> <span class="n">inj</span> <span class="o">@@</span> <span class="n">F</span><span class="o">.</span><span class="n">distrib</span> <span class="p">(</span><span class="n">S</span> <span class="n">n</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>The general workflow of defining advanced injection functions is as
@@ -263,13 +248,11 @@ more type parameters. This is always an OCanren abstract type, such
 as the abstract Peano number type or the abstract list type.</li>
 <li>We count the number of type parameters of the type constructor in
 order to choose the suitable module functor from the Fmap family: for
-one type parameter, use <code class="docutils literal notranslate"><span class="pre">Fmap</span></code>; for two type parameters, use
+one type parameter, use <code class="docutils literal notranslate"><span class="pre">Fmap</span></code> ; for two type parameters, use
 <code class="docutils literal notranslate"><span class="pre">Fmap2</span></code>; three type parameters, <code class="docutils literal notranslate"><span class="pre">Fmap3</span></code> and so on.</li>
 <li>We request the <code class="docutils literal notranslate"><span class="pre">gmap</span></code> plugin for the type constructor, and use it
 to define a function named <code class="docutils literal notranslate"><span class="pre">fmap</span></code> simply by renaming.</li>
-<li>We put the definitions of the type constructor <code class="docutils literal notranslate"><span class="pre">t</span></code> and the <code class="docutils literal notranslate"><span class="pre">fmap</span></code>
-function in one module, and suppy that module as a parameter to the
-chosen Fmap family module functor. The result is a module <code class="docutils literal notranslate"><span class="pre">F</span></code> with
+<li>We put the definitions of the type constructor <code class="docutils literal notranslate"><span class="pre">t</span></code> and the <code class="docutils literal notranslate"><span class="pre">fmap</span></code> function in one module, and suppy that module as a parameter to the chosen Fmap family module functor. The result is a module <code class="docutils literal notranslate"><span class="pre">F</span></code> with
 three functions one of which is <code class="docutils literal notranslate"><span class="pre">distrib</span></code>, the distribution
 function.</li>
 <li>For each value constructor of the type <code class="docutils literal notranslate"><span class="pre">t</span></code>, we define a function
@@ -277,29 +260,39 @@ whose name is the same as the value constructor except that the
 initial letter is set to lower case. For example, <code class="docutils literal notranslate"><span class="pre">Cons</span></code>, <code class="docutils literal notranslate"><span class="pre">S</span></code> and
 <code class="docutils literal notranslate"><span class="pre">NUL</span></code> become respectively <code class="docutils literal notranslate"><span class="pre">cons</span></code>, <code class="docutils literal notranslate"><span class="pre">s</span></code> and <code class="docutils literal notranslate"><span class="pre">nUL</span></code>.</li>
 </ol>
-<p>** Question: did you intentionally used syntax with
-lambda-abstractions instead of <code class="docutils literal notranslate"><span class="pre">let</span> <span class="pre">const1</span> <span class="pre">x</span> <span class="pre">=</span> <span class="pre">Logic.inj</span> <span class="pre">...</span></code>? **</p>
-<ul class="simple">
-<li>For each value constructor <code class="docutils literal notranslate"><span class="pre">Constr0</span></code> of no argument, define:
-<code class="docutils literal notranslate"><span class="pre">ocaml</span>&#160;&#160;&#160;&#160;&#160; <span class="pre">let</span> <span class="pre">constr0</span> <span class="pre">=</span> <span class="pre">fun</span> <span class="pre">()</span> <span class="pre">-&gt;</span> <span class="pre">Logic.inj</span> <span class="pre">&#64;&#64;</span> <span class="pre">F.distrib</span> <span class="pre">Constr0</span></code></li>
-<li>For each value constructor <code class="docutils literal notranslate"><span class="pre">Constr1</span></code> of one argument, define:
-<code class="docutils literal notranslate"><span class="pre">ocaml</span>&#160;&#160;&#160;&#160;&#160; <span class="pre">let</span> <span class="pre">constr1</span> <span class="pre">=</span> <span class="pre">fun</span> <span class="pre">x</span> <span class="pre">-&gt;</span> <span class="pre">Logic.inj</span> <span class="pre">&#64;&#64;</span> <span class="pre">F.distrib</span> <span class="pre">(Constr1</span> <span class="pre">x)</span></code></li>
-<li>For each value constructor <code class="docutils literal notranslate"><span class="pre">Constru</span></code> of <em>u</em> (&gt; 1) arguments,
-define:
-<code class="docutils literal notranslate"><span class="pre">ocaml</span>&#160;&#160;&#160;&#160;&#160; <span class="pre">let</span> <span class="pre">constru</span> <span class="pre">=</span> <span class="pre">fun</span> <span class="pre">x1</span> <span class="pre">...</span> <span class="pre">xu</span> <span class="pre">-&gt;</span> <span class="pre">Logic.inj</span> <span class="pre">&#64;&#64;</span> <span class="pre">F.distrib</span> <span class="pre">&#64;&#64;</span> <span class="pre">Constru</span> <span class="pre">(x1,</span> <span class="pre">...,</span> <span class="pre">xu)</span></code>
-In the definition of a typical advanced injection function, the value
+<ul>
+<li><p class="first">For each value constructor <code class="docutils literal notranslate"><span class="pre">Constr0</span></code> of no argument, define:</p>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">let</span> <span class="n">constr0</span> <span class="o">=</span> <span class="n">fun</span> <span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Logic</span><span class="o">.</span><span class="n">inj</span> <span class="o">@@</span> <span class="n">F</span><span class="o">.</span><span class="n">distrib</span> <span class="n">Constr0</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">For each value constructor <code class="docutils literal notranslate"><span class="pre">Constr1</span></code> of one argument, define:</p>
+<blockquote>
+<div><div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">let</span> <span class="n">constr1</span> <span class="o">=</span> <span class="n">fun</span> <span class="n">x</span> <span class="o">-&gt;</span> <span class="n">Logic</span><span class="o">.</span><span class="n">inj</span> <span class="o">@@</span> <span class="n">F</span><span class="o">.</span><span class="n">distrib</span> <span class="p">(</span><span class="n">Constr1</span> <span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p class="first">For each value constructor <code class="docutils literal notranslate"><span class="pre">Constru</span></code> of <em>u</em> (&gt; 1) arguments,  define:</p>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">let</span> <span class="n">constru</span> <span class="o">=</span> <span class="n">fun</span> <span class="n">x1</span> <span class="o">...</span> <span class="n">xu</span> <span class="o">-&gt;</span> <span class="n">Logic</span><span class="o">.</span><span class="n">inj</span> <span class="o">@@</span> <span class="n">F</span><span class="o">.</span><span class="n">distrib</span> <span class="o">@@</span> <span class="n">Constru</span> <span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="n">xu</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In the definition of a typical advanced injection function, the value
 constructor takes arguments which are at the injected level, and the
 combination of <code class="docutils literal notranslate"><span class="pre">inj</span></code> and <code class="docutils literal notranslate"><span class="pre">distrib</span></code> serves to inject the top level
 value while preserving the structure of constructor application. If
 we explain by a schematic where a pair of enclosing square brackets
 <code class="docutils literal notranslate"><span class="pre">[]</span></code> signifies the injected status of the enclosed data, we would
-say that:</li>
-<li>An advanced injection function <code class="docutils literal notranslate"><span class="pre">constr</span></code> converts a value of the
+say that:</p>
+</li>
+<li><p class="first">An advanced injection function <code class="docutils literal notranslate"><span class="pre">constr</span></code> converts a value of the
 form <code class="docutils literal notranslate"><span class="pre">Constr</span> <span class="pre">([arg1],</span> <span class="pre">...,</span> <span class="pre">[argn])</span></code> to a value of the form
-<code class="docutils literal notranslate"><span class="pre">[Constr</span> <span class="pre">(arg1,</span> <span class="pre">...,</span> <span class="pre">argn)]</span></code>. In other words,</li>
-<li>The injection function <code class="docutils literal notranslate"><span class="pre">constr</span></code> takes arguments
+<code class="docutils literal notranslate"><span class="pre">[Constr</span> <span class="pre">(arg1,</span> <span class="pre">...,</span> <span class="pre">argn)]</span></code>. In other words,</p>
+</li>
+<li><p class="first">The injection function <code class="docutils literal notranslate"><span class="pre">constr</span></code> takes arguments
 <code class="docutils literal notranslate"><span class="pre">[arg1],</span> <span class="pre">...,</span> <span class="pre">[argn]</span></code> and builds a value of the form
-<code class="docutils literal notranslate"><span class="pre">[Constr</span> <span class="pre">(arg1,</span> <span class="pre">...,</span> <span class="pre">argn)]</span></code>.</li>
+<code class="docutils literal notranslate"><span class="pre">[Constr</span> <span class="pre">(arg1,</span> <span class="pre">...,</span> <span class="pre">argn)]</span></code>.</p>
+</li>
 </ul>
 <p>We advise the reader to find in the
 <a class="reference external" href="../../Installation/ocanren/src/core/Logic.mli">interface</a> of the
@@ -308,18 +301,18 @@ types (which are module types): that would provide a more formal
 explanation of what advanced injection functions do and why they are
 defined in the given manner.</p>
 </div>
-<div class="section" id="t-2-reification-and-reifiers">
-<h2>(T.2) Reification and Reifiers<a class="headerlink" href="#t-2-reification-and-reifiers" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="reification-and-reifiers">
+<h2>Reification and Reifiers<a class="headerlink" href="#reification-and-reifiers" title="Permalink to this headline">¶</a></h2>
 <p>Say we have a logic variable <code class="docutils literal notranslate"><span class="pre">x</span></code> and a substitution
-<code class="docutils literal notranslate"><span class="pre">[(x,</span> <span class="pre">Lam(z,y));(y,</span> <span class="pre">App(a,b))]</span></code> that associates <code class="docutils literal notranslate"><span class="pre">x</span></code> with the term
+<code class="docutils literal notranslate"><span class="pre">[(x,</span> <span class="pre">Lam(z,y));</span> <span class="pre">(y,</span> <span class="pre">App(a,b))]</span></code> that associates <code class="docutils literal notranslate"><span class="pre">x</span></code> with the term
 <code class="docutils literal notranslate"><span class="pre">Lam(z,y)</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code> with <code class="docutils literal notranslate"><span class="pre">App(a,b)</span></code> where <code class="docutils literal notranslate"><span class="pre">y,</span> <span class="pre">z</span></code> are also logic
 variables. We would like to know what <code class="docutils literal notranslate"><span class="pre">x</span></code> is with respect to the
 substitution. It is straightforward to replace <code class="docutils literal notranslate"><span class="pre">x</span></code> by <code class="docutils literal notranslate"><span class="pre">Lam(z,y)</span></code> but
 since <code class="docutils literal notranslate"><span class="pre">y</span></code> is associated with <code class="docutils literal notranslate"><span class="pre">App(a,b)</span></code> we can further replace <code class="docutils literal notranslate"><span class="pre">y</span></code>
-in <code class="docutils literal notranslate"><span class="pre">Lam(z,y)</span></code>, and finally we get the term <code class="docutils literal notranslate"><span class="pre">Lam(z,App(a,b))</span></code>.
+in <code class="docutils literal notranslate"><span class="pre">Lam(z,y)</span></code>, and finally we get the term <code class="docutils literal notranslate"><span class="pre">Lam(z,App(a,b))</span></code> .
 Although there is still an unbound part <code class="docutils literal notranslate"><span class="pre">z</span></code>, we have no further
 information about how <code class="docutils literal notranslate"><span class="pre">z</span></code> might be instantiated, so we leave it there.
-What we have done is called <em>reification</em> of the logic variable <code class="docutils literal notranslate"><span class="pre">x</span></code>:
+What we have done is called <em>reification</em> of the logic variable <code class="docutils literal notranslate"><span class="pre">x</span></code> :
 we instantiate it as much as possible, but allowing unbound logic
 variables to occur in the result. A <em>reifier</em> is a function that reifies
 logic variables.</p>
@@ -350,8 +343,8 @@ Peano number type is recursive: the reader should refer to the
 <code class="docutils literal notranslate"><span class="pre">F.reify</span></code> and see how the types of the reifier and the reifier builder
 fit together.</p>
 </div>
-<div class="section" id="t-3-overwriting-the-show-function">
-<h2>(T.3) Overwriting the <em>show</em> Function<a class="headerlink" href="#t-3-overwriting-the-show-function" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="overwriting-the-show-function">
+<h2>Overwriting the <em>show</em> Function<a class="headerlink" href="#overwriting-the-show-function" title="Permalink to this headline">¶</a></h2>
 <p>The default <em>show</em> function for a variant type converts values of that
 type to strings in a straightforward way, e.g., a logic Peano number
 representation of the integer 1 would be converted to the string
@@ -368,7 +361,7 @@ the record value <code class="docutils literal notranslate"><span class="pre">lo
 value origins from the <code class="docutils literal notranslate"><span class="pre">&#64;type</span></code> definition of the type constructor
 <code class="docutils literal notranslate"><span class="pre">Logic.logic</span></code> and is auto-generated by the GT package. The field
 <code class="docutils literal notranslate"><span class="pre">GT.plugins</span></code> is an object with several methods, one of which is
-<code class="docutils literal notranslate"><span class="pre">show</span></code>: other plugins (or methods) keep their default meanings but
+<code class="docutils literal notranslate"><span class="pre">show</span></code> : other plugins (or methods) keep their default meanings but
 <code class="docutils literal notranslate"><span class="pre">show</span></code> is redefined.</p>
 <p>However, when there are too many repetitions of the constructor <code class="docutils literal notranslate"><span class="pre">S</span></code>,
 the <em>show</em> function as redefined in the Logic module is no longer
@@ -380,7 +373,8 @@ number and the symbol <code class="docutils literal notranslate"><span class="pr
 <p>In like manner, the reader may: - Redefine the <em>show</em> function to behave
 in other ways, or - Redefine other plugins by modifying the
 <code class="docutils literal notranslate"><span class="pre">GT.plugins</span></code> field, or - Redefine plugins for other types.</p>
-<p>Some additional remarks on the last point: the <code class="docutils literal notranslate"><span class="pre">&#64;type</span></code> definition of a
+<p>Some additional remarks on the last point: the <code class="docutils literal notranslate"><span class="pre">&#64;type</span></code>
+definition of a
 type constructor <code class="docutils literal notranslate"><span class="pre">typeconstr-name</span></code> generates a record value also named
 <code class="docutils literal notranslate"><span class="pre">typeconstr-name</span></code> of the type <code class="docutils literal notranslate"><span class="pre">GT.t</span></code>. This could be viewed by adding
 the <code class="docutils literal notranslate"><span class="pre">-i</span></code> option as indicated in the <a class="reference external" href="Makefile#L10">Makefile</a>:</p>
@@ -390,8 +384,8 @@ the <code class="docutils literal notranslate"><span class="pre">-i</span></code
 <p>See also the <a class="reference external" href="https://github.com/JetBrains-Research/GT/blob/039193385e6cb1a67bc8a9d00c662d9d1dc5478b/src/GT.ml4#L37">GT
 source</a>.</p>
 </div>
-<div class="section" id="t-4-relations-on-peano-numbers">
-<h2>(T.4) Relations on Peano Numbers<a class="headerlink" href="#t-4-relations-on-peano-numbers" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="relations-on-peano-numbers">
+<h2>Relations on Peano Numbers<a class="headerlink" href="#relations-on-peano-numbers" title="Permalink to this headline">¶</a></h2>
 <p>This section teaches the reader how to read and write relation
 definitions.</p>
 <p>The reader is already familiar with reading and writing functions in
@@ -416,7 +410,7 @@ relation:</p>
 <div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">let</span> <span class="n">rec</span> <span class="n">add</span> <span class="n">a</span> <span class="n">b</span> <span class="n">c</span> <span class="o">=</span>
   <span class="n">ocanren</span><span class="p">{</span> <span class="n">a</span> <span class="o">==</span> <span class="n">O</span> <span class="o">&amp;</span> <span class="n">b</span> <span class="o">==</span> <span class="n">c</span>
          <span class="o">|</span> <span class="n">fresh</span> <span class="n">n</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span>
-           <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span> <span class="o">&amp;</span> <span class="n">c</span> <span class="o">==</span> <span class="n">S</span> <span class="n">m</span> <span class="o">&amp;</span> <span class="n">add</span> <span class="n">n</span> <span class="n">b</span> <span class="n">m</span><span class="p">};;</span>
+           <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span> <span class="o">&amp;</span> <span class="n">c</span> <span class="o">==</span> <span class="n">S</span> <span class="n">m</span> <span class="o">&amp;</span> <span class="n">add</span> <span class="n">n</span> <span class="n">b</span> <span class="n">m</span><span class="p">}</span>
 </pre></div>
 </div>
 <p>It says nothing about how to compute the sum <code class="docutils literal notranslate"><span class="pre">c</span></code> of two numbers <code class="docutils literal notranslate"><span class="pre">a</span></code>
@@ -433,7 +427,7 @@ in which we can establish the addition relation among three numbers.</p>
              <span class="p">{</span> <span class="n">a</span> <span class="o">==</span> <span class="n">O</span>
              <span class="o">|</span> <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39; in</span>
                <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span><span class="s1">&#39;</span>
-               <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39; n }};;</span>
+               <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39; n }}</span>
 </pre></div>
 </div>
 <p>It says that <code class="docutils literal notranslate"><span class="pre">a</span></code> is less than <code class="docutils literal notranslate"><span class="pre">b</span></code> if there exist <code class="docutils literal notranslate"><span class="pre">n</span></code>, such that
@@ -445,12 +439,17 @@ encouraged to write a relation for subtraction: <code class="docutils literal no
 <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">-</span> <span class="pre">b</span> <span class="pre">=</span> <span class="pre">c</span></code>, or, put in another way: iff <code class="docutils literal notranslate"><span class="pre">b</span></code> is <code class="docutils literal notranslate"><span class="pre">O</span></code> and <code class="docutils literal notranslate"><span class="pre">a</span></code> is
 <code class="docutils literal notranslate"><span class="pre">c</span></code>, or <code class="docutils literal notranslate"><span class="pre">b</span></code> is <code class="docutils literal notranslate"><span class="pre">S</span> <span class="pre">n</span></code> and <code class="docutils literal notranslate"><span class="pre">a</span></code> is <code class="docutils literal notranslate"><span class="pre">S</span> <span class="pre">n'</span></code> and <code class="docutils literal notranslate"><span class="pre">sub</span> <span class="pre">n'</span> <span class="pre">n</span> <span class="pre">c</span></code>.</p>
 </div>
-<div class="section" id="t-5-scrutinizing-relations">
-<h2>(T.5) Scrutinizing Relations<a class="headerlink" href="#t-5-scrutinizing-relations" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="scrutinizing-relations">
+<h2>Scrutinizing Relations<a class="headerlink" href="#scrutinizing-relations" title="Permalink to this headline">¶</a></h2>
 <p>Taking the “less than” relation as an example, we can ask questions
-like: - Is zero less than one ? Is one less than two ? Is one less than
-zero ? Is two less than one? - What is less than five ? Five is less
-than what ? - What is less than what ?</p>
+like:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Is zero less than one ? Is one less than two ? Is one less than zero ? Is two less than one?</li>
+<li>What is less than five ? Five is less than what ?</li>
+<li>What is less than what ?</li>
+</ul>
+</div></blockquote>
 <p>The first set of questions above is for <em>checking</em>: we provide concrete
 numbers and ask if they satisfy the relation. The remaining two sets of
 questions are for <em>searching</em>: looking for numbers that satisfy the
@@ -462,21 +461,21 @@ of unknowns in NCR):</p>
 <p>NC0 + NC1 + NC2 + … + NCN-1 + NCN</p>
 <p>Running the <a class="reference external" href="test.ml#L53">test</a> shows that OCanren answers all the
 questions well. For example, the goal:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fun</span> <span class="n">q</span> <span class="o">-&gt;</span> <span class="n">ocanren</span> <span class="p">{</span> <span class="n">lt</span> <span class="n">O</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">lt</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">))</span> <span class="p">}</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fun</span> <span class="n">q</span> <span class="o">-&gt;</span> <span class="n">ocanren</span> <span class="p">{</span> <span class="n">lt</span> <span class="n">O</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">lt</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">))</span> <span class="p">}</span>
 </pre></div>
 </div>
 <p>asks about what is <code class="docutils literal notranslate"><span class="pre">q</span></code> so that zero is less than one and one is less
-than two, and the answer is just <code class="docutils literal notranslate"><span class="pre">n</span></code> meaning that <code class="docutils literal notranslate"><span class="pre">q</span></code> could be any
+than two, and the answer is just a free variable <code class="docutils literal notranslate"><span class="pre">n</span></code> meaning that <code class="docutils literal notranslate"><span class="pre">q</span></code> could be any
 number and the relation always holds between the given numbers. The
 similar goal:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fun</span> <span class="n">q</span> <span class="o">-&gt;</span> <span class="n">ocanren</span> <span class="p">{</span> <span class="n">lt</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)</span> <span class="n">O</span> <span class="o">|</span> <span class="n">lt</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">))</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)</span> <span class="p">}</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fun</span> <span class="n">q</span> <span class="o">-&gt;</span> <span class="n">ocanren</span> <span class="p">{</span> <span class="n">lt</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)</span> <span class="n">O</span> <span class="o">|</span> <span class="n">lt</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">))</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)</span> <span class="p">}</span>
 </pre></div>
 </div>
 <p>asks about what is <code class="docutils literal notranslate"><span class="pre">q</span></code> so that one is less than zero or two is less
 than one. There is no answer, meaning that there is no <code class="docutils literal notranslate"><span class="pre">q</span></code> to make the
 relation hold between the given numbers.</p>
 <p>The goal below asks what is less than five:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fun</span> <span class="n">q</span> <span class="o">-&gt;</span> <span class="n">ocanren</span> <span class="p">{</span> <span class="n">lt</span> <span class="n">q</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="p">}</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fun</span> <span class="n">q</span> <span class="o">-&gt;</span> <span class="n">ocanren</span> <span class="p">{</span> <span class="n">lt</span> <span class="n">q</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="p">}</span>
 </pre></div>
 </div>
 <p>For this goal the answers <code class="docutils literal notranslate"><span class="pre">0,1,2,3,4</span></code> are found, which is quite
@@ -486,20 +485,20 @@ in the test file.</p>
 <p>Note that the addition relation can perform subtraction, and the
 division relation can do multiplication. For instance, the goal below
 asks “What adds 4 equals to 7 ?” and whose answer is “3”:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fun</span> <span class="n">q</span> <span class="o">-&gt;</span> <span class="n">ocanren</span> <span class="p">{</span> <span class="n">add</span> <span class="n">q</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">))))</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))))</span> <span class="p">}</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fun</span> <span class="n">q</span> <span class="o">-&gt;</span> <span class="n">ocanren</span> <span class="p">{</span> <span class="n">add</span> <span class="n">q</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">))))</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))))</span> <span class="p">}</span>
 </pre></div>
 </div>
 <p>This amounts to performing the subtraction <code class="docutils literal notranslate"><span class="pre">7</span> <span class="pre">-</span> <span class="pre">4</span></code>. The next goal asks
 “What divided by 5 equals 3 with remainder 0 ?” and the answer is “15”:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fun</span> <span class="n">q</span> <span class="o">-&gt;</span> <span class="n">ocanren</span> <span class="p">{</span> <span class="n">div</span> <span class="n">q</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span> <span class="n">O</span> <span class="p">}</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fun</span> <span class="n">q</span> <span class="o">-&gt;</span> <span class="n">ocanren</span> <span class="p">{</span> <span class="n">div</span> <span class="n">q</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span> <span class="n">O</span> <span class="p">}</span>
 </pre></div>
 </div>
 <p>It amounts to the multiplication <code class="docutils literal notranslate"><span class="pre">3</span> <span class="pre">*</span> <span class="pre">5</span></code>.</p>
 </div>
-<div class="section" id="t-6-analyzing-the-search-behaviour">
-<h2>(T.6) Analyzing the Search Behaviour<a class="headerlink" href="#t-6-analyzing-the-search-behaviour" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="analyzing-the-search-behaviour">
+<h2>Analyzing the Search Behaviour<a class="headerlink" href="#analyzing-the-search-behaviour" title="Permalink to this headline">¶</a></h2>
 <p>When asking the <code class="docutils literal notranslate"><span class="pre">lt</span></code> relation “what is less than 5” using the goal:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fun</span> <span class="n">q</span> <span class="o">-&gt;</span> <span class="n">ocanren</span> <span class="p">{</span> <span class="n">lt</span> <span class="n">q</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="p">}</span>                                  <span class="p">(</span><span class="n">G</span><span class="o">.</span><span class="mi">1</span><span class="p">)</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fun</span> <span class="n">q</span> <span class="o">-&gt;</span> <span class="n">ocanren</span> <span class="p">{</span> <span class="n">lt</span> <span class="n">q</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="p">}</span>                                  <span class="p">(</span><span class="n">G</span><span class="o">.</span><span class="mi">1</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>OCanren returns 0,1,2,3,4. Let’s see why. It really is a matter of
@@ -508,19 +507,20 @@ now we substitute 5 for <code class="docutils literal notranslate"><span class="
 several steps of simplification then we get a formula <code class="docutils literal notranslate"><span class="pre">(Eq.12)</span></code> that
 literally says <code class="docutils literal notranslate"><span class="pre">a</span></code> shall be 0, 1, 2, 3 or 4. Below are the details.</p>
 <p>We reproduce the definition of <code class="docutils literal notranslate"><span class="pre">lt</span></code> in the followinig simplified form:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="n">b</span> <span class="o">=</span> <span class="n">fresh</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">b</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span> <span class="o">&amp;</span> <span class="p">{</span> <span class="n">a</span> <span class="o">==</span> <span class="n">O</span> <span class="o">|</span> <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39; in a == S n&#39;</span> <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39; n }</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="n">b</span> <span class="o">=</span> <span class="n">fresh</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">b</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span>
+       <span class="o">&amp;</span> <span class="p">{</span> <span class="n">a</span> <span class="o">==</span> <span class="n">O</span> <span class="o">|</span> <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39; in a == S n&#39;</span> <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39; n }</span>
                                                                              <span class="p">(</span><span class="n">Eq</span><span class="o">.</span><span class="mi">1</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Now replace <code class="docutils literal notranslate"><span class="pre">b</span></code> by <code class="docutils literal notranslate"><span class="pre">(S(S(S(S(S</span> <span class="pre">O)))))</span></code> in <code class="docutils literal notranslate"><span class="pre">(Eq.1)</span></code>, we get:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span> <span class="n">fresh</span> <span class="n">n</span> <span class="ow">in</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span> <span class="n">fresh</span> <span class="n">n</span> <span class="ow">in</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span>
                          <span class="o">&amp;</span> <span class="p">{</span> <span class="n">a</span> <span class="o">==</span> <span class="n">O</span> <span class="o">|</span> <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39; in a == S n&#39;</span> <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39; n }</span>
                                                                  <span class="p">(</span><span class="n">Eq</span><span class="o">.</span><span class="mi">2</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Replace <code class="docutils literal notranslate"><span class="pre">(S(S(S(S(S</span> <span class="pre">O)))))</span> <span class="pre">==</span> <span class="pre">S</span> <span class="pre">n</span></code> by <code class="docutils literal notranslate"><span class="pre">(S(S(S(S</span> <span class="pre">O))))</span> <span class="pre">==</span> <span class="pre">n</span></code> in
 <code class="docutils literal notranslate"><span class="pre">(Eq.2)</span></code>, we get:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span> <span class="n">fresh</span> <span class="n">n</span> <span class="ow">in</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">))))</span> <span class="o">==</span> <span class="n">n</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span> <span class="n">fresh</span> <span class="n">n</span> <span class="ow">in</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">))))</span> <span class="o">==</span> <span class="n">n</span>
                          <span class="o">&amp;</span> <span class="p">{</span> <span class="n">a</span> <span class="o">==</span> <span class="n">O</span> <span class="o">|</span> <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39; in a == S n&#39;</span> <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39; n }</span>
                                                                  <span class="p">(</span><span class="n">Eq</span><span class="o">.</span><span class="mi">3</span><span class="p">)</span>
 </pre></div>
@@ -528,7 +528,7 @@ literally says <code class="docutils literal notranslate"><span class="pre">a</s
 <p>In <code class="docutils literal notranslate"><span class="pre">(Eq.3)</span></code>, remove <code class="docutils literal notranslate"><span class="pre">fresh</span> <span class="pre">n</span> <span class="pre">in</span> <span class="pre">(S(S(S(S</span> <span class="pre">O))))</span> <span class="pre">==</span> <span class="pre">n</span></code>, then replace
 all free occurences of <code class="docutils literal notranslate"><span class="pre">n</span></code> by <code class="docutils literal notranslate"><span class="pre">(S(S(S(S</span> <span class="pre">O))))</span></code>. The top level <code class="docutils literal notranslate"><span class="pre">&amp;</span></code>
 and the braces are no longer needed, so also being removed. We get:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span> <span class="n">a</span> <span class="o">==</span> <span class="n">O</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span> <span class="n">a</span> <span class="o">==</span> <span class="n">O</span>
                        <span class="o">|</span> <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39; in a == S n&#39;</span>
                  <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39; (S(S(S(S O))))                              (Eq.4)</span>
 </pre></div>
@@ -551,32 +551,33 @@ in a capture-avoiding manner, we get:</p>
 <p>Using the result of unification we can simplify <code class="docutils literal notranslate"><span class="pre">(Eq.5)</span></code> into:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">n</span><span class="s1">&#39; (S(S(S(S O)))) = n&#39;</span> <span class="o">==</span> <span class="n">O</span>
                      <span class="o">|</span> <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="ow">in</span> <span class="n">n</span><span class="s1">&#39; == S n&#39;&#39;</span>
-               <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span>                                  <span class="p">(</span><span class="n">Eq</span><span class="o">.</span><span class="mi">6</span><span class="p">)</span>
+                     <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span>                      <span class="p">(</span><span class="n">Eq</span><span class="o">.</span><span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Now in <code class="docutils literal notranslate"><span class="pre">(Eq.4)</span></code> replace <code class="docutils literal notranslate"><span class="pre">lt</span> <span class="pre">n'</span> <span class="pre">(S(S(S(S</span> <span class="pre">O))))</span></code> by the right hand
 side of <code class="docutils literal notranslate"><span class="pre">(Eq.6)</span></code>:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span> <span class="n">a</span> <span class="o">==</span> <span class="n">O</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span> <span class="n">a</span> <span class="o">==</span> <span class="n">O</span>
                        <span class="o">|</span> <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39; in a == S n&#39;</span>
-                 <span class="o">&amp;</span> <span class="p">{</span> <span class="n">n</span><span class="s1">&#39; == O</span>
-                            <span class="o">|</span> <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="ow">in</span> <span class="n">n</span><span class="s1">&#39; == S n&#39;&#39;</span>
-                  <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span> <span class="p">}</span>                         <span class="p">(</span><span class="n">Eq</span><span class="o">.</span><span class="mi">7</span><span class="p">)</span>
+                       <span class="o">&amp;</span> <span class="p">{</span> <span class="n">n</span><span class="s1">&#39; == O</span>
+                         <span class="o">|</span> <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="ow">in</span> <span class="n">n</span><span class="s1">&#39; == S n&#39;&#39;</span>
+                           <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span> <span class="p">}</span>           <span class="p">(</span><span class="n">Eq</span><span class="o">.</span><span class="mi">7</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>The right hand side of <code class="docutils literal notranslate"><span class="pre">(Eq.7)</span></code> produces another value of <code class="docutils literal notranslate"><span class="pre">a</span></code> which
+<p>The right hand side of <code class="docutils literal notranslate"><span class="pre">(Eq.7)</span></code>
+produces another value of <code class="docutils literal notranslate"><span class="pre">a</span></code> which
 is <code class="docutils literal notranslate"><span class="pre">S</span> <span class="pre">O</span></code>, as follows. In <code class="docutils literal notranslate"><span class="pre">(Eq.7)</span></code>, distribute <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">==</span> <span class="pre">S</span> <span class="pre">n'</span></code> we get:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">O</span>
-                       <span class="o">|</span>  <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39; in</span>
-                    <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span><span class="s1">&#39; &amp;  n&#39;</span> <span class="o">==</span> <span class="n">O</span>
-                          <span class="o">|</span> <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span><span class="s1">&#39; &amp; fresh n&#39;&#39; in n&#39;</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span> <span class="n">a</span> <span class="o">==</span> <span class="n">O</span>
+                       <span class="o">|</span> <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39; in</span>
+                           <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span><span class="s1">&#39; &amp;  n&#39;</span> <span class="o">==</span> <span class="n">O</span>
+                         <span class="o">|</span> <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span><span class="s1">&#39; &amp; fresh n&#39;&#39; in n&#39;</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span>
 
                                                      <span class="p">(</span><span class="n">Eq</span><span class="o">.</span><span class="mi">8</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Replace <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">==</span> <span class="pre">S</span> <span class="pre">n'</span> <span class="pre">&amp;</span>&#160; <span class="pre">n'</span> <span class="pre">==</span> <span class="pre">O</span></code> by <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">==</span> <span class="pre">S</span> <span class="pre">O</span></code> in <code class="docutils literal notranslate"><span class="pre">(Eq.8)</span></code>, we get:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">O</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">O</span>
                        <span class="o">|</span>  <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39; in</span>
-                    <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">O</span>
+                            <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">O</span>
                           <span class="o">|</span> <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span><span class="s1">&#39; &amp; fresh n&#39;&#39; in  n&#39;</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span>
 
                                                                              <span class="p">(</span><span class="n">Eq</span><span class="o">.</span><span class="mi">9</span><span class="p">)</span>
@@ -584,10 +585,10 @@ is <code class="docutils literal notranslate"><span class="pre">S</span> <span c
 </div>
 <p>In the right hand side of <code class="docutils literal notranslate"><span class="pre">(Eq.9)</span></code> move <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">==</span> <span class="pre">S</span> <span class="pre">O</span></code> out of the scope
 of the <code class="docutils literal notranslate"><span class="pre">fresh</span> <span class="pre">n'</span> <span class="pre">in</span></code>, we have:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">O</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">O</span>
                        <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">O</span>
-               <span class="o">|</span>  <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39; in</span>
-                  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span><span class="s1">&#39; &amp; fresh n&#39;&#39; in n&#39;</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span>
+                       <span class="o">|</span>  <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39; in</span>
+                          <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span><span class="s1">&#39; &amp; fresh n&#39;&#39; in n&#39;</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span>
 
                                                                              <span class="p">(</span><span class="n">Eq</span><span class="o">.</span><span class="mi">10</span><span class="p">)</span>
 </pre></div>
@@ -597,26 +598,26 @@ and simplification. Recursive calls are expanded and then reduced, and
 the initial formula <code class="docutils literal notranslate"><span class="pre">lt</span> <span class="pre">a</span> <span class="pre">(S(S(S(S(S</span> <span class="pre">O)))))</span></code> is gradually unfolded so
 that values of <code class="docutils literal notranslate"><span class="pre">a</span></code> are revealed one by one. Continue this way, the
 last but one equation would be:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">O</span>
-                       <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">O</span>
-               <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)</span>
-               <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">))</span>
-               <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span>
-               <span class="o">|</span>  <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39; in a == S n&#39;</span>
-               <span class="o">&amp;</span>  <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="ow">in</span> <span class="n">n</span><span class="s1">&#39; == S n&#39;&#39;</span>
-               <span class="o">&amp;</span>  <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39;&#39;&#39; in n&#39;&#39; == S n&#39;&#39;&#39;</span>
-               <span class="o">&amp;</span>  <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39;&#39;&#39;&#39; in n&#39;&#39;&#39;</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span><span class="s1">&#39;&#39;&#39;&#39;</span>
-<span class="s1">               &amp;  fresh n&#39;&#39;&#39;&#39;&#39;</span> <span class="ow">in</span> <span class="n">n</span><span class="s1">&#39;&#39;&#39;&#39; == S n&#39;&#39;&#39;&#39;&#39;</span> <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39;&#39;&#39;&#39;&#39; O</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span>  <span class="o">=</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">O</span>
+                        <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">O</span>
+                        <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)</span>
+                        <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">))</span>
+                        <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span>
+                        <span class="o">|</span>  <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39; in a == S n&#39;</span>
+                        <span class="o">&amp;</span>  <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39;&#39;</span> <span class="ow">in</span> <span class="n">n</span><span class="s1">&#39; == S n&#39;&#39;</span>
+                        <span class="o">&amp;</span>  <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39;&#39;&#39; in n&#39;&#39; == S n&#39;&#39;&#39;</span>
+                        <span class="o">&amp;</span>  <span class="n">fresh</span> <span class="n">n</span><span class="s1">&#39;&#39;&#39;&#39; in n&#39;&#39;&#39;</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span><span class="s1">&#39;&#39;&#39;&#39;</span>
+<span class="s1">                        &amp;  fresh n&#39;&#39;&#39;&#39;&#39;</span> <span class="ow">in</span> <span class="n">n</span><span class="s1">&#39;&#39;&#39;&#39; == S n&#39;&#39;&#39;&#39;&#39;</span> <span class="o">&amp;</span> <span class="n">lt</span> <span class="n">n</span><span class="s1">&#39;&#39;&#39;&#39;&#39; O</span>
 <span class="s1">                                                                 (Eq.11)</span>
 </pre></div>
 </div>
 <p>Note that <code class="docutils literal notranslate"><span class="pre">lt</span> <span class="pre">n'''''</span> <span class="pre">O</span></code> expands to <code class="docutils literal notranslate"><span class="pre">fresh</span> <span class="pre">n</span> <span class="pre">in</span> <span class="pre">O</span> <span class="pre">==</span> <span class="pre">S</span> <span class="pre">n</span> <span class="pre">&amp;</span> <span class="pre">...</span></code> which
 is false, therefore the last equation is:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span> <span class="o">=</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">O</span>
-                       <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">O</span>
-               <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)</span>
-               <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">))</span>
-               <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span>                               <span class="p">(</span><span class="n">Eq</span><span class="o">.</span><span class="mi">12</span><span class="p">)</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lt</span> <span class="n">a</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))))</span>  <span class="o">=</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">O</span>
+                        <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">O</span>
+                        <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)</span>
+                        <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">))</span>
+                        <span class="o">|</span>  <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span>                               <span class="p">(</span><span class="n">Eq</span><span class="o">.</span><span class="mi">12</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>From <code class="docutils literal notranslate"><span class="pre">(Eq.12)</span></code> we read off the answers to the query.</p>
@@ -627,35 +628,40 @@ goal <code class="docutils literal notranslate"><span class="pre">(G.1)</span></
 <p>The reader may take an exercise to show that one plus one equals two by
 simplifying the formula <code class="docutils literal notranslate"><span class="pre">add</span> <span class="pre">(S</span> <span class="pre">O)</span> <span class="pre">(S</span> <span class="pre">O)</span> <span class="pre">c</span></code>.</p>
 </div>
-<div class="section" id="t-7-modifying-the-search-behaviour">
-<h2>(T.7) Modifying the Search Behaviour<a class="headerlink" href="#t-7-modifying-the-search-behaviour" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="modifying-the-search-behaviour">
+<h2>Modifying the Search Behaviour<a class="headerlink" href="#modifying-the-search-behaviour" title="Permalink to this headline">¶</a></h2>
 <p>We compare two versions of the <em>simplify</em> relation, differing from each
 other only by a swap of conjuncts.</p>
 <p>Both versions share the logic that the simplest form of <code class="docutils literal notranslate"><span class="pre">a/b</span></code> is
-<code class="docutils literal notranslate"><span class="pre">a'/b'</span></code> where <code class="docutils literal notranslate"><span class="pre">a'</span></code> (<code class="docutils literal notranslate"><span class="pre">b'</span></code>) is <code class="docutils literal notranslate"><span class="pre">a</span></code>(resp. <code class="docutils literal notranslate"><span class="pre">b</span></code>) divided by the
+<code class="docutils literal notranslate"><span class="pre">a'/b'</span></code> where <code class="docutils literal notranslate"><span class="pre">a'</span></code> (<code class="docutils literal notranslate"><span class="pre">b'</span></code>) is <code class="docutils literal notranslate"><span class="pre">a</span></code> (resp. <code class="docutils literal notranslate"><span class="pre">b</span></code>) divided by the
 greatest common divisor of <code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code>, provided <code class="docutils literal notranslate"><span class="pre">b</span></code> is non-zero.
 There is a short cut for the case where <code class="docutils literal notranslate"><span class="pre">a</span></code> is zero, then <code class="docutils literal notranslate"><span class="pre">b'</span></code> is
 set to one directly.</p>
-<p>The difference is that: - In one version we say, “<code class="docutils literal notranslate"><span class="pre">a</span></code> (<code class="docutils literal notranslate"><span class="pre">b</span></code>) divided
-by <code class="docutils literal notranslate"><span class="pre">c</span></code> equals <code class="docutils literal notranslate"><span class="pre">a'</span></code> (resp. <code class="docutils literal notranslate"><span class="pre">b'</span></code>), and <code class="docutils literal notranslate"><span class="pre">c</span></code> is the gcd of <code class="docutils literal notranslate"><span class="pre">a</span></code> and
-<code class="docutils literal notranslate"><span class="pre">b</span></code>.” - In the other version we say, “<code class="docutils literal notranslate"><span class="pre">c</span></code> is the gcd of <code class="docutils literal notranslate"><span class="pre">a</span></code> and
-<code class="docutils literal notranslate"><span class="pre">b</span></code>, and <code class="docutils literal notranslate"><span class="pre">a</span></code> (<code class="docutils literal notranslate"><span class="pre">b</span></code>) divided by <code class="docutils literal notranslate"><span class="pre">c</span></code> equals <code class="docutils literal notranslate"><span class="pre">a'</span></code> (resp. <code class="docutils literal notranslate"><span class="pre">b'</span></code>).”</p>
+<p>The difference is that:</p>
+<ul class="simple">
+<li>In one version we say, “<code class="docutils literal notranslate"><span class="pre">a</span></code> (<code class="docutils literal notranslate"><span class="pre">b</span></code>) divided by <code class="docutils literal notranslate"><span class="pre">c</span></code> equals <code class="docutils literal notranslate"><span class="pre">a'</span></code> (resp. <code class="docutils literal notranslate"><span class="pre">b'</span></code>), and <code class="docutils literal notranslate"><span class="pre">c</span></code> is the gcd of <code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code>.”</li>
+<li>In the other version we say, “<code class="docutils literal notranslate"><span class="pre">c</span></code> is the gcd of <code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code>, and <code class="docutils literal notranslate"><span class="pre">a</span></code> (<code class="docutils literal notranslate"><span class="pre">b</span></code>) divided by <code class="docutils literal notranslate"><span class="pre">c</span></code> equals <code class="docutils literal notranslate"><span class="pre">a'</span></code> (resp. <code class="docutils literal notranslate"><span class="pre">b'</span></code>).”</li>
+</ul>
 <p>In OCanren:</p>
 <div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">let</span> <span class="n">simplify</span> <span class="n">a</span> <span class="n">b</span> <span class="n">a</span><span class="s1">&#39; b&#39;</span> <span class="o">=</span>
-      <span class="n">ocanren</span> <span class="p">{</span>  <span class="n">fresh</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">b</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span> <span class="o">&amp;</span>
-      <span class="p">{</span> <span class="n">a</span> <span class="o">==</span> <span class="n">O</span> <span class="o">&amp;</span> <span class="n">a</span><span class="s1">&#39; == O &amp; b&#39;</span> <span class="o">==</span> <span class="n">S</span> <span class="n">O</span>
-      <span class="o">|</span> <span class="n">fresh</span> <span class="n">c</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">m</span>
-                      <span class="o">&amp;</span> <span class="n">div</span> <span class="n">a</span> <span class="n">c</span> <span class="n">a</span><span class="s1">&#39; O             (* div first, then gcd *)</span>
-                      <span class="o">&amp;</span> <span class="n">div</span> <span class="n">b</span> <span class="n">c</span> <span class="sa">b</span><span class="s1">&#39; O</span>
-                      <span class="o">&amp;</span> <span class="n">gcd</span> <span class="n">a</span> <span class="n">b</span> <span class="n">c</span> <span class="p">}</span> <span class="p">};;</span>
+  <span class="n">ocanren</span> <span class="p">{</span>  <span class="n">fresh</span> <span class="n">n</span> <span class="ow">in</span>
+    <span class="n">b</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span> <span class="o">&amp;</span>
+    <span class="p">{</span> <span class="n">a</span> <span class="o">==</span> <span class="n">O</span> <span class="o">&amp;</span> <span class="n">a</span><span class="s1">&#39; == O &amp; b&#39;</span> <span class="o">==</span> <span class="n">S</span> <span class="n">O</span>
+    <span class="o">|</span> <span class="n">fresh</span> <span class="n">c</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span>
+        <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">m</span>
+      <span class="o">&amp;</span> <span class="n">div</span> <span class="n">a</span> <span class="n">c</span> <span class="n">a</span><span class="s1">&#39; O             (* div first, then gcd *)</span>
+      <span class="o">&amp;</span> <span class="n">div</span> <span class="n">b</span> <span class="n">c</span> <span class="sa">b</span><span class="s1">&#39; O</span>
+      <span class="o">&amp;</span> <span class="n">gcd</span> <span class="n">a</span> <span class="n">b</span> <span class="n">c</span> <span class="p">}</span> <span class="p">}</span>
 
 <span class="n">let</span> <span class="n">simplify</span><span class="s1">&#39; a b a&#39;</span> <span class="sa">b</span><span class="s1">&#39; =</span>
-      <span class="n">ocanren</span> <span class="p">{</span>  <span class="n">fresh</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">b</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span> <span class="o">&amp;</span>
-      <span class="p">{</span> <span class="n">a</span> <span class="o">==</span> <span class="n">O</span> <span class="o">&amp;</span> <span class="n">a</span><span class="s1">&#39; == O &amp; b&#39;</span> <span class="o">==</span> <span class="n">S</span> <span class="n">O</span>
-      <span class="o">|</span> <span class="n">fresh</span> <span class="n">c</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">m</span>
-                      <span class="o">&amp;</span> <span class="n">gcd</span> <span class="n">a</span> <span class="n">b</span> <span class="n">c</span>                <span class="p">(</span><span class="o">*</span> <span class="n">gcd</span> <span class="n">first</span><span class="p">,</span> <span class="n">then</span> <span class="n">div</span> <span class="o">*</span><span class="p">)</span>
-                      <span class="o">&amp;</span> <span class="n">div</span> <span class="n">a</span> <span class="n">c</span> <span class="n">a</span><span class="s1">&#39; O</span>
-                      <span class="o">&amp;</span> <span class="n">div</span> <span class="n">b</span> <span class="n">c</span> <span class="sa">b</span><span class="s1">&#39; O  } };;</span>
+  <span class="n">ocanren</span> <span class="p">{</span> <span class="n">fresh</span> <span class="n">n</span> <span class="ow">in</span>
+     <span class="n">b</span> <span class="o">==</span> <span class="n">S</span> <span class="n">n</span> <span class="o">&amp;</span>
+     <span class="p">{</span> <span class="n">a</span> <span class="o">==</span> <span class="n">O</span> <span class="o">&amp;</span> <span class="n">a</span><span class="s1">&#39; == O &amp; b&#39;</span> <span class="o">==</span> <span class="n">S</span> <span class="n">O</span>
+     <span class="o">|</span> <span class="n">fresh</span> <span class="n">c</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span>
+         <span class="n">a</span> <span class="o">==</span> <span class="n">S</span> <span class="n">m</span>
+       <span class="o">&amp;</span> <span class="n">gcd</span> <span class="n">a</span> <span class="n">b</span> <span class="n">c</span>                <span class="p">(</span><span class="o">*</span> <span class="n">gcd</span> <span class="n">first</span><span class="p">,</span> <span class="n">then</span> <span class="n">div</span> <span class="o">*</span><span class="p">)</span>
+       <span class="o">&amp;</span> <span class="n">div</span> <span class="n">a</span> <span class="n">c</span> <span class="n">a</span><span class="s1">&#39; O</span>
+       <span class="o">&amp;</span> <span class="n">div</span> <span class="n">b</span> <span class="n">c</span> <span class="sa">b</span><span class="s1">&#39; O  } }</span>
 </pre></div>
 </div>
 <p>The test file offers a <a class="reference external" href="test.ml#L199">comparison</a> of these two
@@ -671,12 +677,16 @@ returning anything.</p>
 varaibles and the search behaviour of the sub-relations, results in
 apparently different operational meaning of the conjunctions in backward
 search, as follows:</p>
+<div class="admonition-todo admonition" id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">Rewrite the table completely</p>
+</div>
 <table border="1" class="docutils">
 <colgroup>
-<col width="18%" />
-<col width="24%" />
-<col width="26%" />
-<col width="32%" />
+<col width="27%" />
+<col width="22%" />
+<col width="23%" />
+<col width="28%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Ordering
@@ -691,12 +701,10 @@ Sub-relations</th>
 </tr>
 </thead>
 <tbody valign="top">
-<tr class="row-even"><td>di
-v&nbsp;a&nbsp;c&nbsp;a’&nbsp;O
-&amp;&nbsp;di
-v&nbsp;b&nbsp;c&nbsp;b’&nbsp;O
-&amp;
-&nbsp;gcd&nbsp;a&nbsp;b&nbsp;c</td>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">div</span> <span class="pre">a</span> <span class="pre">c</span> <span class="pre">a'</span> <span class="pre">O</span></code> &amp;
+<code class="docutils literal notranslate"><span class="pre">div&nbsp;a&nbsp;c&nbsp;a’&nbsp;O</span></code> &amp;
+<code class="docutils literal notranslate"><span class="pre">div&nbsp;b&nbsp;c&nbsp;b’&nbsp;O</span></code> &amp;
+<code class="docutils literal notranslate"><span class="pre">gcd&nbsp;a&nbsp;b&nbsp;c</span></code></td>
 <td>Find <code class="docutils literal notranslate"><span class="pre">a</span></code> and
 <code class="docutils literal notranslate"><span class="pre">c</span></code>such
 that <code class="docutils literal notranslate"><span class="pre">a</span></code>
@@ -811,7 +819,7 @@ table can be observed by running the test file or found in
 behaviour of <code class="docutils literal notranslate"><span class="pre">div</span></code> when only its first and second argument are
 unknown, we can make the specific query:</p>
 <div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">printf</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2"> What divided by what equals 3 with remainder 2 ? (give </span><span class="si">%d</span><span class="s2"> answers) </span><span class="se">\n\n</span><span class="s2">&quot;</span> <span class="n">ans_no</span><span class="p">;</span>
-<span class="n">ocrun2</span> <span class="o">~</span><span class="n">n</span><span class="p">:</span><span class="n">ans_no</span> <span class="p">(</span><span class="n">fun</span> <span class="n">q</span> <span class="n">r</span><span class="o">-&gt;</span> <span class="n">ocanren</span> <span class="p">{</span> <span class="n">div</span> <span class="n">q</span> <span class="n">r</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">))</span> <span class="p">})</span>
+<span class="n">ocrun2</span> <span class="o">~</span><span class="n">n</span><span class="p">:</span><span class="n">ans_no</span> <span class="p">(</span><span class="n">fun</span> <span class="n">q</span> <span class="n">r</span> <span class="o">-&gt;</span> <span class="n">ocanren</span> <span class="p">{</span> <span class="n">div</span> <span class="n">q</span> <span class="n">r</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)))</span> <span class="p">(</span><span class="n">S</span><span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">))</span> <span class="p">})</span>
 </pre></div>
 </div>
 <p>The answers are:</p>
@@ -844,7 +852,8 @@ divisors in ascending order, starting with the least possible divisor
 which is 3 (the divisor must be greater than the remainder 2), together
 with the corresponding dividends.</p>
 <p>In backward search, therefore, the <code class="docutils literal notranslate"><span class="pre">simplify</span></code> relation first finds a
-<code class="docutils literal notranslate"><span class="pre">c</span></code>-multiple of <code class="docutils literal notranslate"><span class="pre">a'</span></code> for some <code class="docutils literal notranslate"><span class="pre">c</span></code>, and then finds a <code class="docutils literal notranslate"><span class="pre">c</span></code>-multiple
+<code class="docutils literal notranslate"><span class="pre">c</span></code>-multiple of <code class="docutils literal notranslate"><span class="pre">a'</span></code> for some <code class="docutils literal notranslate"><span class="pre">c</span></code>, and then finds a
+<code class="docutils literal notranslate"><span class="pre">c</span></code> -multiple
 of <code class="docutils literal notranslate"><span class="pre">b'</span></code> for the same <code class="docutils literal notranslate"><span class="pre">c</span></code>. Its check of the gcd relation as the last
 step is starighforward if <code class="docutils literal notranslate"><span class="pre">a'/b'</span></code> is already in the simplest form.
 Note that the programmer provides <code class="docutils literal notranslate"><span class="pre">a'</span></code> and <code class="docutils literal notranslate"><span class="pre">b'</span></code> so practically
@@ -865,14 +874,15 @@ enumerates through all divisors of <code class="docutils literal notranslate"><s
 divisor of <code class="docutils literal notranslate"><span class="pre">b</span></code> and the gcd of <code class="docutils literal notranslate"><span class="pre">a,b</span></code> — less efficient but still
 acceptable for small numbers.</p>
 <p>As an exercise, the reader could experiment with reordering the
-conjuncts so that <code class="docutils literal notranslate"><span class="pre">gcd</span></code> is placed in between the two <code class="docutils literal notranslate"><span class="pre">div</span></code>’s. How
+conjuncts so that <code class="docutils literal notranslate"><span class="pre">gcd</span></code> is placed in between the two <code class="docutils literal notranslate"><span class="pre">div</span></code> ’s.
+How
 would forward and backward search be influenced? A second question: what
 will happen and why, if we use <code class="docutils literal notranslate"><span class="pre">simplify</span></code> to find <code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code>, but
 give <code class="docutils literal notranslate"><span class="pre">a'</span></code> and <code class="docutils literal notranslate"><span class="pre">b'</span></code> as 4 and 2 respectively, i.e., a ratio not in the
 simplest form?</p>
 </div>
-<div class="section" id="t-8-the-trick-of-generate-and-test">
-<h2>(T.8) The Trick of Generate-and-test<a class="headerlink" href="#t-8-the-trick-of-generate-and-test" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-trick-of-generate-and-test">
+<h2>The Trick of Generate-and-test<a class="headerlink" href="#the-trick-of-generate-and-test" title="Permalink to this headline">¶</a></h2>
 <p>When using the <code class="docutils literal notranslate"><span class="pre">gcd</span></code> relation to answer the question: “What and what
 have gcd 7 ?”, the distribution of <a class="reference external" href="answers.txt#L432">the answers</a>
 does not look balanced: the second number is 7 most of the time, while
@@ -909,10 +919,10 @@ relation. When <code class="docutils literal notranslate"><span class="pre">a,b<
 <cite>first ``div`</cite> &lt;peano.ml#L91&gt;`__ generates all possible divisor-quotient
 pairs for <code class="docutils literal notranslate"><span class="pre">a</span></code>, and for each such pair the <cite>second
 ``div`</cite> &lt;peano.ml#L92&gt;`__ tests if the divisor also divides <code class="docutils literal notranslate"><span class="pre">b</span></code> and if
-so generates the quotient. The sequence of two <code class="docutils literal notranslate"><span class="pre">div</span></code>’s then plays
+so generates the quotient. The sequence of two <code class="docutils literal notranslate"><span class="pre">div</span></code> ’s then plays
 the role of a generator of all common divisors of <code class="docutils literal notranslate"><span class="pre">a,b</span></code> together with
 the corresponding pairs of numbers which are <code class="docutils literal notranslate"><span class="pre">a,b</span></code> divided by their
-common divisors. The <code class="docutils literal notranslate"><span class="pre">`gcd</span></code> sub-relation &lt;peano.ml#L93&gt;`__ finally
+common divisors. The <code class="docutils literal notranslate"><span class="pre">`gcd</span></code> sub-relation <a class="reference external" href="peano.ml#L93">peano.ml#L93</a> finally
 checks for the greatest common divisor, and the corresponding pair of
 quotients is the answer for <code class="docutils literal notranslate"><span class="pre">a',b'</span></code>.</p>
 <p>In summary, generate-and-test is both a technique that the programmer
@@ -921,8 +931,8 @@ way in which relational programs search for answers even if the
 programmer does not intentionally apply it (e.g., the <code class="docutils literal notranslate"><span class="pre">simplify</span></code>
 case).</p>
 </div>
-<div class="section" id="t-9-the-formula-parser">
-<h2>(T.9) The Formula Parser<a class="headerlink" href="#t-9-the-formula-parser" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-formula-parser">
+<h2>The Formula Parser<a class="headerlink" href="#the-formula-parser" title="Permalink to this headline">¶</a></h2>
 <p>In the library implementation and the test file, we often see formulae
 enclosed by the <code class="docutils literal notranslate"><span class="pre">ocanren{}</span></code> quotation which takes care of, among
 others, precedence and associativity of the logic connectives. We take a
@@ -1219,7 +1229,7 @@ tuple), <code class="docutils literal notranslate"><span class="pre">15</span></
 ground level where they seem to be. For example, the occurrence of
 <code class="docutils literal notranslate"><span class="pre">S</span> <span class="pre">(S</span> <span class="pre">O)</span></code> in the expression below is transformed into
 <code class="docutils literal notranslate"><span class="pre">s</span> <span class="pre">(s</span> <span class="pre">(o</span> <span class="pre">()))</span></code>:</p>
-<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ocanren</span> <span class="p">{</span> <span class="n">fresh</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)</span> <span class="o">==</span> <span class="n">x</span> <span class="p">};;</span>
+<div class="code ocaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ocanren</span> <span class="p">{</span> <span class="n">fresh</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">S</span> <span class="p">(</span><span class="n">S</span> <span class="n">O</span><span class="p">)</span> <span class="o">==</span> <span class="n">x</span> <span class="p">}</span>
 </pre></div>
 </div>
 <p>Such conversion bridges the gap between the programmer’s intuition of
@@ -1333,8 +1343,8 @@ function names are always differ from the corresponding constructor
 names by one letter: the initial letter.</p>
 </div>
 </div>
-<div class="section" id="t-10-building-a-library">
-<h2>(T.10) Building a Library<a class="headerlink" href="#t-10-building-a-library" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="building-a-library">
+<h2>Building a Library<a class="headerlink" href="#building-a-library" title="Permalink to this headline">¶</a></h2>
 <p>Being essentially an OCaml library, an OCanren library shall have its
 interface <code class="docutils literal notranslate"><span class="pre">.mli</span></code> and implementation <code class="docutils literal notranslate"><span class="pre">.ml</span></code>. The interface typically
 contains type definitions (at the four levels), auxiliaries (such as

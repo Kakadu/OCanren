@@ -45,12 +45,7 @@ Read the query:
                                    & Std.Nat.(<=) n 10
                                    & ascii_ctrl c n s}) project
 
-\*\* ``Std.Nat.(<=) 0 n`` in real OCanren is better to be written as
-``Std.Nat.(0 <= n)`` \*\*
-
-as: > Print at most 18 possible values of *s*, such that exist some *c*
-and *n* where *n* ranges from 0 to 10 inclusive, and the tuple *(c, n,
-s)* satisfies the relation *ascii_ctrl*.
+as: Print at most 18 possible values of *s*, such that exist some *c* and *n* where *n* ranges from 0 to 10 inclusive, and the tuple *(c, n, s)* satisfies the relation *ascii_ctrl*.
 
 OCanren will print the following (eleven) strings:
 
@@ -87,14 +82,8 @@ A formula is either atomic, or is compound and built from atomic
 formulae using conjunction (``&``), disjunction (``|``) and existential
 quantification (``fresh``). Atomic formulae are built from predicate
 symbols followed by their arguments. There are only two predicate
-symbols ``==`` and ``=/=``. A formula is allowed to be infinitely long
-but it shall always contain a finite number of free logic variabes.
-Formulae can be abbreviated by (possibly recurisive) definitions.
-
-\*\* ``infinitely long`` will probably require a clarification. I kind
-of understand that you are saying about ifinite list of phormulas
-connected with disjunction, but 1st idea that will come to mind of the
-reader is that we allow infinite programs \*\*
+symbols ``==`` and ``=/=``. A formula is allowed to be infinitely long.
+Formulae can be abbreviated by finitely-represented (possibly recurisive) definitions.
 
 **Example.** Atomic, compound, named and infinite formulae:
 
@@ -109,8 +98,8 @@ reader is that we allow infinite programs \*\*
       x == S y1 & { y1 == O
                   | fresh y2 in
                     y1 == S y2 & { y2 == O
-                | fresh y3 in
-                  y2 == S y3 & { ... }}}
+                                 | fresh y3 in
+                                   y2 == S y3 & { ... }}}
 
 We now give the concrete syntax of a formula in OCanren.
 
@@ -160,7 +149,7 @@ The Semantics of a Formula
 --------------------------
 
 A formula has two semantics: the *declarational semantics* and the
-*operational semantics*. `The way <#the-relation-and-queries>`__ in
+*operational semantics*. The way in
 which the reader is advised to read the relation definition and the
 query is actually part of the declarational semantics. The operational
 semantics concerns how the answers shall be searched for (mechanically),
@@ -238,33 +227,35 @@ Formulae as Stream Builders
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A formula is a stream builder as far as the operational semantics is
-concerned. It takes a substitution *substin* as input and returns a
+concerned. It takes a substitution :math:`subst_{in}` as input and returns a
 stream of substitutions as output:
 
-substin —[Formula]—> substout, substout, substout, …
+:math:`subst_{in} \xrightarrow{\text{formula}} subst_{out}, subst_{out}, subst_{out}, …`
 
 For each substitution *substout* in the returned stream, applying the
 concatenation *substin ^ substout* makes the formula true in the sense
 of the declarational semantics.
 
+.. todo::
+
+  Yue Li, what you meant saying 'applying concatenation'?
+
 **Example.** Given as input the empty substitution ``[]``:
 
-- The formula ``x == Cons(1,Nil)`` returns the stream that consists of the substitution ``[(x, Cons(1,Nil))]``.
-- The formula ``x == Cons(1,Nil) & y == Cons(2,x)`` returns the stream that consists of the substitution ``[(x, Cons(1,Nil));(y, Cons(2,x))]``.
-- The formula ``is_nat x`` returns the stream that consists of the substitutions ``[(x, O)]``, ``[(x, S(y1));(y1, O)]``, ``[(x, S(y1));(y1, S(y2));(y2, O)]``, …
+- The formula ``x == Cons(1, Nil)`` returns the stream that consists of the substitution ``[(x, Cons(1,Nil))]``.
+- The formula ``x == Cons(1, Nil) & y == Cons(2, x)`` returns the stream that consists of the substitution ``[ (x, Cons(1,Nil)); (y, Cons(2,x)) ]``.
+- The formula ``is_nat x`` returns the stream that consists of the substitutions ``[(x, O)]``, ``[(x, S(y1));(y1, O)]``, ``[ (x, S(y1)); (y1, S(y2)); (y2, O) ]``, ...
 - The formula ``1 == 1`` returns the stream whose only member is ``[]``.
 - The formula ``1 == 2`` returns the empty stream: there is no way to make the formula true.
 
-Disjunction as a Stream Zipper
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Disjunction as stream interleaving
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To *zip* two streams means to merge them by interleaving their members.
-
-**Example.** Let :math:`s_1` denote the stream of all positive intergers, and :math:`s_2` the stream of all negative intergers. The result of zipping :math:`s_2` with :math:`s_2`, denoted :math:`s_1 |zip| s_2` is ``1, -1, 2, -2, ...``, and :math:`s_2 |zip| s_1` is ``-1, 1, -2, 2, ...``.
+**Example.** Let :math:`s_1` denote the stream of all positive intergers, and :math:`s_2` the stream of all negative intergers. The result of interleaving :math:`s_1` with :math:`s_2`, denoted :math:`s_1 |zip| s_2` is ``1, -1, 2, -2, ...``, and :math:`s_2 |zip| s_1` is ``-1, 1, -2, 2, ...``.
 
 The disjunction :math:`F_1 \mid F_2` of two formulae :math:`F_1`, :math:`F_2` is itself a formula on the top level, so it is a stream builder, taking a
 substitution as input and returns a stream of substitutions. It builds
-the output stream by zipping the two streams built separately by :math:`F_1` and :math:`F_2`, both of which share the same input as their immediate top level formula. In more formal terms:
+the output stream by interleaving the two streams built separately by :math:`F_1` and :math:`F_2`, both of which share the same input as their immediate top level formula. In more formal terms:
 
 .. math::
 
@@ -276,20 +267,18 @@ makes either of the two disjuncts true.
 Conjuction as a Stream Map-Zipper
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To *map-zip* a stream builder *F* with a stream *s* := *m*\ 1, *m*\ 2,
-*m*\ 3, … (denoted *F* &mzip *s* ), is to apply *F* individually to each
-member *m*\ k of the stream, resulting in streams *s*\ k, and then zip
-all *s*\ k together.
+To *map-zip* a stream builder *F* with a stream :math:`s := m_1, m_2, m_3, ...` (denoted :math:`F\ mzip\ s`), is to apply :math:`F` individually to each
+member :math:`m_k` of the stream, resulting in streams :math:`s_k`, and then zip all :math:`s_k` together.
 
         .. math::
           :nowrap:
 
-          \begin{eqnarray}
+          \begin{eqnarray*}
               & F mzip s\\
-            =& F mzip m1, m2, m3, \dots\\
-            =& F m1 |zip (F m2 |zip (F m3 |zip (…))) \\
-            =& s1 |zip (s2 |zip (s3 \|zip (…)))
-          \end{eqnarray}
+            =& F\ mzip\ m_1,\ m_2,\ m_3, \dots\\
+            =& F\ m_1 zip\ (F\ m_2\ zip\ (F m_3\ zip\ (…))) \\
+            =& s_1\ zip\ (s_2\ zip (s_3\ zip (…)))
+          \end{eqnarray*}
 
 ..      .. math::
 ..         :nowrap:
@@ -304,18 +293,20 @@ all *s*\ k together.
         .. math::
           :nowrap:
 
-          \begin{eqnarray}
-             & *F* mzip 1,2,3
-            =&  F 1 \|zip (F 2 \|zip F 3)
-            =& 1,1,1,… \|zip (2,2,2,… \|zip 3,3,3,…)
-            =& 1,1,1,… \|zip 2,3,2,3,…
+          \begin{eqnarray*}
+             & F\ mzip\ 1,2,3 \\
+            =&  F_1\ zi\ (F_2\ zip\ F_3) \\
+            =& 1,1,1,…\ zip\ (2,2,2,…\ zip\ 3,3,3,…) \\
+            =& 1,1,1,…\ zip\ 2,3,2,3,… \\
             =& 1,2,1,3,1,2,1,3, …
-         \end{eqnarray}
+          \end{eqnarray*}
 
-A conjunction :math:`F_1 & F_2` provides the input substitution to F1 first, and then map-zips the output of F1 with F2:
+A conjunction :math:`F_1 & F_2` provides the input substitution to :math:`F_1` first, and then map-zips the output of :math:`F_1` with :math:`F_2` :
 
-``(`` *F*\ 1 ``&`` *F*\ 2 ``)`` substin = *F*\ 2 &mzip ``(`` *F*\ 1
-substin ``)``
+        .. math::
+           :nowrap:
+
+           (F_1\ &\ F_2) subst_{in}\ =\ F_2 mzip ( F_1 subst_{in})
 
 Every substitution from the output stream (concatenated with the input)
 makes both of the two conjuncts true.
@@ -357,17 +348,17 @@ expanded at the syntactic level by GT into:
 The effect of syntactic transformation, including what the ``@type``
 definitions become after expansion, can be viewed by adding the “dump
 source” option ``-dsource`` in the Makefile as explained in a comment
-line there. For instance, the ``LString`` module:
+line there. For instance, the ``String`` module:
 
 .. code:: ocaml
 
     (** {2  The logic string type} *)
-   module LString = struct
+   module String = struct
      @type t = GT.string with show
      @type ground = t with show
      @type logic = t OCanren.logic with show
      type groundi = (ground, logic) injected
-   end;;
+   end
 
 would be expanded into `this <lstring.ml>`__, where we could see that
 besides the type constructor definitions a lot more codes have actually
@@ -380,18 +371,24 @@ otherwise it is the same as the OCaml built-in string type. Plugins are
 (auto-)created inductively: GT provides plugins for base types and rules
 for building plugins for compound types from component types.
 
-\*\* I will clarify this a bit. We do not use the GT version of
-``string`` type, in reality it is a just type alias:
-``module GT = struct type string = Stdlib.string ... end``. What is
-really happening here, is that functions for showing and gmapping string
-type are located in module GT. So we need 1) either write ``GT.string``
-instead of ``string`` and preprocessor will generate
-``GT.show GT.string`` instead of ``GT.show string``, 2) or make
-``open GT`` somewhere about and use type ``string`` without fully
-qualified name. \*\*
+.. todo::
 
-The injection functions and the ``ocanren{...}`` quotation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  Write properly part about syntax extensions and port this part there
+
+.. todo::
+
+  I will clarify this a bit. We do not use the GT version of
+  ``string`` type, in reality it is a just type alias:
+  ``module GT = struct type string = Stdlib.string ... end``. What is
+  really happening here, is that functions for showing and gmapping string
+  type are located in module GT. So we need 1) either write ``GT.string``
+  instead of ``string`` and preprocessor will generate
+  ``GT.show GT.string`` instead of ``GT.show string``, 2) or make
+  ``open GT`` somewhere about and use type ``string`` without fully
+  qualified name. \*\*
+
+The injection functions and the ``ocanren {...}`` quotation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The signature of the ``ASCII_Ctrl.Inj`` module shall explain itself. For
 every value constructor, an accompanying injection function shall be
@@ -407,24 +404,22 @@ the body of the ``ascii_ctrl`` relation. The quotation in the body of
 .. code:: ocaml
 
    let ascii_ctrl =
-     (fun c ->
-        fun n ->
-          fun s ->
-            let open ASCII_Ctrl.Inj in
-              OCanren.disj
-                (OCanren.conj (OCanren.unify c (nUL ()))
-                   (OCanren.conj (OCanren.unify n (OCanren.Std.nat 0))
-                      (OCanren.unify s (OCanren.inj (OCanren.lift "Null")))))
-                (OCanren.disj
-                   (OCanren.conj (OCanren.unify c (sOH ()))
-                      (OCanren.conj (OCanren.unify n (OCanren.Std.nat 1))
-                         (OCanren.unify s
-                            (OCanren.inj (OCanren.lift "Start of heading")))))
-                   (OCanren.disj
-                      (OCanren.conj (OCanren.unify c (sTX ()))
-                         (OCanren.conj (OCanren.unify n (OCanren.Std.nat 2))
-                            (OCanren.unify s
-                               (OCanren.inj (OCanren.lift "Start of text")))))
+     (fun c n s ->
+        let open ASCII_Ctrl.Inj in
+        OCanren.disj
+          (OCanren.conj (OCanren.unify c (nUL ()))
+              (OCanren.conj (OCanren.unify n (OCanren.Std.nat 0))
+                (OCanren.unify s (OCanren.inj (OCanren.lift "Null")))))
+          (OCanren.disj
+              (OCanren.conj (OCanren.unify c (sOH ()))
+                (OCanren.conj (OCanren.unify n (OCanren.Std.nat 1))
+                    (OCanren.unify s
+                      (OCanren.inj (OCanren.lift "Start of heading")))))
+              (OCanren.disj
+                (OCanren.conj (OCanren.unify c (sTX ()))
+                    (OCanren.conj (OCanren.unify n (OCanren.Std.nat 2))
+                      (OCanren.unify s
+                          (OCanren.inj (OCanren.lift "Start of text")))))
    (* ... etc *)
 
 The above code excerpt is also from what is displayed on the terminal
@@ -441,14 +436,13 @@ quotation powered by Camlp5. In set theory when we think about a
 relation, we are actually thinking about a function *R* that can be
 applied to its arguments and return either true or false, like this:
 
-*arg1, …, argn* —> *R* —> true \| false
+  :math:`arg_1, …, arg_n \rightarrow R \rightarrow true\ |\ false`
 
 But in relational programming, when we think about a relation *R*, the
-most important thing is not that *R* is a function, but *R(arg1, …,
-argn)* *in whole* is a function, i.e., we regard what is known by
+most important thing is not that *R* is a function, but :math:`R(arg_1, …, arg_n)` *in whole* is a function, i.e., we regard what is known by
 logicians as a formula, as a function whose input is an initial variable
 substitution and whose output is the set of all possible variable
 substitutions where each member when combined with the initial
 substitution makes the formula true, like this:
 
-substin —> *R(arg1, …, argn)* —> substout, substout, substout, …
+  :math:`subst_{in} \rightarrow  R(arg_1, …, arg_n) \rightarrow subst_{out}, subst_{out}, subst_{out},...`

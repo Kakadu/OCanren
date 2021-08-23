@@ -53,6 +53,6 @@ In addition, OCanren introduces explicit disjunction (``|||``) and conjunction
 .. _let-ocanren:
 
 OCanren-specific Camlp5 syntax extension
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------------------
 
 TODO
