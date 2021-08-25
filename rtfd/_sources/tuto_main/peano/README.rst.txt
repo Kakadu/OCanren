@@ -1,8 +1,7 @@
 A Library for Peano Arithmetic
 ==============================
 
-We hope the reader will learn the following techniques (labeled as
-**T.1**, **T.2**, etc) from this lesson:
+We hope the reader will learn the following techniques   from this lesson:
 
 - `Advanced injection functions <#advanced-injection-functions>`__ Defining injection functions for value constructors of variant types, using the Fmap family of module functors ``Fmap``, ``Fmap2``, ``Fmap3``, etc., which are provided by the module `Logic <../../Installation/ocanren/src/core/Logic.mli>`__.
 - `Reification and Reifiers <#reification-and-reifiers>`__ Defining reifiers to convert data from the injected level to the logic level, again with help from the Fmap family of module functors.
@@ -531,8 +530,8 @@ set to one directly.
 
 The difference is that:
 
-- In one version we say, “``a`` (``b``) divided by ``c`` equals ``a'`` (resp. ``b'``), and ``c`` is the gcd of ``a`` and ``b``.”
-- In the other version we say, “``c`` is the gcd of ``a`` and ``b``, and ``a`` (``b``) divided by ``c`` equals ``a'`` (resp. ``b'``).”
+- In one version we say, “`a` (`b`) divided by `c` equals `a'` (resp. `b'`), and `c` is the gcd of `a` and `b`.”
+- In the other version we say, “`c` is the gcd of `a` and `b`, and `a` (`b`) divided by `c` equals `a\'` (resp. `b\'`).”
 
 In OCanren:
 
@@ -573,60 +572,39 @@ varaibles and the search behaviour of the sub-relations, results in
 apparently different operational meaning of the conjunctions in backward
 search, as follows:
 
-.. todo::
+1. *Variant 1*
 
-   Rewrite the table completely
+  .. code::
 
-+--------------------+----------------+-----------------+---------------------+
-| Ordering           | Operational    | State of        | Knowledge on        |
-| of                 | Meaning        | Variables       | Sub-relations       |
-| Conjuncts          |                |                 |                     |
-+====================+================+=================+=====================+
-| ``div a c a' O`` & | Find ``a`` and | Before the      | This analysis       |
-| ``div a c a’ O`` & | ``c``\ such    | execution of    | requires knowledge  |
-| ``div b c b’ O`` & | that ``a``     | the first       | of the search       |
-| ``gcd a b c``      | divided by     | conjunct, both  | behaviour of        |
-|                    | ``c`` equals   | ``a,c`` are     | ``div ar            |
-|                    | ``a'``         | unknowns. When  | g1 arg2 arg3 arg4`` |
-|                    | exactly. Then  | the second      | in the following    |
-|                    | find ``b``     | conjunct is to  | two cases: i. Both  |
-|                    | such that      | be executed,    | ``arg1, arg2`` are  |
-|                    | ``b`` divided  | ``c`` has       | unknowns, but       |
-|                    | by ``c``       | already been    | ``arg3, arg4`` are  |
-|                    | equals ``b'``  | found by the    | known. ii. Only     |
-|                    | exactly. Now   | first conjunct, | ``arg1`` is         |
-|                    | check that the | and only ``b``  | unknown, the other  |
-|                    | gcd of ``a``   | is the unknown. | three are known.    |
-|                    | and ``b`` is   | Right before    |                     |
-|                    | ``c``.         | the execution   |                     |
-|                    |                | of the thrid    |                     |
-|                    |                | conjunct, all   |                     |
-|                    |                | ``a,b,c`` have  |                     |
-|                    |                | been found so   |                     |
-|                    |                | only a check is |                     |
-|                    |                | due.            |                     |
-+--------------------+----------------+-----------------+---------------------+
-| gcd a b c          | Find three     | Before the      | This analysis       |
-| & di               | unkno          | first conjunct  | requires knowledge  |
-| v a c a’ O         | wns\ ``a,b,c`` | is executed,    | of the search       |
-| & di               | such that the  | all ``a,b,c``   | behaviour of        |
-| v b c b’ O         | relation       | are unknown,    | ``gcd`` when        |
-|                    | ``gcd a b c``  | but by the time | provided with three |
-|                    | holds, then    | the second and  | free logic          |
-|                    | check that     | third conjuncts | variables for its   |
-|                    | ``a`` (``b``)  | are to be       | three arguments.    |
-|                    | is exactly     | executed, the   |                     |
-|                    | dividable by   | variables       |                     |
-|                    | ``c`` with     | ``a,b,c`` are   |                     |
-|                    | quotient       | already         |                     |
-|                    | ``a'`` (resp.  | computed by the |                     |
-|                    | ``b'``).       | first conjunct, |                     |
-|                    |                | therefore the   |                     |
-|                    |                | last two        |                     |
-|                    |                | conjuncts       |                     |
-|                    |                | merely check    |                     |
-|                    |                | the result.     |                     |
-+--------------------+----------------+-----------------+---------------------+
+      div a c a’ O &
+      div b c b’ O &
+      gcd a b c
+
+  Find `a` and `c` such  that ``a`` divided by `c` equals `a\'` exactly. Then find ``b`` such that  ``b`` divided by `c`
+  equals `b\'` exactly. Now check that the gcd of `a` and `b` is `c`.
+
+  Before the execution of the first conjunct, both `a` and `c` are unknowns. When the second conjunct is to be executed, `c` has already been found by the first conjunct, and only `b` is the unknown. Right before the execution of the thrid conjunct, all `a,b,c` have been found  so only a check is due.
+
+  This analysis requires knowledge of the search behaviour of `div arg1 arg2 arg3 arg4` in the following two cases:
+
+  * Both `arg1, arg2` are unknowns, but `arg3, arg4` are known.
+  * Only `arg1` is unknown, the other three are known.
+
+1. *Variant 2*
+
+  .. code::
+
+      gcd a b c &
+      div a c a’ O &
+      div b c b’ O
+
+
+  Find three unknowns`a,b,c` such  that the relation `gcd a b c` holds, then check that `a` (`b`) is exactly dividable by  `c` with quotient `a'` (resp. `b'`).
+
+  Before the first conjunct is executed, all `a,b,c` are  unknown, but by the time the second and third conjuncts are to be executed, the variables `a,b,c` are already computed by the first conjunct, therefore the last two conjuncts merely check the result.
+
+  This analysis requires knowledge of the search behaviour of `gcd` when provided  with three free logic variables for its three arguments.
+
 
 The relevant search behaviours of the sub-relations mentioned in the
 table can be observed by running the test file or found in
@@ -767,441 +745,10 @@ The Formula Parser
 
 In the library implementation and the test file, we often see formulae
 enclosed by the ``ocanren{}`` quotation which takes care of, among
-others, precedence and associativity of the logic connectives. We take a
-look at the
-`implementation <../../Installation/ocanren/camlp5/pa_ocanren.ml>`__ of
-the ``ocanren{}`` quotation which we will call *the formula parser* in
-the rest of this lesson. Our terminology follows `Camlp5 Reference
-Manual <https://camlp5.github.io/doc/htmlc/>`__. We take a top-down
-approach, starting with an overview of the structure of the parser, then
-explain its individual parts.
+others, precedence and associativity of the logic connectives. It is an
+OCanren-specific syntax extension which is described
+:ref:`let-ocanren`
 
-The structure of the parser: an overview
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-We describe the formula parser as the reader (a Camlp5 novice) sees it,
-and then putting it in perspective, briefly explain how it works.
-
-What we see
-^^^^^^^^^^^
-
-The first line loads the Camlp5 syntax extension kit ``pa_extend.cmo``
-where ``pa_`` in the name stands for “parser”, and ``extend`` refers to
-the syntactic category named “extend”, so that the name “pa_extend”
-means “parser for the ‘extend’ syntactic category.”:
-
-.. code:: ocaml
-
-   #load "pa_extend.cmo";;
-
-Loading the kit amounts to extending the OCaml syntactic category
-`expression <https://ocaml.org/releases/4.11/htmlman/expr.html>`__ with
-several sub-categories one of which is named *extend*:
-
-.. code:: ebnf
-
-   expr = ... | extend ;
-   extend = "EXTEND", extend-body, "END" ;
-
-An expression that belongs to the category “extend” would be called an
-*EXTEND statement*.
-
-Our formula parser has only
-`one <../../Installation/ocanren/camlp5/pa_ocanren.ml#L168>`__ EXTEND
-statement, whose extend-body starts with a `global
-indicator <../../Installation/ocanren/camlp5/pa_ocanren.ml#L169>`__
-followed by a semicolon separated list of *entries* (whose names are,
-exhaustively,
-```long_ident`` <../../Installation/ocanren/camlp5/pa_ocanren.ml#L171>`__,
-```expr`` <../../Installation/ocanren/camlp5/pa_ocanren.ml#L186>`__,
-```ocanren_embedding`` <../../Installation/ocanren/camlp5/pa_ocanren.ml#L222>`__,
-```ocanren_expr`` <../../Installation/ocanren/camlp5/pa_ocanren.ml#L226>`__,
-```ocanren_term`` <../../Installation/ocanren/camlp5/pa_ocanren.ml#L255>`__,
-```ocanren_term'`` <../../Installation/ocanren/camlp5/pa_ocanren.ml#L259>`__
-and
-```ctyp`` <../../Installation/ocanren/camlp5/pa_ocanren.ml#L290>`__). An
-*entry* is a (vertical bar separated) list of *levels* (with a pair of
-enclosing square brackets); a *level* is a (vertical bar separated) list
-of *rules* (with a pair of enclosing square brackets); a (non-empty)
-*rule* is a (semicolon separated) list of “psymbols” (collectively
-acting as a pattern) followed by an optional semantic action that
-produces an abstract syntax tree (or AST, of any string that matches the
-pattern specified by the list of psymbols). The details on the syntax
-and semantics of the “extend” category can be found in the `Extensible
-Grammars <https://camlp5.github.io/doc/htmlc/grammars.html#a:Syntax-of-the-EXTEND-statement>`__
-section of the Camlp5 Manual.
-
-Besides the EXTEND statement our formula parser has some auxiliary
-functions such as
-```decapitalize`` <../../Installation/ocanren/camlp5/pa_ocanren.ml#L46>`__,
-```ctor`` <../../Installation/ocanren/camlp5/pa_ocanren.ml#L49>`__ and
-```fix_term`` <../../Installation/ocanren/camlp5/pa_ocanren.ml#L61>`__
-etc.
-
-How it works
-^^^^^^^^^^^^
-
-The syntax extension kit ``pa_extend.cmo`` is fundamental for the
-cascade of extensions described below. The entries ``expr`` and ``ctyp``
-origin from the module Pcaml that is the core of Camlp5 and is
-`opened <../../Installation/ocanren/camlp5/pa_ocanren.ml#L37>`__ by the
-formula parser. Pcaml initializes the (empty) grammar entries ``expr``
-and ``ctyp``. The standard OCaml parsing kit of Camlp5 then defines them
-by means of an EXTEND statement and accordng to the standard syntax of
-OCaml. Our EXTEND statement further extends these global entries with
-locally defined entries — entries other than ``expr`` and ``ctyp`` in
-our EXTEND statement are locally defined, such as ``ocanren_embedding``,
-``ocanren_expr`` and ``ocanren_term`` etc. The following table
-summarizes the stages of extension, providing links to copies of
-relevant files from either OCanren source or Camlp5 source, together
-with their documentations.
-
-+------------------------+---------+----------------------------------+
-| Stages of Extension    | Happens | Documentation                    |
-|                        | in file |                                  |
-+========================+=========+==================================+
-| Stage 1.               | `       | `The Pcaml                       |
-| Initialization         | Pcaml < | module <https://camlp5.gi        |
-|                        | camlp5_ | thub.io/doc/htmlc/pcaml.html>`__ |
-|                        | src_ref |                                  |
-|                        | /pcaml. |                                  |
-|                        | ml>`__: |                                  |
-|                        | `       |                                  |
-|                        | ``expr` |                                  |
-|                        | ` <caml |                                  |
-|                        | p5_src_ |                                  |
-|                        | ref/pca |                                  |
-|                        | ml.ml#L |                                  |
-|                        | 53>`__, |                                  |
-|                        | ```ctyp |                                  |
-|                        | `` <cam |                                  |
-|                        | lp5_src |                                  |
-|                        | _ref/pc |                                  |
-|                        | aml.ml# |                                  |
-|                        | L56>`__ |                                  |
-+------------------------+---------+----------------------------------+
-| Stage 2. Parsing Kit   | `p      | `Commands and                    |
-| for Standard OCaml     | a_o.ml  | Files <https://camlp5.githu      |
-|                        | <camlp5 | b.io/doc/htmlc/commands.html>`__ |
-|                        | _src_re |                                  |
-|                        | f/pa_o. |                                  |
-|                        | ml>`__: |                                  |
-|                        | `       |                                  |
-|                        | ``expr` |                                  |
-|                        | ` <caml |                                  |
-|                        | p5_src_ |                                  |
-|                        | ref/pa_ |                                  |
-|                        | o.ml#L5 |                                  |
-|                        | 56>`__, |                                  |
-|                        | ```ctyp |                                  |
-|                        | `` <cam |                                  |
-|                        | lp5_src |                                  |
-|                        | _ref/pa |                                  |
-|                        | _o.ml#L |                                  |
-|                        | 950>`__ |                                  |
-+------------------------+---------+----------------------------------+
-| Stage 3. OCanren       | `pa_o   | This document                    |
-| Formula Parser         | canren. |                                  |
-|                        | ml <../ |                                  |
-|                        | ../Inst |                                  |
-|                        | allatio |                                  |
-|                        | n/ocanr |                                  |
-|                        | en/caml |                                  |
-|                        | p5/pa_o |                                  |
-|                        | canren. |                                  |
-|                        | ml>`__: |                                  |
-|                        | ```ex   |                                  |
-|                        | pr`` <. |                                  |
-|                        | ./../In |                                  |
-|                        | stallat |                                  |
-|                        | ion/oca |                                  |
-|                        | nren/ca |                                  |
-|                        | mlp5/pa |                                  |
-|                        | _ocanre |                                  |
-|                        | n.ml#L1 |                                  |
-|                        | 86>`__, |                                  |
-|                        | ```c    |                                  |
-|                        | typ`` < |                                  |
-|                        | ../../I |                                  |
-|                        | nstalla |                                  |
-|                        | tion/oc |                                  |
-|                        | anren/c |                                  |
-|                        | amlp5/p |                                  |
-|                        | a_ocanr |                                  |
-|                        | en.ml#L |                                  |
-|                        | 290>`__ |                                  |
-+------------------------+---------+----------------------------------+
-
-As a preprocessing tool, Camlp5 defines its own parser ``pa_o.ml`` for
-standard OCaml, so that any standard OCaml code can be converted by it
-into an AST recongnizable by the `OCaml
-compiler <https://ocaml.org/releases/4.11/htmlman/comp.html>`__. Is
-``pa_o.ml`` a redundant piece of work for we can just use the OCaml
-compiler to build the AST ? Not exactly, because besides ``pa_o.ml``,
-Camlp5 also provides EXTEND statments so that syntactic categories
-defined in ``pa_o.ml`` can be extended. The result is that using the
-combination of ``pa_ocanren.ml`` and ``pa_o.ml`` we can convert code
-that is not wholly in OCaml into a purely OCaml AST.
-
-Conclusion
-^^^^^^^^^^
-
-The OCanren formula parser has the EXTEND statement as its core, which
-consists of a list of entries, notably the global entries ``expr``\ and
-``ctyp`` that extend the corresponding predefined entries that conform
-to standard OCaml. Such extension is characterized by the locally
-defined entries such as ``ocanren_embedding``.
-
-We will next focus on the extension of ``expr`` and leave ``ctyp``
-`aside <./ctyp>`__. As far as the semantics is concerned entries are
-parsers for syntactic categories. From now on we use the words “entry”
-and “parser” interchangeably.
-
-The global entry: ``expr``
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This is the major entry of the OCanren formula parser, which starts
-like:
-
-.. code:: ocaml
-
-   expr: LEVEL "expr1" [ ...
-
-where we see the entry name *expr* and the position ``LEVEL "expr1"``.
-We now use OCanren-``expr`` to refer to the ``expr`` entry in the
-OCanren formula parser, and OCaml-``expr`` to refer to the predefined
-entry ``expr`` in the Camlp5 parsing kit for standard OCaml.
-OCanren-``expr`` extends OCaml-``expr`` in the position
-``LEVEL "expr1"``: the first level of the OCanren-``expr`` is merged
-with the `level named “expr1” <camlp5_src_ref/pa_o.ml#L563>`__ of the
-OCaml-``expr``, i.e., their rules are put together and grouped as a
-single level named “expr1”; other levels from OCanren-``expr`` are
-inserted into OCaml-``expr`` as new levels, right below the extended
-“expr1” level. There are three levels in the OCanren-``expr``, the third
-of which is:
-
-.. code:: ocaml
-
-   [ e=ocanren_embedding -> e ]
-
-This third level of OCanren-``expr`` is inserted as a new level in
-OCaml-``expr``, and the entry ``ocanren_embedding`` directly corresponds
-to the ``ocanren{}`` quotations we see in the library implementation, so
-that we can mix ``ocanren{}`` quotations with standard OCaml
-expressions, and Camlp5 will take care to convert such mixture into
-standard OCaml AST. We now explain the local entry
-``ocanren_embedding``.
-
-Local entries I: ``ocanren_embedding`` and ``ocanren_expr``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The entry ``ocanren_embedding`` directly corresponds to the
-``ocanren{}`` quotations we see in the library implementation, and it
-further calls the entry ``ocanren_expr`` to parse the content between
-the braces:
-
-.. code:: ocaml
-
-   ocanren_embedding: [[ "ocanren"; "{"; e=ocanren_expr; "}" -> e ]];
-
-The ``ocanren_expr`` entry has four levels which strongly reminds us of
-the recursive definition of a formula, i.e, a formula is either atomic,
-or a conjunction/ disjunction of two formulae, or an existential
-quantification over a formula, or an explicitly delimited formula (with
-braces). - The `first
-level <../../Installation/ocanren/camlp5/pa_ocanren.ml#L227>`__ parses a
-disjunction:
-``ocaml     "top" RIGHTA [ l=SELF; "|"; r=SELF -> <:expr< OCanren.disj $l$ $r$ >> ]``
-- The `second
-level <../../Installation/ocanren/camlp5/pa_ocanren.ml#L228>`__ parses a
-conjunction:
-``ocaml    RIGHTA [ l=SELF; "&"; r=SELF -> <:expr< OCanren.conj $l$ $r$ >> ]``
-- The `third
-level <../../Installation/ocanren/camlp5/pa_ocanren.ml#L229>`__ parses a
-fresh variable introduction (i.e., existential quantification):
-``ocaml    [ "fresh"; vars=LIST1 LIDENT SEP ","; "in"; b=ocanren_expr LEVEL "top" ->        List.fold_right          (fun x b -> let p = <:patt< $lid:x$ >> in <:expr< OCanren.call_fresh ( fun $p$ -> $b$ ) >>) vars b  ]``
-- The `fourth
-level <../../Installation/ocanren/camlp5/pa_ocanren.ml#L238>`__ parses
-atomic, named and grouped formulae (and else):
-``ocaml    "primary" [       | l=ocanren_term; "==" ; r=ocanren_term         -> <:expr< OCanren.unify $l$ $r$ >>       | l=ocanren_term; "=/="; r=ocanren_term         -> <:expr< OCanren.diseq $l$ $r$ >>       | x=ocanren_term                                -> x       | "{"; e=ocanren_expr; "}"                      -> e       (* other rules omitted *)  ]``
-
-The order of the levels determines the precedence of the logic
-connectives: the parser first sees if the formula is a disjunction at
-the top level, if not, sees if it is conjunction, and so on, implying
-that disjunction has the least precedence, above which is conjunction,
-then existential quantification, and finally syntactic equality,
-disequality and braced groups (among others) enjoy the highest
-precedence. We can justly call a level: a “precedence level”.
-
-The first and second level also have the associativity indicator
-``RIGHTA``, requiring that the conjunction and disjunction connectives
-associate to the right.
-
-The third level refers back to the first level (named “top”) when
-parsing the ``<body>`` part of a formula of the form
-``fresh <vars> in <body>``, implying that the scope of ``fresh`` extends
-to the right as far as possible.
-
-Quotations and antiquotations
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-In every rule above we could see at least one
-`quotation <https://camlp5.github.io/doc/htmlc/quot.html>`__:
-
-.. code:: ebnf
-
-   quotation = "<:", quotation name, "<", quotation body, ">>"
-
-Within a quotation body we may see an
-`antiquotation <https://camlp5.github.io/doc/htmlc/quot.html#a:Antiquotations>`__:
-
-.. code:: ebnf
-
-   antiquotation = "$", antiquotation body, "$"
-
-If antiquotations are not allowed, then a quotation body is any
-expression in the `revised
-syntax <https://camlp5.github.io/doc/htmlc/revsynt.html>`__ of OCaml. At
-parse time a quotation is expanded by the
-(`loaded <../../Installation/ocanren/camlp5/pa_ocanren.ml#L35>`__ and
-`predefined <https://camlp5.github.io/doc/htmlc/ast_strict.html#a:Nodes-and-Quotations>`__)
-quotation expander ``q_MLast.cmo`` into an AST of the quotation body. An
-antiquotaion body is usually a pattern variable bound to some other AST
-which is inserted into the the quotation body’s AST.
-
-Local entries II: ``ocanren_term`` and ``ocanren_term'``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The values that we write in an ``ocanren{}`` quotation, such as
-``"this is a string"``, ``'c'`` (a single character), ``true`` (a
-boolean value), ``S (S O)`` (a constructor application), ``(O, S O)`` (a
-tuple), ``15`` (an integer), ``[1;2;3]`` (a list) and ``false :: []``
-(amending a list) etc., are converted into the injected level from the
-ground level where they seem to be. For example, the occurrence of
-``S (S O)`` in the expression below is transformed into
-``s (s (o ()))``:
-
-.. code:: ocaml
-
-   ocanren { fresh x in S (S O) == x }
-
-Such conversion bridges the gap between the programmer’s intuition of
-writing OCaml values and OCanren’s internal representation of the same
-values, Inspecting the entries ``ocanren_term``, ``ocanren_term'`` and
-their auxiliary functions help us know precisely how the conversion is
-performed.
-
-Below is the definition of the entry ``ocanren_term``:
-
-.. code:: ocaml
-
-   ocanren_term: [[ t=ocanren_term' -> fix_term t ]];
-
-where the ``ocanren_term'`` parser is called immediately to process
-expressions like ``S (S O)`` and the intermediate result (an AST) is
-bound to the pattern variable ``t`` and then passed to the auxiliary
-function ``fix_term``. The AST returned by ``fix_term`` is returned by
-the parser ``ocanren_term``.
-
-The ``ocanren_term'`` parser has four levels, namely: 1.
-`“app” <../../Installation/ocanren/camlp5/pa_ocanren.ml#L260>`__, for
-applications.
-``ocaml    "app"  LEFTA  [ l=SELF; r=SELF -> <:expr< $l$ $r$ >> ]``
-Applications are treated as being left associative as indicated by
-``LEFTA``. This level not yet converts constructor applications into
-injection function applications. Instead it simply builds the AST of the
-application in a straightforward manner, not distinguishing a
-constructor application from a function application. 1.
-`“list” <../../Installation/ocanren/camlp5/pa_ocanren.ml#L261>`__ , for
-non-empty lists with ``::`` as the top level constructor.
-``ocaml    "list" RIGHTA [ l=SELF; "::"; r=SELF -> <:expr< OCanren.Std.List.cons $l$ $r$ >> ]``
-The constructor ``::`` is replaced by the OCanren standard library
-function ```cons`` <../../Installation/ocanren/src/std/LList.mli#L47>`__
-which is the injection function for the constructor
-```OCanren.Std.List.Cons`` <../../Installation/ocanren/src/std/LList.mli#L27>`__.
-1. `“primary” <../../Installation/ocanren/camlp5/pa_ocanren.ml#L262>`__,
-which has rules for: -
-`anti-quotations <../../Installation/ocanren/camlp5/pa_ocanren.ml#L262>`__
-``ocaml      "!"; "("; e=expr; ")" -> e`` So that the ``ocanren{}``
-quotation would take any ``<value>`` from ``!(<value>)`` as is without
-further processing. In other words, the ``<value>`` will be parsed using
-the entry ``expr``. -
-`integers <../../Installation/ocanren/camlp5/pa_ocanren.ml#L263>`__
-``ocaml      c=INT -> let n = <:expr< $int:c$ >> in <:expr< OCanren.Std.nat $n$ >>``
-Thus, occurrences of integers like ``15`` within the ``ocanren{}``
-quotation would be converted to values of the Peano number type that is
-provided by the OCanren standard library
-`OCanren.Std.Nat <../../Installation/ocanren/src/std/LNat.mli>`__. -
-`characters <../../Installation/ocanren/camlp5/pa_ocanren.ml#L266>`__
-and `strings <../../Installation/ocanren/camlp5/pa_ocanren.ml#L269>`__
-``ocaml        c=CHAR   -> let s = <:expr< $chr:c$ >> in <:expr< OCanren.inj (OCanren.lift $s$) >>      | s=STRING -> let s = <:expr< $str:s$ >> in <:expr< OCanren.inj (OCanren.lift $s$) >>``
-Characters and strings are injected using the primary injection function
-``!!`` (see its
-`signature <../../Installation/ocanren/src/core/Logic.mli#L57>`__ and
-`implementation <../../Installation/ocanren/src/core/Logic.ml#L65>`__).
-- `booleans <../../Installation/ocanren/camlp5/pa_ocanren.ml#L272>`__
-``ocaml        "true"   -> <:expr< OCanren.Std.Bool.truo >>      | "false"  -> <:expr< OCanren.Std.Bool.falso >>``
-Boolean values are converted into the corresponding injected values from
-the OCanren standard library
-`LBool <../../Installation/ocanren/src/std/LBool.mli#L45>`__. - `lists
-delimited by ``[]`` and
-``;`` <../../Installation/ocanren/camlp5/pa_ocanren.ml#L274>`__
-``ocaml      "["; ts=LIST0 ocanren_term' SEP ";"; "]" ->       ( match ts with       | [] -> <:expr< OCanren.Std.nil () >>       | _  -> List.fold_right (fun x l -> <:expr< OCanren.Std.List.cons $x$ $l$ >> )                               ts <:expr< OCanren.Std.nil () >> )``
-The entry ``ocanren_term'`` is recursively called to process the list
-members and the injection functions for list constructors are applied. -
-`operators <../../Installation/ocanren/camlp5/pa_ocanren.ml#L279>`__
-(which are not qualified)
-``ocaml       "("; op=operator_rparen -> <:expr< $lid:op$ >>`` Operators
-are specified by the auxiliary function
-```is_operator`` <../../Installation/ocanren/camlp5/pa_ocanren.ml#L92>`__
-and extracted by another auxiliary function
-```operator_rparen`` <../../Installation/ocanren/camlp5/pa_ocanren.ml#L104>`__
-(the name of which reads “operator right parenthesis”). - (possibly
-empty) `tuples <../../Installation/ocanren/camlp5/pa_ocanren.ml#L280>`__
-``ocaml      "("; ts=LIST0 ocanren_term' SEP ","; ")" ->       (match ts with        | []  -> <:expr< OCanren.inj (OCanren.lift ()) >>        | [t] -> t        | _   -> <:expr< ( $list:ts$ ) >> )``
-There is a recursive call of the entry itself to process members of the
-tuple, and then the AST of the tuple is built. 1. The level for long
-identifiers. ``ocaml    [ long_ident ]`` This level calls the entry
-```long_ident`` <../../Installation/ocanren/camlp5/pa_ocanren.ml#L171>`__
-to build AST’s of (possibly qualified) upper / lower case identifiers
-and operators which are taken as is.
-
-Therefore, given ``S (S O)`` the ``ocanren_term'`` parser would return a
-straightforward translation into an AST. The interesting thing is done
-by ``fix_term`` and its helper ``ctor`` (read “C-tour”). The latter
-tests the input: if it is a (possibly qualified) uppercase identifier
-then sets the initial letter to lowercase and wraps the whole thing by
-``Some``, e.g., ``Mod1.Mod2.ABC`` becomes (roughly)
-``Some Mod1.Mod2.aBC``; if the input is not a (qualified) uppercase
-identifier then returns ``None``:
-
-.. code:: ocaml
-
-   let rec ctor e =
-     let loc = MLast.loc_of_expr e in
-     match e with
-     | <:expr< $uid:u$ >>   -> Some (<:expr< $lid:decapitalize u$ >>)
-     | <:expr< $m$ . $e$ >> -> (match ctor e with Some e -> Some (<:expr< $m$ . $e$ >>) | _ -> None)
-     | _                    -> None
-
-The
-```fix_term`` <../../Installation/ocanren/camlp5/pa_ocanren.ml#L61>`__
-function then recurses down the structure of applications to
-systematically replace uppercase identifiers with lowercase identifiers
-produced by ``ctor``. After a constant constructor is changed to
-lowercase, it is provided with the unit value ``()`` as the argument,
-e.g., ``O`` becomes ``o ()``. A non-constant constructor is not only set
-to lowercase, but also has its argument list transformed, e.g.,
-``Cons(a,b)`` becomes (roughly) ``cons a b``. Tuples are also replaced
-by their OCanren standard library counterpart — `logic
-tuples <../../Installation/ocanren/src/std/LPair.mli>`__.
-
-These lowercase identifiers converted from constructors are supposed to
-be injection functions, which must be defined by the programmer
-somewhere in the program, otherwise there would be some compile-time
-error like “unbound identifier”. This explains why the injection
-function names are always differ from the corresponding constructor
-names by one letter: the initial letter.
 
 Building a Library
 ------------------

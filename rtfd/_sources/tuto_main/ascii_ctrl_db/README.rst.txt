@@ -240,7 +240,7 @@ of the declarational semantics.
 
   Yue Li, what you meant saying 'applying concatenation'?
 
-**Example.** Given as input the empty substitution ``[]``:
+**Example.** Given as input the empty substitution ``[]`` :
 
 - The formula ``x == Cons(1, Nil)`` returns the stream that consists of the substitution ``[(x, Cons(1,Nil))]``.
 - The formula ``x == Cons(1, Nil) & y == Cons(2, x)`` returns the stream that consists of the substitution ``[ (x, Cons(1,Nil)); (y, Cons(2,x)) ]``.
@@ -280,14 +280,6 @@ member :math:`m_k` of the stream, resulting in streams :math:`s_k`, and then zip
             =& s_1\ zip\ (s_2\ zip (s_3\ zip (…)))
           \end{eqnarray*}
 
-..      .. math::
-..         :nowrap:
-..
-..         \begin{eqnarray}
-..            y    & = & ax^2 + bx + c \\
-..            f(x) & = & x^2 + 2xy + y^2
-..         \end{eqnarray}
-
 **Example.** Let F be a stream builder that works like this: :math:`F\  n = n,n,n,…` Then:
 
         .. math::
@@ -321,7 +313,7 @@ The @type syntax
 
 In OCanren, type constructors are often defined by :
 
-.. code:: ebnf
+.. code::
 
    type definition = '@type', typedef, 'with', plugins
 
