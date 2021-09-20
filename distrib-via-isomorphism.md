@@ -1,0 +1,39 @@
+### Using isomorphic types to declare distribs
+
+The input. We have a fully abstract type with arbitrary number of type parameters and want to generate distribs for it.
+The problem. We have `FmapN` only for finite arity
+
+
+##### Observation 1: It doesn't matter how many arguments our fully abstract type has
+
+For every constructor `C1 of 'a1 * ... * 'an` we can abstract the tuple away by replacing it with a single type parameter `C1 of 'b1` where `'b1` will be substituted to `'a1 * ... * 'an`.
+
+**Downside** The representation of values will use more memory because not having tupled constructors' arguments save a word. We should probably ignore this issue.
+
+**Remark**. Having too many constructor arguments is not a problem, we still are able to express it as finite `FmapN`. For example, if constructor has 36 arguments we can replace it by 6-tuple, whose every component will be a 6-tuple.
+
+
+##### (Key) Observation 2: Representing types as sums
+
+For every type with n single-argumented constructors we can write it's equivalent using (n-1) applications of either-like type. We will call it `repr`-type (representation), and this representation will be isomorphic to original type
+
+```ocaml
+type ('a, 'b, 'c) t = A of 'a | B of 'b | C of 'c
+type ('a,'b) either = Left of 'a | Right of 'b
+type ('a, 'b, 'c) repr = ('a, ('b, 'c) either) either
+
+(* both total functions *)
+val t_of_repr : ('a, 'b, 'c) repr -> ('a, 'b, 'c) t
+val repr_of_t : ('a, 'b, 'c) t -> ('a, 'b, 'c) repr
+
+let a x = left x
+let b x = right (left x)
+let c x = right (right x)
+```
+
+**Downside** Unifing the isomorphic representation will be slower because of explicit tagging introduced by constructors `Left` and `Right`.
+
+
+#### Issues
+
+The injected type currently is `('a, 'b) injected` which has `'a` for an original ground type and `'b` for an original logic type. There is no place for representation here. We should add a few type parameters to `injected` type to store there both representation and orignal type.
