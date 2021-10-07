@@ -360,10 +360,10 @@ let only_head g st =
   with Failure _ -> Stream.nil
 
 module FD = struct
-  let lt a b st =
+  (* let lt a b st =
     match FM.lt a b (State.fds st) with
     | None -> failure ()
-    | Some fd -> success {st with State.fd = fd }
+    | Some fd -> success {st with State.fd = fd } *)
 
   let eq a b st =
     match FM.eq a b (State.fds st) with

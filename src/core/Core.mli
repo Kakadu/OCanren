@@ -393,7 +393,7 @@ end
 
 
 module FD : sig
-  val lt : (int, int logic) injected -> (int, int logic) injected -> goal
+  (* val lt : (int, int logic) injected -> (int, int logic) injected -> goal *)
   val eq : (int, int logic) injected -> (int, int logic) injected -> goal
   val neq : (int, int logic) injected -> (int, int logic) injected -> goal
   val domain  : (int, int logic) injected -> int list -> goal
