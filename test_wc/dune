@@ -1,5 +1,5 @@
-(executable
- (name main)
+(executables
+ (names main unique)
  (preprocess
   (pps
    OCanren-ppx.ppx_wildcard
@@ -9,4 +9,4 @@
  (libraries OCanren OCanren.tester))
 
 (cram
- (deps ./main.exe))
+ (deps ./main.exe ./unique.exe))

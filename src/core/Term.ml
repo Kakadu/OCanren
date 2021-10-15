@@ -193,38 +193,34 @@ let rec iter ~fvar ~fval x =
 ;;
 
 let rec show x =
-  if Obj.is_block x
+  (* if Obj.is_block x
+  then ( *)
+  let tx = Obj.tag x in
+  if is_box tx
   then (
-    let tx = Obj.tag x in
-    if is_box tx
+    let sx = Obj.size x in
+    if has_var_structure tx sx x
     then (
-      let sx = Obj.size x in
-      if has_var_structure tx sx x
-      then (
-        let v = Obj.magic x in
-        match v.Var.constraints with
-        | [] -> Printf.sprintf "_.%d" v.Var.index
-        | cs ->
-          Printf.sprintf
-            "_.%d{=/= %s}"
-            v.Var.index
-            (String.concat "; " @@ List.map show cs))
-      else (
-        let rec inner i =
-          if i < sx then (show @@ Obj.field x i) :: inner (i + 1) else []
-        in
-        Printf.sprintf "boxed %d <%s>" tx (String.concat ", " @@ inner 0)))
+      let v = Obj.magic x in
+      match v.Var.constraints with
+      | [] -> Printf.sprintf "_.%d" v.Var.index
+      | cs ->
+        Printf.sprintf "_.%d{=/= %s}" v.Var.index (String.concat "; " @@ List.map show cs))
     else (
-      is_valid_tag_exn tx;
-      if tx = Obj.int_tag
-      then Printf.sprintf "int<%d>" @@ Obj.magic x
-      else if tx = Obj.string_tag
-      then Printf.sprintf "string<%s>" @@ Obj.magic x
-      else if tx = Obj.double_tag
-      then Printf.sprintf "double<%e>" @@ Obj.magic x
-      else assert false))
-  else string_of_int (Obj.magic x)
+      let rec inner i = if i < sx then (show @@ Obj.field x i) :: inner (i + 1) else [] in
+      Printf.sprintf "boxed %d <%s>" tx (String.concat ", " @@ inner 0)))
+  else (
+    is_valid_tag_exn tx;
+    if tx = Obj.int_tag
+    then Printf.sprintf "int<%d>" @@ Obj.magic x
+    else if tx = Obj.string_tag
+    then Printf.sprintf "string<%s>" @@ Obj.magic x
+    else if tx = Obj.double_tag
+    then Printf.sprintf "double<%e>" @@ Obj.magic x
+    else assert false)
 ;;
+
+(* ) else string_of_int (Obj.magic x) *)
 
 let rec fold ~fvar ~fval ~init x =
   let tx = Obj.tag x in

@@ -402,4 +402,18 @@ module FD : sig
 end
 
 val unif_hack: ('a, 'b) injected as 'v -> 'v -> (bool, bool logic) injected -> goal
-val unique_answers: goal -> (int , int logic) injected ->  (int option, int logic option logic) injected -> goal
+
+module Unique : sig
+  @type 'a t = NoAnswer | Unique of 'a | DifferentAnswers with show
+  @type 'a ground = 'a t with show
+  @type 'a logic = 'a t Logic.logic with show
+
+  type nonrec ('a, 'b) injected = ('a t, 'b t Logic.logic) Logic.injected
+
+  val reify : (Env.t -> ('a, 'b) Logic.injected -> 'b) -> Env.t -> ('a, 'b) injected -> 'b logic
+
+  val unique : ('a, 'b) Logic.injected -> ('a, 'b) injected
+  val noanswer : ('a, 'b) injected
+
+  val unique_answers: (('a, 'b) Logic.injected -> goal) -> ('a, 'b) injected -> goal
+end

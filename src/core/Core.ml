@@ -772,9 +772,12 @@ let unif_hack x y rez st =
   match xs with
   | [] -> sin *)
 
-let rec my_to_string t =
+(* let rec my_to_string t =
   if Obj.is_int t then string_of_int (!!!t)
-  else if Term.is_var t then "var"
+  else if Term.is_var t
+  then
+    let v : Term.Var.t = Obj.magic t in
+    Format.sprintf "(var %d)" v.Term.Var.index
   else
     let b = Buffer.create 10 in
     let () = Printf.bprintf b "Block<%d, " (Obj.tag t)  in
@@ -783,18 +786,42 @@ let rec my_to_string t =
          Printf.bprintf b " %s" (my_to_string @@ Obj.field t i)
       done in
     let () = Printf.bprintf b ">" in
-    Buffer.contents b
+    Buffer.contents b *)
+
+module Unique = struct
+  @type 'a t = NoAnswer | Unique of 'a | DifferentAnswers with show
+  @type 'a ground = 'a t with show
+  @type 'a logic = 'a t Logic.logic with show
+
+  type nonrec ('a,'b) injected = ('a ground, 'b t Logic.logic) Logic.injected
+
+  module F = Logic.Fmap(struct
+    type nonrec 'a t = 'a t
+    let fmap f = function Unique x -> Unique (f x) | NoAnswer -> NoAnswer | DifferentAnswers -> DifferentAnswers
+  end)
+
+  let reify = F.reify
+  let unique x = inj @@ F.distrib (Unique x)
+  let noanswer = Obj.magic (inj @@ F.distrib NoAnswer)
 
 
-let unique_answers g v  (rez: (int option, int logic option logic) injected) = fun st ->
-  let stream = g st in
-  if Stream.is_empty stream
-  then (===) rez (Obj.magic None) st
-  else
-    let xs = Stream.take stream |> List.map (fun subst -> State.reify v st) in
-    let first = List.hd xs in
-    if Stdlib.List.for_all (fun el -> el = first ) xs
-    then (===) rez (Obj.magic (Some first)) st
+  let unique_answers g (rez: (_, _) injected) = fun st ->
+    let v = State.fresh st in
+    let stream = g (Obj.magic v) st in
+    if Stream.is_empty stream
+    then (===) rez (Obj.magic NoAnswer) st
     else
-      let () = List.iter (fun x -> Format.printf "%s\n%!" (my_to_string !!!x)) xs in
-       assert false
+      let xs = Stream.take stream
+        |> List.map (fun st0 -> Subst.reify (State.env st0) (State.subst st0) v)
+      in
+      let first = List.hd xs in
+      if Stdlib.List.for_all (fun el ->
+        (* let __ _ = Format.printf "  el = '%s'\n%!" (my_to_string el) in *)
+        el = first ) xs
+      then
+        (* let __ _ = Format.printf "first = '%s'\n%!" (my_to_string first) in *)
+        (===) rez (Obj.magic (Unique first)) st
+      else
+        (* let __ _ = List.iter (fun x -> Format.printf "%s\n%!" (my_to_string !!!x)) xs in *)
+        (===) rez (Obj.magic DifferentAnswers) st
+end

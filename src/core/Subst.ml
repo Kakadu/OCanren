@@ -248,5 +248,12 @@ module Answer =
 
 let reify env subst x =
   map env subst (Term.repr x)
-    ~fvar:(fun v -> Term.repr v)
+    ~fvar:(fun v ->
+      match v.Term.Var.subst with
+      | None -> Term.repr v
+      | Some x ->
+        Printf.printf "%s %d\n%!" __FILE__ __LINE__;
+        Term.repr x
+
+    )
     ~fval:(fun x -> Term.repr x)

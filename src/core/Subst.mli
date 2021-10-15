@@ -83,6 +83,8 @@ module Answer :
 
 val reify : Env.t -> t -> 'a -> Answer.t
 
+(* val walk: Env.t -> t -> 'a -> 'a *)
+
 IFDEF STATS THEN
 (** Walk counter *)
 val walk_counter : unit -> int
