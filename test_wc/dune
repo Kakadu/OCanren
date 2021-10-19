@@ -1,5 +1,5 @@
 (executables
- (names main unique)
+ (names main unique debug_var)
  (preprocess
   (pps
    OCanren-ppx.ppx_wildcard
@@ -9,4 +9,4 @@
  (libraries OCanren OCanren.tester))
 
 (cram
- (deps ./main.exe ./unique.exe))
+ (deps ./main.exe ./unique.exe ./debug_var.exe))
