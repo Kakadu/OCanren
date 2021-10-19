@@ -414,6 +414,7 @@ module Unique : sig
 
   val unique : ('a, 'b) Logic.injected -> ('a, 'b) injected
   val noanswer : ('a, 'b) injected
+  val different : ('a, 'b) injected
 
   val unique_answers: (('a, 'b) Logic.injected -> goal) -> ('a, 'b) injected -> goal
 end

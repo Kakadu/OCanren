@@ -803,6 +803,7 @@ module Unique = struct
   let reify = F.reify
   let unique x = inj @@ F.distrib (Unique x)
   let noanswer = Obj.magic (inj @@ F.distrib NoAnswer)
+  let different = Obj.magic (inj @@ F.distrib DifferentAnswers)
 
 
   let unique_answers g (rez: (_, _) injected) = fun st ->
