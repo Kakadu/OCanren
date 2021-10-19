@@ -257,9 +257,21 @@ module MYZ3 = struct
 
   let mk solver vars sorts = { solver; vars; sorts }
 
-  let check { solver } =
+  let check { vars; solver } =
     match Z3.Solver.check solver [] with
-    | Z3.Solver.SATISFIABLE -> true
+    | Z3.Solver.SATISFIABLE ->
+      (match Z3.Solver.get_model solver with
+      | None -> true
+      | Some m ->
+        IntMap.iter
+          (fun k (ve, _) ->
+            Format.printf
+              "%s -> %s "
+              (Z3.Expr.to_string ve)
+              (Z3.Model.eval m ve false |> Stdlib.Option.get |> Z3.Expr.to_string))
+          vars;
+        Format.printf "\n %!";
+        true)
     | Z3.Solver.UNSATISFIABLE -> false
     | Z3.Solver.UNKNOWN -> assert false
   ;;
@@ -289,7 +301,7 @@ module MYZ3 = struct
   ;;
 
   let extend ({ solver; vars; sorts } as s) ph0 =
-    (* Format.printf "extending by %a\n%!" (GT.fmt phormula0) ph0; *)
+    Format.printf "extending by %a\n%!" (GT.fmt phormula0) ph0;
     let makef = function
       | EQ -> Boolean.mk_eq
       (* | LT -> Arithmetic.mk_lt *)
