@@ -415,7 +415,7 @@ let conj f g st =
 
 let debug_var v reifier call = fun st ->
   let xs = List.map (fun answ ->
-    reifier (Obj.magic @@ Answer.ctr_term answ) (Answer.env answ)
+    reifier (Answer.env answ) (Obj.magic @@ Answer.ctr_term answ)
     ) (State.reify v st)
   in
   call xs st

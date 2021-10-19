@@ -15,17 +15,15 @@ let all_give_same_answer_or_fail (ans : (int, int logic) OCanren.injected)
   assert (gs <> []);
   helper gs
 
-let flip f x env = f env x
-
 let lino f c =
-  debug_var !!1 (flip OCanren.reify) (function
+  debug_var !!1 OCanren.reify (function
     | [Value 1] ->
         Format.printf "%s %d\n%!" f c;
         success
     | _ -> assert false )
 
 let debug_int n =
-  debug_var n (flip OCanren.reify) (function
+  debug_var n OCanren.reify (function
     | [Value n] -> Format.printf "%d\n%!" n; success
     | [Var (n, [])] -> Format.printf "_.%d\n%!" n; success
     | _ -> assert false )
