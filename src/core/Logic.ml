@@ -221,3 +221,20 @@ module Fmap6 (T : T6) = struct
     | Some v -> let i, cs = Term.Var.reify (prjc r1 r2 r3 r4 r5 r6 of_int env) v in of_int i cs
     | None   -> T.fmap (r1 env) (r2 env) (r3 env) (r4 env) (r5 env) (r6 env) x
 end
+
+module ILogic = struct
+  type _ ilogic = Obj.t
+
+  external inj : 'a -> 'a ilogic = "%identity"
+
+  module Env = struct
+    type 'a t = Env.t -> 'a
+
+    let return a _ = a
+
+    let fmap f r env = f (r env)
+
+    let bind r k env = k (r env) env
+  end
+
+end

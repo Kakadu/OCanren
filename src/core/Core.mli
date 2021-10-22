@@ -390,3 +390,60 @@ module PrunesControl : sig
   val is_exceeded: unit -> bool
   val skipped_prunes : unit -> int
 end
+
+module Moiseenko : sig
+  open ILogic
+
+  module State : sig
+    (* `'a State.t` --- essentially a coreader comonad, dual to '`a Env.t` *)
+    type 'a t
+
+    (* Usual comonadic stuff *)
+
+    val extract : 'a t -> 'a
+
+    val extend : 'a t -> ('a t -> 'b) -> 'b t
+
+    (* Interesting part --- we can `observe` implicit logic variable, dipped into our comonad *)
+    val observe : 'a ilogic t -> 'a logic
+  end
+
+  module Reifier : sig
+    (* Reifier from type `'a` into type `'b` is an `'a -> 'b` function
+     * dipped into the `Env.t` monad, will see how it plays later.
+     * Perhaps, it is possible to not expose the reifier type and make it itself
+     * a monad or something else that composes nicely, but I haven't figured out yet.
+     *)
+    type ('a, 'b) t = ('a -> 'b) ILogic.Env.t
+
+    (* Some predefined reifiers from which other reifiers will be composed *)
+
+    (* this one transforms implicit logic value into regular logic value *)
+    val reify : ('a ilogic, 'a logic) t
+
+    (* this one projects implicit logic into the underlying type,
+     * handling variables with the help of the user provided function
+     *)
+    val prj : (Term.Var.t -> 'a) -> ('a ilogic, 'a) t
+
+    (* this one projects implicit logic into the underlying type,
+     * raising an exception if it finds a variable
+     *)
+    val prj_exn : ('a ilogic, 'a) t
+
+    (* Interesting part --- we can apply a reifier to a value dipped into `State.t` comonad *)
+    val apply : ('a, 'b) t -> 'a State.t -> 'b
+
+    (* composition of two reifiers *)
+    val compose : ('a, 'b) t -> ('b, 'c) t -> ('a, 'c) t
+
+    (* Reifier is a profunctor, so we get combinators
+     * to compose reifiers with regular functions
+     *)
+
+    val fmap : ('b -> 'c) -> ('a, 'b) t -> ('a, 'c) t
+
+    val fcomap : ('a -> 'b) -> ('b, 'c) t -> ('a, 'c) t
+  end
+
+end

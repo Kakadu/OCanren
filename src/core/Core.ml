@@ -728,3 +728,46 @@ module Tabling =
       g := currier g_tabled;
       !g
   end
+
+module Moiseenko = struct
+  open Logic
+
+  let observe : Env.t -> 'a ILogic.ilogic -> 'a logic =
+   fun env t ->
+    match Term.var t with None -> Value (Obj.magic t) | Some v -> Var(v.Term.Var.index, [])
+
+  module State = struct
+    type 'a t = Env.t * 'a
+
+    let extract (_, a) = a
+
+    let extend (env, a) k = (env, k (env, a))
+
+    let observe (env, a) = observe env a
+  end
+
+  module Reifier = struct
+    type ('a, 'b) t = ('a -> 'b) ILogic.Env.t
+
+    let reify = observe
+
+    let prj k env t = match reify env t with Value x -> x | Var (v,_) -> k v
+
+    (* can be implemented more efficiently,
+     * without allocation of `'a logic`,
+     * but for demonstration purposes this implementation is okay
+     *)
+    let prj_exn env t =
+      match reify env t with
+      | Value x -> x
+      | Var (v, _) -> raise Not_a_value
+
+    let apply r (env, a) = r env a
+
+    let compose r r' env a = r' env (r env a)
+
+    let fmap f r env a = f (r env a)
+
+    let fcomap f r env a = r env (f a)
+  end
+end

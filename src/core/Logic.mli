@@ -19,7 +19,7 @@
 (** {3 Logic values} *)
 
 (** A type of a logic value *)
-@type 'a logic = private
+@type 'a logic =
 | Var   of GT.int * 'a logic GT.list
 | Value of 'a with show, gmap, html, eq, compare, foldl, foldr, fmt
 
@@ -205,3 +205,22 @@ module Fmap6 (T : T6) :
      Env.t -> ('r, ('b,'d,'f,'h,'j,'l) T.t logic) injected ->
      (('a,'c,'e,'g,'i,'k) T.t as 'r)
  end
+
+module ILogic : sig
+  type 'a ilogic
+  val inj : 'a -> 'a ilogic
+
+  module Env : sig
+    (* `'a Env.t` --- essentially a reader monad *)
+    type 'a t
+
+    (* Usual boring monadic stuff *)
+
+    val return : 'a -> 'a t
+
+    val fmap : ('a -> 'b) -> 'a t -> 'b t
+
+    val bind : 'a t -> ('a -> 'b t) -> 'b t
+  end
+
+end
