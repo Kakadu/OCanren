@@ -424,7 +424,7 @@ module Moiseenko : sig
     (* this one projects implicit logic into the underlying type,
      * handling variables with the help of the user provided function
      *)
-    val prj : (Term.Var.t -> 'a) -> ('a ilogic, 'a) t
+    val prj : (int -> 'a) -> ('a ilogic, 'a) t
 
     (* this one projects implicit logic into the underlying type,
      * raising an exception if it finds a variable
@@ -446,4 +446,7 @@ module Moiseenko : sig
     val fcomap : ('a -> 'b) -> ('b, 'c) t -> ('a, 'c) t
   end
 
+  val fresh : ('a ilogic -> 'b ILogic.Env.t) -> 'b ILogic.Env.t
+
+  val run : ('a ilogic -> 'b ilogic ILogic.Env.t) -> 'b ilogic State.t
 end

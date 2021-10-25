@@ -212,7 +212,7 @@ module ILogic : sig
 
   module Env : sig
     (* `'a Env.t` --- essentially a reader monad *)
-    type 'a t
+    type 'a t = Env.t -> 'a
 
     (* Usual boring monadic stuff *)
 

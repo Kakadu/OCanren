@@ -1,0 +1,17 @@
+(library
+ (name lib)
+ (modules lib)
+ (inline_tests)
+ (libraries OCanren OCanren.tester)
+ (preprocess
+  (pps OCanren-ppx.ppx_fresh OCanren-ppx.ppx_repr ppx_inline_test)))
+
+(executable
+ (name main)
+ (modules main)
+ (libraries OCanren OCanren.tester)
+ (preprocess
+  (pps OCanren-ppx.ppx_fresh OCanren-ppx.ppx_repr)))
+
+(cram
+ (deps ./main.exe))

@@ -732,9 +732,9 @@ module Tabling =
 module Moiseenko = struct
   open Logic
 
-  let observe : Env.t -> 'a ILogic.ilogic -> 'a logic =
-   fun env t ->
-    match Term.var t with None -> Value (Obj.magic t) | Some v -> Var(v.Term.Var.index, [])
+  let observe : ('a Logic.ILogic.ilogic -> 'a Logic.logic) ILogic.Env.t =
+    fun env t ->
+      match Term.var t with None -> Value (Obj.magic t) | Some v -> Var(v.Term.Var.index, [])
 
   module State = struct
     type 'a t = Env.t * 'a
@@ -749,9 +749,10 @@ module Moiseenko = struct
   module Reifier = struct
     type ('a, 'b) t = ('a -> 'b) ILogic.Env.t
 
+
     let reify = observe
 
-    let prj k env t = match reify env t with Value x -> x | Var (v,_) -> k v
+    let prj : (int -> 'a) -> ('a ILogic.ilogic, 'a) t = fun k env t -> match reify env t with Value x -> x | Var (v,_) -> k v
 
     (* can be implemented more efficiently,
      * without allocation of `'a logic`,
@@ -770,4 +771,13 @@ module Moiseenko = struct
 
     let fcomap f r env a = r env (f a)
   end
+
+  let fresh : ('a ILogic.ilogic -> 'b ILogic.Env.t) -> 'b ILogic.Env.t =
+   fun g env -> g (Obj.magic (Term.fresh env)) env
+
+
+  let run : ('a ilogic -> 'b ilogic ILogic.Env.t) -> 'b ilogic State.t =
+   fun rel ->
+    let env = Logic.make_env () in
+    (env, rel (Term.fresh env) env)
 end
