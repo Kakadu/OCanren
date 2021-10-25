@@ -732,7 +732,7 @@ module Tabling =
 module Moiseenko = struct
   open Logic
 
-  let observe : Env.t -> 'a ILogic.ilogic -> 'a logic =
+  let observe : ('a ilogic, 'a logic) ILogic.Reifier.t =
    fun env t ->
     match Term.var t with None -> Value (Obj.magic t) | Some v -> Var(v.Term.Var.index, [])
 
