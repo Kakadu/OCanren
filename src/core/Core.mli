@@ -31,16 +31,19 @@ type goal = State.t Stream.t goal'
 
 (** [call_fresh f] creates a fresh logical variable and passes it to the
     parameter *)
-val call_fresh : (('a, 'b) injected -> goal) -> goal
+val call_fresh : ('a ilogic -> goal) -> goal
 
 (** [x === y] creates a goal, which performs a unification of [x] and [y] *)
-val (===) : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal
+(* val (===) : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal *)
+val (===) : 'a ilogic -> 'a ilogic -> goal
 
 (** [unify x y] is a prefix synonym for [x === y] *)
-val unify : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal
+(* val unify : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal *)
+
 
 (** [x =/= y] creates a goal, which introduces a disequality constraint for [x] and [y] *)
-val (=/=) : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal
+(* val (=/=) : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal *)
+val (=/=) : 'a ilogic -> 'a ilogic -> goal
 
 (** Call [structural var reifier checker] adds a structural constraint for future use.
  Every time substitution is updated it reifies [var] using [reifier] and checks that
@@ -51,14 +54,14 @@ val (=/=) : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal
 
  See also: {!debug_var}.
 *)
-val structural :
+(* val structural :
   ('a,'b) injected ->
   (Env.t -> ('a,'b) injected -> 'b) ->
   ('b -> bool) ->
-  goal
+  goal *)
 
 (** [diseq x y] is a prefix synonym for [x =/= y] *)
-val diseq : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal
+(* val diseq : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal *)
 
 (** [conj s1 s2] creates a goal, which is a conjunction of its arguments *)
 val conj : goal -> goal -> goal
@@ -99,24 +102,24 @@ module Fresh :
     (** [succ num f] increments the number of free logic variables in
         a goal; can be used to get rid of ``fresh'' syntax extension
     *)
-    val succ : ('a -> 'b goal') -> ((_, _) injected -> 'a) -> 'b goal'
+    val succ : ('a -> 'b goal') -> (_ ilogic -> 'a) -> 'b goal'
 
     (** Zero logic parameters *)
     val zero : 'a -> 'a
 
     (** {3 One to five logic parameter(s)} *)
-    val one   : (_ injected ->                                                         goal) -> goal
-    val two   : (_ injected -> _ injected ->                                           goal) -> goal
-    val three : (_ injected -> _ injected -> _ injected ->                             goal) -> goal
-    val four  : (_ injected -> _ injected -> _ injected -> _ injected ->               goal) -> goal
-    val five  : (_ injected -> _ injected -> _ injected -> _ injected -> _ injected -> goal) -> goal
+    val one   : (_ ilogic ->                                                         goal) -> goal
+    val two   : (_ ilogic -> _ ilogic ->                                           goal) -> goal
+    val three : (_ ilogic -> _ ilogic -> _ ilogic ->                             goal) -> goal
+    val four  : (_ ilogic -> _ ilogic -> _ ilogic -> _ ilogic ->               goal) -> goal
+    val five  : (_ ilogic -> _ ilogic -> _ ilogic -> _ ilogic -> _ ilogic -> goal) -> goal
 
     (** {3 One to five logic parameter(s), conventional names} *)
-    val q     : (_ injected ->                                                         goal) -> goal
-    val qr    : (_ injected -> _ injected ->                                           goal) -> goal
-    val qrs   : (_ injected -> _ injected -> _ injected ->                             goal) -> goal
-    val qrst  : (_ injected -> _ injected -> _ injected -> _ injected ->               goal) -> goal
-    val pqrst : (_ injected -> _ injected -> _ injected -> _ injected -> _ injected -> goal) -> goal
+    val q     : (_ ilogic ->                                                         goal) -> goal
+    val qr    : (_ ilogic -> _ ilogic ->                                           goal) -> goal
+    val qrs   : (_ ilogic -> _ ilogic -> _ ilogic ->                             goal) -> goal
+    val qrst  : (_ ilogic -> _ ilogic -> _ ilogic -> _ ilogic ->               goal) -> goal
+    val pqrst : (_ ilogic -> _ ilogic -> _ ilogic -> _ ilogic -> _ ilogic -> goal) -> goal
   end
 
 (** {2 Top-level running primitives} *)
@@ -146,14 +149,14 @@ val run : (unit ->
 val delay : (unit -> goal) -> goal
 
 (** Successor function *)
-val succ : (unit ->
+(* val succ : (unit ->
             ('a -> State.t -> 'b) * ('c -> Env.t -> 'd) * ('e -> 'f * 'g) *
             ('h -> 'i -> 'j)) ->
            unit ->
            ((('k, 'l) injected -> 'a) -> State.t -> ('k, 'l) injected * 'b) *
            (('m, 'n) injected * 'c -> Env.t -> ('m, 'n) reified * 'd) *
-           ('o * 'e -> ('o * 'f) * 'g) * (('p -> 'h) -> 'p * 'i -> 'j)
-
+           ('o * 'e -> ('o * 'f) * 'g) * (('p -> 'h) -> 'p * 'i -> 'j) *)
+(*
 (** {3 Predefined numerals (one to five)} *)
 val one : unit ->
            ((('a, 'b) injected -> goal) ->
@@ -222,14 +225,15 @@ val five : unit ->
             ('u * ('v * ('w * ('x * 'y)))) * 'z) *
            (('a1 -> 'b1 -> 'c1 -> 'd1 -> 'e1 -> 'f1) ->
             'a1 * ('b1 * ('c1 * ('d1 * 'e1))) -> 'f1)
+*)
 
 (** {3 The same numerals with conventional names} *)
 val q : unit ->
-           ((('a, 'b) injected -> goal) ->
-            State.t -> ('a, 'b) injected * State.t Stream.t) *
-           (('c, 'd) injected -> Env.t -> ('c, 'd) reified) * ('e -> 'e) *
+           (('a ilogic -> goal) ->
+            State.t -> 'a ilogic * State.t Stream.t) *
+           ('c ilogic -> Env.t -> ('c,_) reified) * ('e -> 'e) *
            (('f -> 'g) -> 'f -> 'g)
-
+(*
 val qr : unit ->
            ((('a, 'b) injected -> ('c, 'd) injected -> goal) ->
             State.t ->
@@ -291,7 +295,7 @@ val qrstu : unit ->
             ('u * ('v * ('w * ('x * 'y)))) * 'z) *
            (('a1 -> 'b1 -> 'c1 -> 'd1 -> 'e1 -> 'f1) ->
             'a1 * ('b1 * ('c1 * ('d1 * 'e1))) -> 'f1)
-
+*)
 (** Tabling primitives.
     Tabling allows to cache answers of the goal between different queries.
 
@@ -309,6 +313,7 @@ val qrstu : unit ->
 
        [let g = Tabling.(tabledrec one) (fun grec q -> (q === O) ||| (fresh (n) (q === S n) &&& (grec n)))]
 *)
+(*
 module Tabling :
   sig
     val succ : (unit -> (('a -> 'b) -> 'c) * ('d -> 'e -> 'f)) ->
@@ -360,7 +365,7 @@ module Tabling :
        ('d -> 'a -> State.t Stream.t goal')) ->
       (('b -> 'c) -> 'd) -> 'b -> 'c
   end
-
+*)
 IFDEF STATS THEN
 val unification_counter : unit -> int
 val unification_time    : unit -> Mtime.span
@@ -373,7 +378,7 @@ END
 
 See also: {!structural}.
 *)
-val debug_var : ('a, 'b) injected -> (('a,'b) injected -> Env.t -> 'b) -> ('b list -> goal) -> goal
+(* val debug_var : ('a, 'b) injected -> (('a,'b) injected -> Env.t -> 'b) -> ('b list -> goal) -> goal *)
 
 (** The goal [only_head f] returns no answers when [f] returns:
   - empty stream when [f] returns empty stream;
@@ -390,7 +395,7 @@ module PrunesControl : sig
   val is_exceeded: unit -> bool
   val skipped_prunes : unit -> int
 end
-
+(*
 module Moiseenko : sig
   open ILogic
 
@@ -446,7 +451,8 @@ module Moiseenko : sig
     val fcomap : ('a -> 'b) -> ('b, 'c) t -> ('a, 'c) t
   end
 
-  val fresh : ('a ilogic -> 'b ILogic.Env.t) -> 'b ILogic.Env.t
+  (* val fresh : ('a ilogic -> 'b ILogic.Env.t) -> 'b ILogic.Env.t *)
 
-  val run : ('a ilogic -> 'b ilogic ILogic.Env.t) -> 'b ilogic State.t
+  (* val run : ('a ilogic -> 'b ilogic ILogic.Env.t) -> 'b ilogic State.t *)
 end
+*)

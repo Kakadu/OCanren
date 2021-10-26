@@ -60,3 +60,14 @@ let is_open env x =
   with Open_Term -> true
 
 let equal {anchor=a1} {anchor=a2} = (a1 = a2)
+
+
+module Monad = struct
+  type nonrec 'a t = t -> 'a
+
+  let return a _ = a
+
+  let fmap f r env = f (r env)
+
+  let bind r k env = k (r env) env
+end

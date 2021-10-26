@@ -1,36 +1,80 @@
-open OCanren.Moiseenko
-open OCanren.ILogic
+open OCanren
 
+(* example of reifiers for custom types *)
+module TestOption = struct
+  module Maybe = struct
+    type 'a t = 'a option
+    type 'a ground = 'a t
+    type nonrec 'a logic = 'a t logic
+    type nonrec 'a ilogic = 'a t ilogic
 
-let ret = Env.return
+    let fmap : 'a 'b. ('a -> 'b) -> 'a t -> 'b t =
+     fun f a ->
+      match a with
+      | Some a -> Some (f a)
+      | None -> None
+   ;;
 
-(* test that reifiyng a variable yeilds variable *)
-let%test _ =
-  match Reifier.(apply reify @@ run (fun v -> ret v)) with
-  | Var _ -> true
-  | Value _ -> false
+    let reify : 'a 'b. ('a, 'b) Reifier.t -> ('a ilogic, 'b logic) Reifier.t =
+     fun ra ->
+      let ( >>= ) = Env.Monad.bind in
+      Reifier.reify
+      >>= fun r ->
+      ra
+      >>= fun fa ->
+      Env.Monad.return (fun x ->
+          match r x with
+          | Var (v, c) -> Var (v, [])
+          | Value t -> Value (fmap fa t))
+   ;;
 
-(* test that reifiyng a fresh variable yeilds variable *)
-let%test _ =
-  match Reifier.(apply reify @@ run (fun v -> fresh (fun x -> ret x))) with
-  | Var _ -> true
-  | Value _ -> false
+    let prj_exn : 'a 'b. ('a, 'b) Reifier.t -> ('a ilogic, 'b ground) Reifier.t =
+     fun ra ->
+      let ( >>= ) = Env.Monad.bind in
+      Reifier.prj_exn
+      >>= fun r -> ra >>= fun fa -> Env.Monad.return (fun x -> fmap fa (r x))
+   ;;
+  end
 
-(* test that reifiyng a value yeilds value *)
-let%test _ =
-  match Reifier.(apply reify @@ run (fun v -> ret @@ inj 42)) with
-  | Value i -> i = 42
-  | Var _ -> false
+  (* test projection *)
+  let%test _ =
+    let goal q = q === inji @@ Some (inji 42) in
+    let xs : int option Stream.t =
+      OCanren.(run q) goal (fun rr -> rr#reify (Maybe.prj_exn Reifier.prj_exn))
+    in
+    match Stream.take xs with
+    | [ Some 42 ] -> true
+    | _ -> false
+  ;;
 
-(* test that runaway variables are handled *)
-(* let%test _ =
-  let runaway : int ilogic ref = ref (Obj.magic ()) in
-  let _ =
-    run (fun v ->
-        runaway := v;
-        ret v)
-  in
-  try
-    let _ = Reifier.(apply reify @@ run (fun v -> ret !runaway)) in
-    false
-  with Var_scope_violation v -> true *)
+  (* test reification *)
+  let%test _ =
+    let goal q = q === inji @@ Some (inji 42) in
+    let xs : int logic Maybe.logic Stream.t =
+      OCanren.(run q) goal (fun rr -> rr#reify (Maybe.reify Reifier.reify))
+    in
+    match Stream.take xs with
+    | [ Value (Some (Value 42)) ] -> true
+    | _ -> false
+  ;;
+
+  let%test _ =
+    let goal q = success in
+    let xs : int logic Maybe.logic Stream.t =
+      OCanren.(run q) goal (fun rr -> rr#reify (Maybe.reify Reifier.reify))
+    in
+    match Stream.take xs with
+    | [ Var (_, _) ] -> true
+    | _ -> false
+  ;;
+
+  let%test _ =
+    let goal q = fresh x (q === inji @@ Some x) in
+    let xs : int logic Maybe.logic Stream.t =
+      OCanren.(run q) goal (fun rr -> rr#reify (Maybe.reify Reifier.reify))
+    in
+    match Stream.take xs with
+    | [ Value (Some (Var (_, _))) ] -> true
+    | _ -> false
+  ;;
+end

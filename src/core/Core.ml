@@ -18,6 +18,7 @@
 
 open Logic
 
+IFDEF STATS THEN
 type stat = {
   mutable unification_count : int;
   mutable unification_time  : Mtime.span;
@@ -34,7 +35,7 @@ let stat = {
   delay_counter     = 0
 }
 
-IFDEF STATS THEN
+
 let unification_counter () = stat.unification_count
 let unification_time    () = stat.unification_time
 let conj_counter        () = stat.conj_counter
@@ -148,7 +149,7 @@ module Answer :
 
 module Prunes : sig
   type rez = Violated | NonViolated
-  type ('a, 'b) reifier = Env.t -> ('a, 'b) Logic.injected -> 'b
+  type ('a, 'b) reifier = Env.t -> 'a Logic.ilogic -> 'b
   type 'b cond = 'b -> bool
   type t
 
@@ -159,7 +160,7 @@ module Prunes : sig
   val extend  : t -> Term.VarTbl.key -> ('a, 'b) reifier -> 'b cond -> t
 end = struct
   type rez = Violated | NonViolated
-  type ('a, 'b) reifier = Env.t -> ('a, 'b) Logic.injected -> 'b
+  type ('a, 'b) reifier = Env.t -> 'a Logic.ilogic -> 'b
   type reifier_untyped = Env.t -> Obj.t -> Obj.t
   type 'b cond = 'b -> bool
   type cond_untyped = Obj.t -> bool
@@ -403,7 +404,7 @@ let structural term rr k st =
   match Prunes.check_last new_constraints (State.env st) (State.subst st) with
   | Prunes.Violated -> failure st
   | NonViolated -> success { st with State.prunes = new_constraints }
-
+(*
 include (struct
   @type cost = CFixed of GT.int | CAtLeast of GT.int with show
   let show_cost x = GT.show cost x
@@ -450,11 +451,11 @@ end : sig
   type cost = CFixed of GT.int | CAtLeast of GT.int
 
   val minimize : ('b -> cost) ->
-    (Env.t -> 'logicvar -> 'b) ->
-    (('a, 'b) injected as 'logicvar) ->
+    (Env.t -> 'a ilogic -> 'a) ->
+    ('a ilogic) ->
     ('logicvar -> goal) -> goal
 end)
-
+*)
 
 let (&&&) = conj
 let (?&) gs = List.fold_right (&&&) gs success
@@ -537,7 +538,7 @@ module Uncurry =
 module LogicAdder :
   sig
     val zero : goal -> goal
-    val succ : ('a -> State.t -> 'd) -> (('e, 'f) injected -> 'a) -> State.t -> ('e, 'f) injected * 'd
+    val succ : ('a -> State.t -> 'd) -> ('e ilogic -> 'a) -> State.t -> 'e ilogic * 'd
   end = struct
     let zero f      = f
     let succ prev f = call_fresh (fun logic st -> (logic, prev (f logic) st))
@@ -704,10 +705,10 @@ module Tabling =
   struct
     let succ n () =
       let currier, uncurrier = n () in
-      let sc = (Curry.succ : (('a -> 'b) -> 'c) -> ((((_, _) injected as 'k) * 'a -> 'b) -> 'k -> 'c)) in
+      let sc = (Curry.succ : (('a -> 'b) -> 'c) -> ((((_) ilogic as 'k) * 'a -> 'b) -> 'k -> 'c)) in
       (sc currier, Uncurry.succ uncurrier)
 
-    let one () = ((Curry.(one) : ((_, _) injected -> _) as 'x -> 'x), Uncurry.one)
+    let one () = ((Curry.(one) : ((_) ilogic -> _) as 'x -> 'x), Uncurry.one)
 
     let two   () = succ one ()
     let three () = succ two ()
@@ -728,7 +729,7 @@ module Tabling =
       g := currier g_tabled;
       !g
   end
-
+(*
 module Moiseenko = struct
   open Logic
 
@@ -771,7 +772,7 @@ module Moiseenko = struct
 
     let fcomap f r env a = r env (f a)
   end
-
+(*
   let fresh : ('a ILogic.ilogic -> 'b ILogic.Env.t) -> 'b ILogic.Env.t =
    fun g env -> g (Obj.magic (Term.fresh env)) env
 
@@ -779,5 +780,6 @@ module Moiseenko = struct
   let run : ('a ilogic -> 'b ilogic ILogic.Env.t) -> 'b ilogic State.t =
    fun rel ->
     let env = Logic.make_env () in
-    (env, rel (Term.fresh env) env)
+    (env, rel (Term.fresh env) env) *)
 end
+*)

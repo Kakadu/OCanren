@@ -37,3 +37,17 @@ val freevars      : t -> 'a -> Term.VarSet.t
 val is_open       : t -> 'a -> bool
 
 val equal         : t -> t -> bool
+
+module Monad : sig
+
+  (* `'a Env.t` --- essentially a reader monad *)
+  type nonrec 'a t = t -> 'a
+
+  (* Usual boring monadic stuff *)
+
+  val return : 'a -> 'a t
+
+  val fmap : ('a -> 'b) -> 'a t -> 'b t
+
+  val bind : 'a t -> ('a -> 'b t) -> 'b t
+end

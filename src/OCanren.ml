@@ -26,7 +26,7 @@ module Env = Env
 
 module Std =
   struct
-
+(*
     module Pair    = Pair
     module Option  = Option
     module Bool    = Bool
@@ -68,4 +68,5 @@ module Std =
     let structural = Core.structural
     let debug_var = Core.debug_var
     let only_head = Core.only_head
+    *)
   end
