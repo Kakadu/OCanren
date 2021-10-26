@@ -26,9 +26,9 @@ module Env = Env
 
 module Std =
   struct
+    module Option  = Option
 (*
     module Pair    = Pair
-    module Option  = Option
     module Bool    = Bool
     module Nat     = Nat
     module List    = List

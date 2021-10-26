@@ -3,7 +3,17 @@
 (library
  (name OCanren)
  (public_name OCanren)
- (modules Logic Core Stream Subst Term Env Runconf Disequality OCanren)
+ (modules
+  Logic
+  Core
+  Stream
+  Subst
+  Term
+  Env
+  Runconf
+  Disequality
+  OCanren
+  Option)
  (libraries GT mtime.clock.os)
  (flags
   (:standard -short-paths))
