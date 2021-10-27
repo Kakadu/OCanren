@@ -7,10 +7,14 @@
  (flags
   (:standard -short-paths -rectypes))
  (inline_tests)
+ (modules_without_implementation DISEQ_SIG)
  (preprocess
   (per_module
    ((pps ppx_expect ppx_inline_test GT.ppx_all)
     Disequality
+    Disequality2
+    DISEQ_SIG
+    Term
     FM)
    ((action
      (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file}))
