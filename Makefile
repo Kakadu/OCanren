@@ -30,6 +30,8 @@ promote:
 
 discover-tests:
 	dune build @discover-tests
+	# You can generate cram test files too using
+	# dune exec config/discover.exe -- -tests -tests-dir regression -cram-files `realpath regression`
 
 samples:
 	dune build samples

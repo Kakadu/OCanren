@@ -1,0 +1,1 @@
+  $ ./test022newsyntax.exe
