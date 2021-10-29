@@ -16,27 +16,23 @@
  * (enclosed in the file COPYING).
  *)
 
-module Binding :
-  sig
-    type t =
-      { var   : Term.Var.t
-      ; term  : Term.t
-      }
+module Binding : sig
+  type t =
+    { var : Term.Var.t
+    ; term : Term.t
+    }
 
-    val is_relevant : Env.t -> Term.VarSet.t -> t -> bool
-
-    val equal : t -> t -> bool
-    val compare : t -> t -> int
-    val hash : t -> int
-  end
+  val is_relevant : Env.t -> Term.VarSet.t -> t -> bool
+  val equal : t -> t -> bool
+  val compare : t -> t -> int
+  val hash : t -> int
+end
 
 type t
 
 val empty : t
-
 val of_list : Binding.t list -> t
-val of_map  : Term.t Term.VarMap.t -> t
-
+val of_map : Term.t Term.VarMap.t -> t
 val split : t -> Binding.t list
 
 (* [apply env subst x] - applies [subst] to term [x],
@@ -61,7 +57,14 @@ val freevars : Env.t -> t -> 'a -> Term.VarSet.t
  *   This can be used to perform subsumption check:
  *   [y] is subsumed by [x] (i.e. [x] is more general than [x]) if such a unification succeeds.
  *)
-val unify : ?subsume:bool -> ?scope:Term.Var.scope -> Env.t -> t -> 'a -> 'a -> (Binding.t list * t) option
+val unify
+  :  ?subsume:bool
+  -> ?scope:Term.Var.scope
+  -> Env.t
+  -> t
+  -> 'a
+  -> 'a
+  -> (Binding.t list * t) option
 
 val merge_disjoint : Env.t -> t -> t -> t
 
@@ -73,19 +76,18 @@ val merge : Env.t -> t -> t -> t option
  *)
 val subsumed : Env.t -> t -> t -> bool
 
-module Answer :
-  sig
-    type t = Term.t
+module Answer : sig
+  type t = Term.t
 
-    (* [subsumed env x y] checks that [x] is subsumed by [y] (i.e. [y] is more general than [x]) *)
-    val subsumed : Env.t -> t -> t -> bool
-  end
+  (* [subsumed env x y] checks that [x] is subsumed by [y] (i.e. [y] is more general than [x]) *)
+  val subsumed : Env.t -> t -> t -> bool
+end
 
 val reify : Env.t -> t -> 'a -> Answer.t
 
 (* val walk: Env.t -> t -> 'a -> 'a *)
-
+(*
 IFDEF STATS THEN
 (** Walk counter *)
 val walk_counter : unit -> int
-END
+END *)

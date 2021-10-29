@@ -22,17 +22,13 @@ type 'a t
 (** {2 Constructors} *)
 
 val nil : 'a t
-
 val single : 'a -> 'a t
-
 val cons : 'a -> 'a t -> 'a t
-
 val from_fun : (unit -> 'a t) -> 'a t
 
 (** {2 Other functions} *)
 
 val suspend : is_ready:(unit -> bool) -> (unit -> 'a t) -> 'a t
-
 val of_list : 'a list -> 'a t
 
 (** Emptiness test *)
@@ -87,6 +83,7 @@ val hd : 'a t -> 'a
 (** [tl s] gets a tail of the stream *)
 val tl : 'a t -> 'a t
 
+(*
 IFDEF STATS THEN
 (* Gets a counter *)
 val unwrap_suspended_counter : unit -> int
@@ -94,4 +91,4 @@ val force_counter            : unit -> int
 val from_fun_counter         : unit -> int
 val bind_counter             : unit -> int
 val mplus_counter            : unit -> int
-END
+END *)

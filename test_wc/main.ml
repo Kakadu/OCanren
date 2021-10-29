@@ -33,6 +33,11 @@ let run_triple eta =
     (GT.show Pair.logic show_intl (GT.show Pair.logic show_intl show_intl))
     eta
 
+let __ _ =
+  run_exn show_int (-1) q qh (REPR (fun q -> fresh (x y) (x === y) (x =/= y)));
+  run_exn show_int (-1) q qh (REPR (fun q -> fresh (x y) (x =/= y) (x === y)));
+  exit 1
+
 let _ = [%tester run_int (-1) (fun q -> q === __)]
 let _ = [%tester run_int (-1) (fun q -> q =/= __)]
 let _ = [%tester run_pair (-1) (fun q -> pair !!2 __ =/= pair __ !!2)]
@@ -95,20 +100,16 @@ let _ =
 
 let _ = [%tester run_int (-1) (fun q -> fresh a (q === !!1) (a =/= !!1 % a))]
 
-
 let rec non_membero x xs =
   let open OCanren.Std in
   fresh (h tl)
-    (xs =/= List.cons x __ )
-    (conde
-    [ (xs === List.cons h tl )  &&& (non_membero x tl )
-    ; (xs === List.nil () )
-    ])
+    (xs =/= List.cons x __)
+    (conde [xs === List.cons h tl &&& non_membero x tl; xs === List.nil ()])
 
 let _ =
-  [%tester run_int (-1) (fun q -> non_membero !!0 (Std.list (!!) [1;2;3] ))];
-  [%tester run_int (-1) (fun q -> non_membero !!0 (Std.list (!!) [] ))];
-  [%tester run_int (-1) (fun q -> non_membero !!0 (Std.list (!!) [0] ))];
+  [%tester run_int (-1) (fun q -> non_membero !!0 (Std.list ( !! ) [1; 2; 3]))];
+  [%tester run_int (-1) (fun q -> non_membero !!0 (Std.list ( !! ) []))];
+  [%tester run_int (-1) (fun q -> non_membero !!0 (Std.list ( !! ) [0]))];
   ()
 
-let _ = [%tester run_list (-1) (fun q -> (q =/= __ % __) &&& (q =/= List.nil()))]
+let _ = [%tester run_list (-1) (fun q -> q =/= __ % __ &&& (q =/= List.nil ()))]

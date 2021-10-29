@@ -22,23 +22,27 @@ open Core
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
 
-@type 'a nat = O | S of 'a with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type 'a logic' = 'a logic with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a nat = O | S of 'a
+[@@deriving gt ~options:{show; gmap; eq; compare; foldl; foldr; fmt}]
+type 'a logic' = 'a logic
+[@@deriving gt ~options:{show; gmap; eq; compare; foldl; foldr; fmt}]
 
 let logic' = logic
 
 module X =
   struct
-    @type 'a t = 'a nat with show, gmap, html, eq, compare, foldl, foldr, fmt
-    let fmap f x = GT.gmap (t) f x
+    type 'a t = 'a nat
+    let fmap f x = GT.gmap (nat) f x
   end
 
 include X
 
 module F = Fmap (X)
 
-@type ground  = ground t                 with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type logic   = logic t logic'           with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ground  = ground nat
+[@@deriving gt ~options:{show; gmap; eq; compare; foldl; foldr; fmt}]
+type logic   = logic nat logic'
+[@@deriving gt ~options:{show; gmap; eq; compare; foldl; foldr; fmt}]
 
 type groundi = (ground, logic) injected
 
@@ -51,9 +55,9 @@ let logic = {
       method eq      = logic.GT.plugins#eq
       method foldl   = logic.GT.plugins#foldl
       method foldr   = logic.GT.plugins#foldr
-      method html    = logic.GT.plugins#html
+      (* method html    = logic.GT.plugins#html *)
       method fmt     = logic.GT.plugins#fmt
-      method show    = GT.show(logic') (fun l -> GT.show(t) this#show l)
+      method show    = GT.show(logic') (fun l -> GT.show(nat) this#show l)
     end
 }
 

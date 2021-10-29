@@ -22,24 +22,23 @@ open Logic
 open Core
 
 (** Abstract list type *)
-@type ('a, 'l) list =
+type ('a, 'l) list =
 | Nil
-| Cons of 'a * 'l with show, gmap, html, eq, compare, foldl, foldr, fmt
-
+| Cons of 'a * 'l [@@deriving gt ~options:{show; gmap; eq; compare; foldl; foldr; fmt}]
 
 (** {2 GT-related API} *)
 
 (** Type synonym to prevent toplevel [logic] from being hidden *)
-@type 'a logic' = 'a logic with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a logic' = 'a logic [@@deriving gt ~options:{show; gmap; eq; compare; foldl; foldr; fmt}]
 
 (** Synonym for abstract list type *)
-@type ('a, 'l) t = ('a, 'l) list with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ('a, 'l) t = ('a, 'l) list [@@deriving gt ~options:{show; gmap; eq; compare; foldl; foldr; fmt}]
 
 (** Ground lists (isomorphic to regular ones) *)
-@type 'a ground = ('a, 'a ground) t with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a ground = ('a, 'a ground) t [@@deriving gt ~options:{show; gmap; eq; compare; foldl; foldr; fmt}]
 
 (** Logic lists (with the tails as logic lists) *)
-@type 'a logic  = ('a, 'a logic) t logic' with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a logic  = ('a, 'a logic) t logic' [@@deriving gt ~options:{show; gmap; eq; compare; foldl; foldr; fmt}]
 
 (** {2 Relational API} *)
 

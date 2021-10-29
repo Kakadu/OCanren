@@ -16,16 +16,18 @@
  * (enclosed in the file COPYING).
  *)
 
-IFDEF STATS THEN
-let unification_counter      = Core.unification_counter
-let unification_time         = Core.unification_time
-let walk_counter             = Subst.walk_counter
-let conj_counter             = Core.conj_counter
-let disj_counter             = Core.disj_counter
-let delay_counter            = Core.delay_counter
+[%%if false]
+
+let unification_counter = Core.unification_counter
+let unification_time = Core.unification_time
+let walk_counter = Subst.walk_counter
+let conj_counter = Core.conj_counter
+let disj_counter = Core.disj_counter
+let delay_counter = Core.delay_counter
 let unwrap_suspended_counter = Stream.unwrap_suspended_counter
-let force_counter            = Stream.force_counter
-let from_fun_counter         = Stream.from_fun_counter
-let bind_counter             = Stream.bind_counter
-let mplus_counter            = Stream.mplus_counter
-END
+let force_counter = Stream.force_counter
+let from_fun_counter = Stream.from_fun_counter
+let bind_counter = Stream.bind_counter
+let mplus_counter = Stream.mplus_counter
+
+[%%endif]

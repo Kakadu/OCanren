@@ -31,7 +31,7 @@ module Std =
     module Option  = Option
     module Bool    = Bool
     module Nat     = Nat
-    module List    = List
+    module List    = Listo
 
     let eqo x y t =
       conde [

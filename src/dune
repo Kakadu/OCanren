@@ -10,21 +10,34 @@
  (modules_without_implementation DISEQ_SIG)
  (preprocess
   (per_module
-   ((pps ppx_expect ppx_inline_test GT.ppx_all)
+   ((pps ppx_expect ppx_inline_test GT.ppx_all ppx_optcomp)
     Disequality
     Disequality2
     DISEQ_SIG
     Term
-    FM)
-   ((action
-     (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file}))
+    FM
+    ;
     Pair
     Option
     Nat
-    List
+    Listo
     Bool
     Subst
     Stream
     Peep
     Logic
-    Core))))
+    Core)
+   ;  )
+   ;  ((action
+   ;    (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file}))
+   ;   Pair
+   ;   Option
+   ;   Nat
+   ;   Listo
+   ;   Bool
+   ;   Subst
+   ;   Stream
+   ;   Peep
+   ;   Logic
+   ;   Core)
+   )))
