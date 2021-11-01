@@ -52,10 +52,10 @@ let logic = {logic with
     end
 };;
 
-@type ('a, 'b) injected = 'a with show, gmap, html, eq, compare, foldl, foldr
+(* @type ('a, 'b) injected = 'a with show, gmap, html, eq, compare, foldl, foldr *)
 
-external lift : 'a -> ('a, 'a) injected                      = "%identity"
-external inj  : ('a, 'b) injected -> ('a, 'b logic) injected = "%identity"
+(* external lift : 'a -> ('a, 'a) injected                      = "%identity" *)
+(* external inj  : ('a, 'b) injected -> ('a, 'b logic) injected = "%identity" *)
 
 exception Not_a_value
 
@@ -65,17 +65,53 @@ let from_logic = function
 | Value x    -> x
 | Var (_, _) -> raise Not_a_value
 
-let (!!) x = inj (lift x)
+(* let (!!) x = inj (lift x) *)
 
 type 'a ilogic
 
-external to_ilogic : (_, 'b) injected -> 'b ilogic = "%identity"
+(* external to_ilogic : (_, 'b) injected -> 'b ilogic = "%identity" *)
 external inji : 'a -> 'a ilogic = "%identity"
+let inj = inji
+
+let (!!) = inj
+
+let observe : ('a ilogic -> 'a logic) Env.Monad.t =
+  fun env t ->
+    match Term.var t with None -> Value (Obj.magic t) | Some v -> Var (v.Term.Var.index, [])
+
+
+module Reifier = struct
+  type ('a, 'b) t = ('a -> 'b) Env.Monad.t
+
+  let reify = observe
+
+  (* let prj : (int -> 'a) -> ('a ILogic.ilogic, 'a) t = fun k env t -> match reify env t with Value x -> x | Var (v,_) -> k v *)
+
+  (* can be implemented more efficiently,
+    * without allocation of `'a logic`,
+    * but for demonstration purposes this implementation is okay
+    *)
+  let prj_exn env t =
+    match reify env t with
+    | Value x -> x
+    | Var (v, _) -> raise Not_a_value
+
+  let apply r (env, a) = r env a
+
+  let compose r r' env a = r' env (r env a)
+
+  let fmap f r env a = f (r env a)
+
+  let fcomap f r env a = r env (f a)
+end
+
+let reify = Reifier.reify
+let prj = Reifier.prj_exn
 
 class type ['a, 'b] reified = object
   method is_open : bool
-  method prj     : 'a
-  method reify   : (Env.t -> 'a ilogic -> 'b) -> 'b
+  (* method prj     : ('a ilogic, 'b) Reifier.t -> 'b *)
+  method reify   : ('a ilogic, 'b) Reifier.t -> 'b
   (* method prjc    : (Env.t -> ('a, 'b) injected -> 'a) -> 'a
   method reify2  : (Env.t -> 'b ilogic -> 'b) -> 'b *)
 end
@@ -83,15 +119,18 @@ end
 let make_rr : Env.t -> 'a ilogic -> ('a, 'b) reified  = fun env x ->
   object (self)
     method is_open            = Env.is_open env x
-    method prj                = if self#is_open then raise Not_a_value else Obj.magic x
-    method reify reifier      = reifier env x
+    (* method prj                =
+      if self#is_open then raise Not_a_value
+      else Obj.magic x *)
+    method reify : ('a ilogic, 'b) Reifier.t -> 'b = fun reifier ->
+      Reifier.apply reifier (env, x)
     (* method prjc  onvar        = onvar   env x *)
     (* method reify2 reifier     = reifier env (to_ilogic x) *)
   end
 
-let prj x = let rr = make_rr (Env.empty ()) x in rr#prj
+(* let prj x = let rr = make_rr (Env.empty ()) x in rr#prj *)
 
-let rec reify env x =
+(* let rec reify env x =
   match Env.var env x with
   | Some v -> let i, cs = Term.Var.reify (reify env) v in Var (i, cs)
   | None   -> Value (Obj.magic x)
@@ -100,9 +139,9 @@ let rec prjc of_int env x =
   match Env.var env x with
   | Some v -> let i, cs = Term.Var.reify (prjc of_int env) v in of_int i cs
   | None   -> Obj.magic x
-
-let project rr = rr#prj
-
+ *)
+(* let project rr = rr#prj *)
+(*
 module type T1 =
   sig
     type 'a t
@@ -228,41 +267,11 @@ module Fmap6 (T : T6) = struct
     | Some v -> let i, cs = Term.Var.reify (prjc r1 r2 r3 r4 r5 r6 of_int env) v in of_int i cs
     | None   -> T.fmap (r1 env) (r2 env) (r3 env) (r4 env) (r5 env) (r6 env) x
 end
+*)
 
 module ILogic = struct
   type _ ilogic = Obj.t
 
   external inj : 'a -> 'a ilogic = "%identity"
 
-end
-
-
-let observe : ('a ilogic -> 'a logic) Env.Monad.t =
-  fun env t ->
-    match Term.var t with None -> Value (Obj.magic t) | Some v -> Var (v.Term.Var.index, [])
-
-
-module Reifier = struct
-  type ('a, 'b) t = ('a -> 'b) Env.Monad.t
-
-  let reify = observe
-
-  (* let prj : (int -> 'a) -> ('a ILogic.ilogic, 'a) t = fun k env t -> match reify env t with Value x -> x | Var (v,_) -> k v *)
-
-  (* can be implemented more efficiently,
-    * without allocation of `'a logic`,
-    * but for demonstration purposes this implementation is okay
-    *)
-  let prj_exn env t =
-    match reify env t with
-    | Value x -> x
-    | Var (v, _) -> raise Not_a_value
-
-  let apply r (env, a) = r env a
-
-  let compose r r' env a = r' env (r env a)
-
-  let fmap f r env a = f (r env a)
-
-  let fcomap f r env a = r env (f a)
 end

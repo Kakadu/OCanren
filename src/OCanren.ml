@@ -27,8 +27,7 @@ module Env = Env
 module Std =
   struct
     module Option  = Option
-(*
-    module Pair    = Pair
+    (* module Pair    = Pair *)
     module Bool    = Bool
     module Nat     = Nat
     module List    = List
@@ -62,9 +61,9 @@ module Std =
 
     let some = Option.some
     let none = Option.none
-    let pair = Pair.pair
+    (* let pair = Pair.pair *)
 
-
+(*
     let structural = Core.structural
     let debug_var = Core.debug_var
     let only_head = Core.only_head

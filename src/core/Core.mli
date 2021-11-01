@@ -233,16 +233,16 @@ val q : unit ->
             State.t -> 'a ilogic * State.t Stream.t) *
            ('c ilogic -> Env.t -> ('c,_) reified) * ('e -> 'e) *
            (('f -> 'g) -> 'f -> 'g)
-(*
+
 val qr : unit ->
-           ((('a, 'b) injected -> ('c, 'd) injected -> goal) ->
+           ((('a ) ilogic -> 'c ilogic -> goal) ->
             State.t ->
-            ('a, 'b) injected * (('c, 'd) injected * State.t Stream.t)) *
-           (('e, 'f) injected * ('g, 'h) injected ->
-            Env.t -> ('e, 'f) reified * ('g, 'h) reified) *
+            ('a ) ilogic * (('c ) ilogic * State.t Stream.t)) *
+           (('e ) ilogic * ('g ) ilogic ->
+            Env.t -> ('e, _) reified * ('g, _) reified) *
            ('i * ('j * 'k) -> ('i * 'j) * 'k) *
            (('l -> 'm -> 'n) -> 'l * 'm -> 'n)
-
+(*
 val qrs : unit ->
            ((('a, 'b) injected ->
              ('c, 'd) injected -> ('e, 'f) injected -> goal) ->

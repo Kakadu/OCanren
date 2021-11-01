@@ -13,10 +13,13 @@
   Runconf
   Disequality
   OCanren
-  Option)
+  Option
+  Bool
+  Nat
+  List)
  (libraries GT mtime.clock.os)
  (flags
-  (:standard -short-paths))
+  (:standard -rectypes -short-paths))
  (preprocess
   (action
    (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file}))))

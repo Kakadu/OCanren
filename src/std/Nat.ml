@@ -1,6 +1,6 @@
 (*
  * OCanren.
- * Copyright (C) 2015-2017
+ * Copyright (C) 2015-2021
  * Dmitri Boulytchev, Dmitry Kosarev, Alexey Syomin, Evgeny Moiseenko
  * St.Petersburg State University, JetBrains Research
  *
@@ -22,25 +22,17 @@ open Core
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
 
-@type 'a nat = O | S of 'a with show, gmap, html, eq, compare, foldl, foldr, fmt
+@type 'a t = O | S of 'a with show, gmap, html, eq, compare, foldl, foldr, fmt
 @type 'a logic' = 'a logic with show, gmap, html, eq, compare, foldl, foldr, fmt
 
-let logic' = logic
+let logic' = logic;;
 
-module X =
-  struct
-    @type 'a t = 'a nat with show, gmap, html, eq, compare, foldl, foldr, fmt
-    let fmap f x = GT.gmap (t) f x
-  end
+@type ground  = ground t
+with show, gmap, html, eq, compare, foldl, foldr, fmt
+@type logic   = logic t Logic.logic
+with show, gmap, html, eq, compare, foldl, foldr, fmt
 
-include X
-
-module F = Fmap (X)
-
-@type ground  = ground t                 with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type logic   = logic t logic'           with show, gmap, html, eq, compare, foldl, foldr, fmt
-
-type groundi = (ground, logic) injected
+type groundi = groundi t Logic.ilogic
 
 let logic = {
   logic with
@@ -60,15 +52,31 @@ let logic = {
 let rec of_int n = if n <= 0 then O else S (of_int (n-1))
 let rec to_int   = function O -> 0 | S n -> 1 + to_int n
 
-let rec inj n = to_logic (GT.(gmap nat) inj n)
+let rec inj n = to_logic (GT.(gmap t) inj n)
 
-let rec reify h n = F.reify reify h n
-let rec prjc onvar env n = F.prjc (prjc onvar) onvar env n
+let rec reify _ =
+  failwith "not implemented"
+(*
+  let ( >>= ) = Env.Monad.bind in
+  (* Here the usage of `compose` is essential,
+    * the 'monadic' implementation shown below fails with stack overflow due to an infinite recursion
+    *)
+  Reifier.compose Reifier.reify (
+    reify >>= fun fr ->
+    Env.Monad.return (fun lx ->
+      match lx with
+      | Var (v,_) ->
+        Format.eprintf "Constraints are not taken to account";
+        Var (v,[])
+      | Value n -> Value (GT.gmap t fr n))
+      )
+ *)
+let rec prj_exn _ = failwith "not implemented"
 
-let o   = Logic.inj @@ F.distrib O
-let s x = Logic.inj @@ F.distrib (S x)
+let o   = Logic.inj O
+let s x = Logic.inj (S x)
 
-let rec nat n = Logic.inj @@ F.distrib @@ X.fmap nat n
+let rec nat n = Logic.inj @@ (GT.gmap t) nat n
 
 let zero = o
 let one  = s o
