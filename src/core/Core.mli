@@ -156,146 +156,60 @@ val delay : (unit -> goal) -> goal
            ((('k, 'l) injected -> 'a) -> State.t -> ('k, 'l) injected * 'b) *
            (('m, 'n) injected * 'c -> Env.t -> ('m, 'n) reified * 'd) *
            ('o * 'e -> ('o * 'f) * 'g) * (('p -> 'h) -> 'p * 'i -> 'j) *)
-(*
-(** {3 Predefined numerals (one to five)} *)
-val one : unit ->
-           ((('a, 'b) injected -> goal) ->
-            State.t -> ('a, 'b) injected * State.t Stream.t) *
-           (('c, 'd) injected -> Env.t -> ('c, 'd) reified) * ('e -> 'e) *
-           (('f -> 'g) -> 'f -> 'g)
 
-val two : unit ->
-           ((('a, 'b) injected -> ('c, 'd) injected -> goal) ->
-            State.t ->
-            ('a, 'b) injected * (('c, 'd) injected * State.t Stream.t)) *
-           (('e, 'f) injected * ('g, 'h) injected ->
-            Env.t -> ('e, 'f) reified * ('g, 'h) reified) *
-           ('i * ('j * 'k) -> ('i * 'j) * 'k) *
-           (('l -> 'm -> 'n) -> 'l * 'm -> 'n)
-
-val three : unit ->
-           ((('a, 'b) injected ->
-             ('c, 'd) injected -> ('e, 'f) injected -> goal) ->
-            State.t ->
-            ('a, 'b) injected *
-            (('c, 'd) injected *
-             (('e, 'f) injected * State.t Stream.t))) *
-           (('g, 'h) injected * (('i, 'j) injected * ('k, 'l) injected) ->
-            Env.t ->
-            ('g, 'h) reified * (('i, 'j) reified * ('k, 'l) reified)) *
-           ('m * ('n * ('o * 'p)) -> ('m * ('n * 'o)) * 'p) *
-           (('q -> 'r -> 's -> 't) -> 'q * ('r * 's) -> 't)
-
-val four : unit ->
-           ((('a, 'b) injected ->
-             ('c, 'd) injected ->
-             ('e, 'f) injected -> ('g, 'h) injected -> goal) ->
-            State.t ->
-            ('a, 'b) injected *
-            (('c, 'd) injected *
-             (('e, 'f) injected *
-              (('g, 'h) injected * State.t Stream.t)))) *
-           (('i, 'j) injected *
-            (('k, 'l) injected * (('m, 'n) injected * ('o, 'p) injected)) ->
-            Env.t ->
-            ('i, 'j) reified *
-            (('k, 'l) reified * (('m, 'n) reified * ('o, 'p) reified))) *
-           ('q * ('r * ('s * ('t * 'u))) -> ('q * ('r * ('s * 't))) * 'u) *
-           (('v -> 'w -> 'x -> 'y -> 'z) -> 'v * ('w * ('x * 'y)) -> 'z)
-
-val five : unit ->
-           ((('a, 'b) injected ->
-             ('c, 'd) injected ->
-             ('e, 'f) injected ->
-             ('g, 'h) injected -> ('i, 'j) injected -> goal) ->
-            State.t ->
-            ('a, 'b) injected *
-            (('c, 'd) injected *
-             (('e, 'f) injected *
-              (('g, 'h) injected *
-               (('i, 'j) injected * State.t Stream.t))))) *
-           (('k, 'l) injected *
-            (('m, 'n) injected *
-             (('o, 'p) injected * (('q, 'r) injected * ('s, 't) injected))) ->
-            Env.t ->
-            ('k, 'l) reified *
-            (('m, 'n) reified *
-             (('o, 'p) reified * (('q, 'r) reified * ('s, 't) reified)))) *
-           ('u * ('v * ('w * ('x * ('y * 'z)))) ->
-            ('u * ('v * ('w * ('x * 'y)))) * 'z) *
-           (('a1 -> 'b1 -> 'c1 -> 'd1 -> 'e1 -> 'f1) ->
-            'a1 * ('b1 * ('c1 * ('d1 * 'e1))) -> 'f1)
-*)
-
-(** {3 The same numerals with conventional names} *)
-val q : unit ->
+module NUMERAL_TYPS : sig
+  type ('a, 'c, 'e, 'f, 'g) one = unit ->
            (('a ilogic -> goal) ->
             State.t -> 'a ilogic * State.t Stream.t) *
-           ('c ilogic -> Env.t -> ('c,_) reified) * ('e -> 'e) *
+           ('c ilogic -> Env.t -> 'c reified) * ('e -> 'e) *
            (('f -> 'g) -> 'f -> 'g)
+  type ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j) two = unit ->
+           (('a Logic.ilogic -> 'b Logic.ilogic -> goal) ->
+            State.t -> 'a Logic.ilogic * ('b Logic.ilogic * State.t Stream.t)) *
+           ('c Logic.ilogic * 'd Logic.ilogic ->
+            Env.t -> 'c Logic.reified * 'd Logic.reified) *
+           ('e * ('f * 'g) -> ('e * 'f) * 'g) *
+           (('h -> 'i -> 'j) -> 'h * 'i -> 'j)
 
-val qr : unit ->
-           ((('a ) ilogic -> 'c ilogic -> goal) ->
+  type ('a,'c,'e,'g,'i,'k,'m,'n,'o,'p,'q,'r,'s,'t) three = unit ->
+           (('a ilogic -> 'c ilogic -> 'e ilogic -> goal) ->
             State.t ->
-            ('a ) ilogic * (('c ) ilogic * State.t Stream.t)) *
-           (('e ) ilogic * ('g ) ilogic ->
-            Env.t -> ('e, _) reified * ('g, _) reified) *
-           ('i * ('j * 'k) -> ('i * 'j) * 'k) *
-           (('l -> 'm -> 'n) -> 'l * 'm -> 'n)
-(*
-val qrs : unit ->
-           ((('a, 'b) injected ->
-             ('c, 'd) injected -> ('e, 'f) injected -> goal) ->
-            State.t ->
-            ('a, 'b) injected *
-            (('c, 'd) injected *
-             (('e, 'f) injected * State.t Stream.t))) *
-           (('g, 'h) injected * (('i, 'j) injected * ('k, 'l) injected) ->
+            'a ilogic *
+            ('c ilogic *
+             ('e ilogic * State.t Stream.t))) *
+           ('g ilogic * ('i ilogic * 'k ilogic) ->
             Env.t ->
-            ('g, 'h) reified * (('i, 'j) reified * ('k, 'l) reified)) *
+            'g reified * ('i reified * 'k reified)) *
            ('m * ('n * ('o * 'p)) -> ('m * ('n * 'o)) * 'p) *
            (('q -> 'r -> 's -> 't) -> 'q * ('r * 's) -> 't)
 
-val qrst : unit ->
-           ((('a, 'b) injected ->
-             ('c, 'd) injected ->
-             ('e, 'f) injected -> ('g, 'h) injected -> goal) ->
-            State.t ->
-            ('a, 'b) injected *
-            (('c, 'd) injected *
-             (('e, 'f) injected *
-              (('g, 'h) injected * State.t Stream.t)))) *
-           (('i, 'j) injected *
-            (('k, 'l) injected * (('m, 'n) injected * ('o, 'p) injected)) ->
-            Env.t ->
-            ('i, 'j) reified *
-            (('k, 'l) reified * (('m, 'n) reified * ('o, 'p) reified))) *
-           ('q * ('r * ('s * ('t * 'u))) -> ('q * ('r * ('s * 't))) * 'u) *
-           (('v -> 'w -> 'x -> 'y -> 'z) -> 'v * ('w * ('x * 'y)) -> 'z)
+  type ('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o,'p,'q,'r) four = unit ->
+         (('a ilogic -> 'b ilogic -> 'c ilogic -> 'd ilogic -> goal) ->
+          State.t ->
+          'a ilogic *
+          ('b ilogic * ('c ilogic * ('d ilogic * State.t Stream.t)))) *
+         ('e ilogic * ('f ilogic * ('g ilogic * 'h ilogic)) ->
+          Env.t -> 'e reified * ('f reified * ('g reified * 'h reified))) *
+         ('i * ('j * ('k * ('l * 'm))) -> ('i * ('j * ('k * 'l))) * 'm) *
+         (('n -> 'o -> 'p -> 'q -> 'r) -> 'n * ('o * ('p * 'q)) -> 'r)
 
-val qrstu : unit ->
-           ((('a, 'b) injected ->
-             ('c, 'd) injected ->
-             ('e, 'f) injected ->
-             ('g, 'h) injected -> ('i, 'j) injected -> goal) ->
-            State.t ->
-            ('a, 'b) injected *
-            (('c, 'd) injected *
-             (('e, 'f) injected *
-              (('g, 'h) injected *
-               (('i, 'j) injected * State.t Stream.t))))) *
-           (('k, 'l) injected *
-            (('m, 'n) injected *
-             (('o, 'p) injected * (('q, 'r) injected * ('s, 't) injected))) ->
-            Env.t ->
-            ('k, 'l) reified *
-            (('m, 'n) reified *
-             (('o, 'p) reified * (('q, 'r) reified * ('s, 't) reified)))) *
-           ('u * ('v * ('w * ('x * ('y * 'z)))) ->
-            ('u * ('v * ('w * ('x * 'y)))) * 'z) *
-           (('a1 -> 'b1 -> 'c1 -> 'd1 -> 'e1 -> 'f1) ->
-            'a1 * ('b1 * ('c1 * ('d1 * 'e1))) -> 'f1)
-*)
+end
+
+
+(** {3 Predefined numerals (one to five)} *)
+val one : (_, _, _, _, _) NUMERAL_TYPS.one
+val two : (_, _, _, _, _, _, _, _, _, _) NUMERAL_TYPS.two
+val three : (_, _, _, _, _, _, _, _, _, _, _, _, _, _) NUMERAL_TYPS.three
+val four : (_, _, _, _, _, _, _, _, _, _, _, _, _, _,_,_,_,_) NUMERAL_TYPS.four
+
+
+(** {3 The same numerals with conventional names} *)
+val q : (_, _, _,  _, _) NUMERAL_TYPS.one
+val qr : (_, _, _, _, _, _, _, _, _, _) NUMERAL_TYPS.two
+val qrs : (_, _, _, _, _, _, _, _, _, _, _, _, _, _) NUMERAL_TYPS.three
+val qrst : (_, _, _, _, _, _, _, _, _, _, _, _, _, _,_,_,_,_) NUMERAL_TYPS.four
+
+
 (** Tabling primitives.
     Tabling allows to cache answers of the goal between different queries.
 

@@ -2,7 +2,7 @@
   (names
     test000
     test001
-    ;test002sort
+    test002sort
     ;test004
     ;test005
     ;test006
@@ -15,7 +15,7 @@
     ;test015runaway
     ;test016sorto
     ;test017tabling
-    ;test018prjc
+    test018prjc
     ;test019tablingCache
     ;test020
     test021structural
@@ -33,7 +33,7 @@
 (cram (deps
   ./test000.exe
   ./test001.exe
-  ;./test002sort.exe
+  ./test002sort.exe
   ;./test004.exe
   ;./test005.exe
   ;./test006.exe
@@ -46,7 +46,7 @@
   ;./test015runaway.exe
   ;./test016sorto.exe
   ;./test017tabling.exe
-  ;./test018prjc.exe
+  ./test018prjc.exe
   ;./test019tablingCache.exe
   ;./test020.exe
   ./test021structural.exe

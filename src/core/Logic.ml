@@ -1,6 +1,6 @@
 (*
  * OCanren.
- * Copyright (C) 2015-2017
+ * Copyright (C) 2015-2021
  * Dmitri Boulytchev, Dmitry Kosarev, Alexey Syomin, Evgeny Moiseenko
  * St.Petersburg State University, JetBrains Research
  *
@@ -50,12 +50,7 @@ let logic = {logic with
           ()
           x
     end
-};;
-
-(* @type ('a, 'b) injected = 'a with show, gmap, html, eq, compare, foldl, foldr *)
-
-(* external lift : 'a -> ('a, 'a) injected                      = "%identity" *)
-(* external inj  : ('a, 'b) injected -> ('a, 'b logic) injected = "%identity" *)
+}
 
 exception Not_a_value
 
@@ -63,13 +58,10 @@ let to_logic x = Value x
 
 let from_logic = function
 | Value x    -> x
-| Var (_, _) -> raise Not_a_value
-
-(* let (!!) x = inj (lift x) *)
+| Var (n, _) -> raise Not_a_value
 
 type 'a ilogic
 
-(* external to_ilogic : (_, 'b) injected -> 'b ilogic = "%identity" *)
 external inji : 'a -> 'a ilogic = "%identity"
 let inj = inji
 
@@ -88,8 +80,6 @@ module Reifier = struct
   type ('a, 'b) t = ('a -> 'b) Env.Monad.t
 
   let reify = observe
-
-  (* let prj : (int -> 'a) -> ('a ILogic.ilogic, 'a) t = fun k env t -> match reify env t with Value x -> x | Var (v,_) -> k v *)
 
   (* can be implemented more efficiently,
     * without allocation of `'a logic`,
@@ -114,15 +104,15 @@ end
 let reify = Reifier.reify
 let prj = Reifier.prj_exn
 
-class type ['a, 'b] reified = object
+class type ['a] reified = object
   method is_open : bool
-  method reify   : ('a ilogic, 'b) Reifier.t -> 'b
+  method reify   : 'b . ('a ilogic, 'b) Reifier.t -> 'b
 end
 
-let make_rr : Env.t -> 'a ilogic -> ('a, 'b) reified  = fun env x ->
+let make_rr : Env.t -> 'a ilogic -> 'a reified  = fun env x ->
   object (self)
     method is_open            = Env.is_open env x
-    method reify : ('a ilogic, 'b) Reifier.t -> 'b = fun reifier ->
+    method reify : 'b . ('a ilogic, 'b) Reifier.t -> 'b = fun reifier ->
       Reifier.apply reifier (env, x)
   end
 

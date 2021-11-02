@@ -5,9 +5,6 @@ open OCanren
 
 (** {3 Helper functions to provide names for top-level variables } *)
 
-(* let qh    = fun qs          -> ["q", qs] *)
-(* let qrh   = fun qs rs       -> ["q", qs; "r", rs] *)
-
 let wrap onOK i (name, x) =
   onOK i name x
 
@@ -94,7 +91,7 @@ let run_gen_new onFree n num handler (repr, goal) =
   printf "}\n%!"
 
 let run_new reifier printerR = run_gen_new
-  (fun i name func ->
+  (fun i name (func : _ OCanren.reified) ->
     let ans = func#reify reifier in
     printf "%s%s=%s;%!" (if i<>0 then " " else "") name (printerR ans)
     )

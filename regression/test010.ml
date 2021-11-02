@@ -45,3 +45,9 @@ let runB n = run_new OCanren.reify (show(logic) show_bool) n
 
 let _ =
   runB (-1) qr qrh (REPR (fun q r -> (q =/= (!!true)) &&& (q =/= r)))
+
+let run_list n = run_new (Std.List.reify OCanren.reify) (GT.show(Std.List.logic) @@ GT.show logic show_int) n
+
+let _ =
+  run_list (-1) q qh (REPR (fun q -> (q =/= Std.nil()) ));
+  run_list (-1) q qh (REPR (fun q -> (q =/= !< !!2) ))

@@ -553,18 +553,57 @@ module ReifyTuple = struct
   let succ prev (x, xs) env = (make_rr env x, prev xs env)
 end
 
+module NUMERAL_TYPS = struct
+  type ('a, 'c, 'e, 'f, 'g) one = unit ->
+           (('a ilogic -> goal) ->
+            State.t -> 'a ilogic * State.t Stream.t) *
+           ('c ilogic -> Env.t -> 'c reified) * ('e -> 'e) *
+           (('f -> 'g) -> 'f -> 'g)
+  type ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j) two = unit ->
+           (('a Logic.ilogic -> 'b Logic.ilogic -> goal) ->
+            State.t -> 'a Logic.ilogic * ('b Logic.ilogic * State.t Stream.t)) *
+           ('c Logic.ilogic * 'd Logic.ilogic ->
+            Env.t -> 'c Logic.reified * 'd Logic.reified) *
+           ('e * ('f * 'g) -> ('e * 'f) * 'g) *
+           (('h -> 'i -> 'j) -> 'h * 'i -> 'j)
+  type ('a,'c,'e,'g,'i,'k,'m,'n,'o,'p,'q,'r,'s,'t) three = unit ->
+           (('a ilogic -> 'c ilogic -> 'e ilogic -> goal) ->
+            State.t ->
+            'a ilogic *
+            ('c ilogic *
+             ('e ilogic * State.t Stream.t))) *
+           ('g ilogic * ('i ilogic * 'k ilogic) ->
+            Env.t ->
+            'g reified * ('i reified * 'k reified)) *
+           ('m * ('n * ('o * 'p)) -> ('m * ('n * 'o)) * 'p) *
+           (('q -> 'r -> 's -> 't) -> 'q * ('r * 's) -> 't)
+           
+  type ('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o,'p,'q,'r) four = unit ->
+         (('a ilogic -> 'b ilogic -> 'c ilogic -> 'd ilogic -> goal) ->
+          State.t ->
+          'a ilogic *
+          ('b ilogic * ('c ilogic * ('d ilogic * State.t Stream.t)))) *
+         ('e ilogic * ('f ilogic * ('g ilogic * 'h ilogic)) ->
+          Env.t -> 'e reified * ('f reified * ('g reified * 'h reified))) *
+         ('i * ('j * ('k * ('l * 'm))) -> ('i * ('j * ('k * 'l))) * 'm) *
+         (('n -> 'o -> 'p -> 'q -> 'r) -> 'n * ('o * ('p * 'q)) -> 'r)
+
+
+end
+
 let succ n () =
   let adder, app, ext, uncurr = n () in
   (LogicAdder.succ adder, ReifyTuple.succ app, ExtractDeepest.succ ext, Uncurry.succ uncurr)
 
-let one   () = (LogicAdder.(succ zero)), ReifyTuple.one, ExtractDeepest.ext2, Uncurry.one
-let two   () = succ one   ()
+let one : (_,_,_,_,_) NUMERAL_TYPS.one = fun () ->
+   (LogicAdder.(succ zero)), ReifyTuple.one, ExtractDeepest.ext2, Uncurry.one
+let two  : (_,_,_,_,_,_,_,_,_,_) NUMERAL_TYPS.two = fun () -> succ one   ()
 let three () = succ two   ()
-let four  () = succ three ()
-let five  () = succ four  ()
+let four () = succ three ()
+let five () = succ four  ()
 
 let q     = one
-let qr    = two
+let qr : (_,_,_,_,_,_,_,_,_,_) NUMERAL_TYPS.two = two
 let qrs   = three
 let qrst  = four
 let qrstu = five

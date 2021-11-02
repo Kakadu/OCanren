@@ -92,19 +92,21 @@ let logic = {
 
 type 'a groundi = ('a, 'a groundi) t Logic.ilogic
 
-let rec reify : ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t =
+let reify : 'a 'b . ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t =
   fun ra ->
     let ( >>= ) = Env.Monad.bind in
+    Reifier.fix (fun self ->
     Reifier.compose Reifier.reify
     @@ ( ra >>= fun fa ->
-          reify ra >>= fun fr ->
-          Env.Monad.return (fun lx ->
+         self >>= fun fr ->
+          let rec foo = (fun lx ->
               match lx with
               | Var (v, xs) ->
-                Format.printf "reification of constraints is not implemented %s\n%!" __FILE__;
-                Var (v, [])
+                Var (v, Stdlib.List.map foo xs)
               | Value x -> Value (GT.gmap t fa fr x))
-        )
+          in
+          Env.Monad.return foo
+        ))
 
 let rec prj : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t =
   fun ra ->

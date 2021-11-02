@@ -91,16 +91,15 @@ val (!!) : 'a -> 'a ilogic
  *)
 val prj : ('a ilogic, 'a) Reifier.t
 
+(* A default shallow reifier *)
 (** Alias of [Reifier.reify] *)
 val reify : ('a ilogic, 'a logic) Reifier.t
 
 (** The exception is raised when we try to extract a regular term from the answer with some free variables *)
 exception Not_a_value
 
-
-
 (** Reification result *)
-class type ['a,'b] reified =
+class type ['a] reified =
 object
   (** Returns [true] if the term has any free logic variable inside *)
   method is_open: bool
@@ -109,17 +108,7 @@ object
   (* method prj: ('a ilogic, 'b) Reifier.t -> 'b *)
 
   (** Gets the answer as a logic value using provided injection function [inj] *)
-  (* method reify: (Env.t -> ('a, 'b) injected -> 'b) -> 'b *)
-
-  (* method prjc : (Env.t -> ('a, 'b) injected -> 'a) -> 'a *)
-  (* method prj_exn: (Env.t -> 'a ilogic -> 'b) -> 'b *)
-  (* method reify: (Env.t -> 'a ilogic -> 'b) -> 'b *)
-  method reify: ('a ilogic, 'b) Reifier.t -> 'b
+  method reify: 'b . ('a ilogic, 'b) Reifier.t -> 'b
 end
 
-val make_rr : Env.t -> 'a ilogic -> ('a,'b) reified
-
-(* A default shallow reifier *)
-(* val reify : Env.t -> ('a, 'a logic) injected -> 'a logic *)
-
-(* val prjc : (int -> 'a list -> 'a) -> Env.t -> ('a, 'a logic) injected -> 'a *)
+val make_rr : Env.t -> 'a ilogic -> 'a reified
