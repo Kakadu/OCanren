@@ -63,7 +63,7 @@ let rec reify : ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t =
       Var (v,[])
     | Value t -> Value (GT.gmap ground fa t))
 
-let prj_exn : 'a 'b. ('a, 'b) Reifier.t ->
+let prj : 'a 'b. ('a, 'b) Reifier.t ->
   (* (int -> 'b) ->  *)
   ('a groundi, 'b ground) Reifier.t
     =

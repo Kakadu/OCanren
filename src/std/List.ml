@@ -139,7 +139,6 @@ let (%) = cons
 let (%<) = fun x y -> cons x @@ cons y @@ nil ()
 let (!<) = fun x -> cons x @@ nil ()
 
-(*
 
 let rec foldro f a xs r =
   conde [
@@ -185,7 +184,7 @@ let rec lookupo p xs mx =
     )
   ]
 
-  let rec assoco x xs v =
+let rec assoco x xs v =
    Fresh.three (fun a b tl ->
      (xs === (Pair.pair a b) % tl) &&&
      conde [
@@ -228,7 +227,7 @@ let rec reverso a b =
     )
   ]
 
-let rec membero (l: (_,_) groundi) a =
+let rec membero l a =
   Fresh.two (fun x xs ->
     (l === x % xs) &&&
     (conde [
@@ -236,7 +235,7 @@ let rec membero (l: (_,_) groundi) a =
       (x =/= a) &&& (membero xs a)
     ])
   )
-*)
+
 let nullo q : goal = (q === nil())
 
 let caro : 'a groundi -> _ -> goal = fun xs h -> call_fresh (fun tl -> xs === (h % tl))

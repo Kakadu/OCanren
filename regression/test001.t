@@ -1,4 +1,6 @@
   $ ./test001.exe
+  fun q -> q === !!1 % q, 1 answer {
+  }
   fun q -> appendo q (ilist [3; 4]) (ilist [1; 2; 3; 4]), 1 answer {
   q=[1; 2];
   }
@@ -13,6 +15,8 @@
   }
   fun q -> reverso (ilist [1]) q, 1 answer {
   q=[1];
+  }
+  fun q -> occurs q, 1 answer {
   }
   fun q -> a_and_b q, 1 answer {
   q=7;
@@ -32,8 +36,6 @@
   q=5;
   q=5;
   q=5;
-  }
-  fun q -> occurs q, 1 answer {
   }
   fun q -> reverso (ilist []) (ilist []), 1 answer {
   q=_.10;

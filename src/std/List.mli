@@ -79,41 +79,44 @@ val list : 'a  GT.list -> 'a groundi
 val reify :  ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t
 
 val prj : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t
-(*
+
 (** Relational foldr *)
-val foldro : (('a, 'b) injected -> ('acc, _ logic' as 'acc2) injected -> ('acc, 'acc2) injected -> goal) -> ('acc, 'acc2) injected -> ('a, 'b) groundi -> ('acc, 'acc2) injected -> goal
+val foldro :
+  ('x ilogic as 'a -> 'acc ilogic -> 'acc ilogic -> goal) ->
+  'acc ilogic ->
+  'a groundi ->
+  'acc ilogic -> goal
 
 (** Relational map *)
-val mapo : (('a, 'b) injected -> ('q, 'w) injected -> goal) -> ('a, 'b) groundi -> ('q, 'w) groundi -> goal
+val mapo : ('x ilogic as 'a -> ('y ilogic as 'b) -> goal) -> 'a groundi -> 'b groundi -> goal
 
 (** Relational filter *)
-val filtero : (('a, 'b) injected -> Bool.groundi -> goal) -> ('a, 'b) groundi -> ('a, 'b) groundi -> goal
+val filtero : ('x ilogic as 'a -> Bool.groundi -> goal) -> 'a groundi -> 'a groundi -> goal
 
 (** Relational lookup *)
-val lookupo : (('a, 'b) injected -> Bool.groundi -> goal) -> ('a, 'b) groundi -> ('a option, 'b option logic') injected -> goal
+val lookupo : ('x ilogic as 'a -> Bool.groundi -> goal) -> 'a groundi -> 'a Option.groundi -> goal
 
 (** Relational association list lookup *)
-val assoco : ('a, 'b logic') injected -> (('a, 'c) Pair.ground, ('b logic', 'd logic') Pair.logic) groundi -> ('c, 'd logic') injected -> goal
+val assoco : 'a ilogic -> ('a ilogic, 'c ilogic ) Pair.groundi groundi -> 'c ilogic -> goal
 
 (** Boolean list disjunctions *)
-val anyo : (Bool.ground, Bool.logic) groundi -> Bool.groundi -> goal
+val anyo : Bool.groundi groundi -> Bool.groundi -> goal
 
 (** Boolean list conjunction *)
-val allo : (Bool.ground, Bool.logic) groundi -> Bool.groundi -> goal
+val allo : Bool.groundi groundi -> Bool.groundi -> goal
+
 
 (** Relational length *)
-val lengtho : (_, _) groundi -> Nat.groundi -> goal
+val lengtho : 'a ilogic groundi -> Nat.groundi -> goal
 
 (** Relational append *)
-val appendo : ('a, 'b) groundi -> ('a, 'b) groundi  -> ('a, 'b) groundi -> goal
+val appendo : (_ ilogic as 'a) groundi -> 'a groundi -> 'a groundi -> goal
 
 (** Relational reverse *)
-val reverso : ('a, 'b) groundi -> ('a, 'b) groundi -> goal
+val reverso : (_ ilogic as 'a)groundi -> 'a groundi -> goal
 
 (** Relational occurrence check (a shortcut) *)
-val membero : ('a, 'b logic') groundi  -> ('a, 'b logic') injected  -> goal
-
-*)
+val membero : 'a ilogic groundi  -> 'a ilogic  -> goal
 
 (** Relational check for empty list *)
 val nullo : _ groundi -> goal

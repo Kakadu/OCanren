@@ -28,6 +28,7 @@ module Y = struct
   type nonrec 'a logic = 'a t logic
   type nonrec 'a ilogic = 'a t ilogic
 
+  (* TODO: rewrite without exceptions *)
   let prj : 'a 'b. ('a, 'b) Reifier.t -> ('a ilogic, 'b t) Reifier.t =
      fun ra ->
       let ( >>= ) = Env.Monad.bind in
@@ -37,7 +38,7 @@ module Y = struct
          with Not_a_value -> Var2 5))
 
 
-  let b x     = inj (B x)
+  let b x = inj (B x)
 end
 
 let prjc_xy = X.prj (Y.prj OCanren.prj)

@@ -149,13 +149,13 @@ val run : (unit ->
 val delay : (unit -> goal) -> goal
 
 (** Successor function *)
-(* val succ : (unit ->
+val succ : (unit ->
             ('a -> State.t -> 'b) * ('c -> Env.t -> 'd) * ('e -> 'f * 'g) *
             ('h -> 'i -> 'j)) ->
            unit ->
-           ((('k, 'l) injected -> 'a) -> State.t -> ('k, 'l) injected * 'b) *
-           (('m, 'n) injected * 'c -> Env.t -> ('m, 'n) reified * 'd) *
-           ('o * 'e -> ('o * 'f) * 'g) * (('p -> 'h) -> 'p * 'i -> 'j) *)
+           (('k ilogic -> 'a) -> State.t -> 'k ilogic * 'b) *
+           ('m ilogic * 'c -> Env.t -> 'm reified * 'd) *
+           ('o * 'e -> ('o * 'f) * 'g) * (('p -> 'h) -> 'p * 'i -> 'j)
 
 module NUMERAL_TYPS : sig
   type ('a, 'c, 'e, 'f, 'g) one = unit ->

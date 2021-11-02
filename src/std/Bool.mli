@@ -45,9 +45,10 @@ val inj : ground -> logic
 type groundi = ground ilogic
 
 (** Reifier *)
-(* val reify : Env.t -> groundi -> logic *)
-
 val reify: (bool ilogic, bool Logic.logic) Reifier.t
+
+(** Shallow reifier *)
+val prj: (bool ilogic, bool) Reifier.t
 
 (** Constants *)
 val falso : groundi

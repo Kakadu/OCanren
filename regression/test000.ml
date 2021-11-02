@@ -31,18 +31,20 @@ module Result = struct
 
   type ('a, 'b) groundi = ('a, 'b) t ilogic
 
-  let rec reify : ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t -> (('a,'c) groundi, ('b,'d) logic) Reifier.t =
+  let reify : ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t -> (('a,'c) groundi, ('b,'d) logic) Reifier.t =
     fun ra rb ->
     let ( >>= ) = Env.Monad.bind in
-    Reifier.reify >>= fun r ->
+    Reifier.compose Reifier.reify
+    (Reifier.reify >>= fun r ->
     ra >>= fun fa ->
     rb >>= fun fb ->
-    Env.Monad.return (fun x ->
-      match r x with
-      | Var (v, _) ->
-        Format.eprintf "Reification of constraints is not implemented\n%!";
-        Var (v,[])
-      | Value x -> Value (GT.gmap t fa fb x))
+    let rec foo x =
+      match x with
+      | Var (v, xs) ->
+        Var (v, Stdlib.List.map foo xs)
+      | Value x -> Value (GT.gmap t fa fb x)
+      in
+    Env.Monad.return foo)
 
   let prj_exn : 'a 'b. ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t -> (('a,'c) groundi, ('b,'d) t) Reifier.t
       =

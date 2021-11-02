@@ -16,6 +16,7 @@
   Option
   Bool
   Nat
+  Pair
   List)
  (libraries GT mtime.clock.os)
  (flags

@@ -57,15 +57,15 @@ let rec inj n = to_logic (GT.(gmap t) inj n)
 let reify =
   let ( >>= ) = Env.Monad.bind in
   Reifier.fix (fun self ->
-  Reifier.compose Reifier.reify
-     (  self>>= fun fr ->
-        Env.Monad.return (fun lx ->
-            match lx with
-            | Var (v,_) ->
-              Format.printf "reification of constraints is not implemented %s" __FILE__;
-              Var (v,[])
-            | Value x -> Value (GT.gmap t fr x))
-      ))
+    Reifier.compose Reifier.reify
+      ( self>>= fun fr ->
+        let rec foo = function
+          | Var (v, xs) ->
+            Var (v, Stdlib.List.map foo xs)
+          | Value x -> Value (GT.gmap t fr x)
+        in
+        Env.Monad.return foo
+    ))
 
 let prj : (groundi, ground) Reifier.t =
   let ( >>= ) = Env.Monad.bind in
