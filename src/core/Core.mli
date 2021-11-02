@@ -227,45 +227,45 @@ val qrst : (_, _, _, _, _, _, _, _, _, _, _, _, _, _,_,_,_,_) NUMERAL_TYPS.four
 
        [let g = Tabling.(tabledrec one) (fun grec q -> (q === O) ||| (fresh (n) (q === S n) &&& (grec n)))]
 *)
-(*
+
 module Tabling :
   sig
     val succ : (unit -> (('a -> 'b) -> 'c) * ('d -> 'e -> 'f)) ->
            unit ->
-           ((('g, 'h) injected * 'a -> 'b) -> ('g, 'h) injected -> 'c) *
+           (('g ilogic * 'a -> 'b) -> 'g ilogic -> 'c) *
            (('i -> 'd) -> 'i * 'e -> 'f)
 
     val one : unit ->
-         ((('a, 'b) injected -> 'c) -> ('a, 'b) injected -> 'c) *
+         (('a ilogic -> 'c) -> 'a ilogic -> 'c) *
          (('d -> 'e) -> 'd -> 'e)
 
     val two : unit ->
-         ((('a, 'b) injected * ('c, 'd) injected -> 'e) ->
-          ('a, 'b) injected -> ('c, 'd) injected -> 'e) *
+         (('a ilogic * 'c ilogic -> 'e) ->
+          'a ilogic -> 'c ilogic -> 'e) *
          (('f -> 'g -> 'h) -> 'f * 'g -> 'h)
 
     val three : unit ->
-           ((('a, 'b) injected * (('c, 'd) injected * ('e, 'f) injected) ->
+           (('a ilogic * ('c ilogic * 'e ilogic) ->
              'g) ->
-            ('a, 'b) injected -> ('c, 'd) injected -> ('e, 'f) injected -> 'g) *
+            'a ilogic -> 'c ilogic -> 'e ilogic -> 'g) *
            (('h -> 'i -> 'j -> 'k) -> 'h * ('i * 'j) -> 'k)
 
     val four :  unit ->
-           ((('a, 'b) injected *
-             (('c, 'd) injected * (('e, 'f) injected * ('g, 'h) injected)) ->
+           (('a ilogic *
+             ('c ilogic * ('e ilogic * 'g ilogic)) ->
              'i) ->
-            ('a, 'b) injected ->
-            ('c, 'd) injected -> ('e, 'f) injected -> ('g, 'h) injected -> 'i) *
+            'a ilogic ->
+            'c ilogic -> 'e ilogic -> 'g ilogic -> 'i) *
            (('j -> 'k -> 'l -> 'm -> 'n) -> 'j * ('k * ('l * 'm)) -> 'n)
 
     val five : unit ->
-           ((('a, 'b) injected *
-             (('c, 'd) injected *
-              (('e, 'f) injected * (('g, 'h) injected * ('i, 'j) injected))) ->
+           (('a ilogic *
+             ('c ilogic *
+              ('e ilogic * ('g ilogic * 'i ilogic))) ->
              'k) ->
-            ('a, 'b) injected ->
-            ('c, 'd) injected ->
-            ('e, 'f) injected -> ('g, 'h) injected -> ('i, 'j) injected -> 'k) *
+            'a ilogic ->
+            'c ilogic ->
+            'e ilogic -> 'g ilogic -> 'i ilogic -> 'k) *
            (('l -> 'm -> 'n -> 'o -> 'p -> 'q) ->
             'l * ('m * ('n * ('o * 'p))) -> 'q)
 
@@ -279,7 +279,7 @@ module Tabling :
        ('d -> 'a -> State.t Stream.t goal')) ->
       (('b -> 'c) -> 'd) -> 'b -> 'c
   end
-*)
+
 IFDEF STATS THEN
 val unification_counter : unit -> int
 val unification_time    : unit -> Mtime.span
