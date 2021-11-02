@@ -63,9 +63,11 @@ let rec reify : ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t =
       Var (v,[])
     | Value t -> Value (GT.gmap ground fa t))
 
-let prj_exn : 'a 'b. ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t
+let prj_exn : 'a 'b. ('a, 'b) Reifier.t ->
+  (* (int -> 'b) ->  *)
+  ('a groundi, 'b ground) Reifier.t
     =
-  fun ra ->
+  fun ra (* onvar *) ->
   let ( >>= ) = Env.Monad.bind in
   Reifier.prj_exn >>= fun r ->
   ra >>= fun fa -> Env.Monad.return (fun x -> GT.gmap ground fa (r x))

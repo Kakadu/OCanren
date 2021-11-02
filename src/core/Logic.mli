@@ -57,7 +57,9 @@ module Reifier : sig
   (* this one projects implicit logic into the underlying type,
     * raising an exception if it finds a variable
     *)
-  val prj_exn : ('a ilogic, 'a) t
+  val prj_exn :
+    (* (int -> 'a) -> *)
+    ('a ilogic, 'a) t
 
   (* Interesting part --- we can apply a reifier to a value dipped into `State.t` comonad *)
   (* val apply : ('a, 'b) t -> 'a State.t -> 'b *)

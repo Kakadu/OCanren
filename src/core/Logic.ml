@@ -85,10 +85,12 @@ module Reifier = struct
     * without allocation of `'a logic`,
     * but for demonstration purposes this implementation is okay
     *)
-  let prj_exn env t =
+  let prj_exn(*  onvar *) env t =
     match reify env t with
     | Value x -> x
     | Var (v, _) -> raise Not_a_value
+      (* onvar v  *)
+
 
   let apply r (env, a) = r env a
 
