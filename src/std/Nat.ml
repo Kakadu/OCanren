@@ -54,24 +54,26 @@ let rec to_int   = function O -> 0 | S n -> 1 + to_int n
 
 let rec inj n = to_logic (GT.(gmap t) inj n)
 
-let rec reify _ =
-  failwith "not implemented"
-(*
+let reify =
   let ( >>= ) = Env.Monad.bind in
-  (* Here the usage of `compose` is essential,
-    * the 'monadic' implementation shown below fails with stack overflow due to an infinite recursion
-    *)
-  Reifier.compose Reifier.reify (
-    reify >>= fun fr ->
-    Env.Monad.return (fun lx ->
-      match lx with
-      | Var (v,_) ->
-        Format.eprintf "Constraints are not taken to account";
-        Var (v,[])
-      | Value n -> Value (GT.gmap t fr n))
-      )
- *)
-let rec prj_exn _ = failwith "not implemented"
+  Reifier.fix (fun self ->
+  Reifier.compose Reifier.reify
+     (  self>>= fun fr ->
+        Env.Monad.return (fun lx ->
+            match lx with
+            | Var (v,_) ->
+              Format.printf "reification of constraints is not implemented %s" __FILE__;
+              Var (v,[])
+            | Value x -> Value (GT.gmap t fr x))
+      ))
+
+let prj : (groundi, ground) Reifier.t =
+  let ( >>= ) = Env.Monad.bind in
+  Reifier.fix (fun self ->
+    Reifier.compose Reifier.prj_exn
+    ( self >>= fun fr ->
+      Env.Monad.return (fun x -> GT.gmap t fr x))
+    )
 
 let o   = Logic.inj O
 let s x = Logic.inj (S x)

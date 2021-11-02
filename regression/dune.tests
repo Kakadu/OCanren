@@ -18,8 +18,8 @@
     ;test018prjc
     ;test019tablingCache
     ;test020
-    ;test021structural
-    ;test022newsyntax
+    test021structural
+    test022newsyntax
   )
   (libraries GT OCanren OCanren.tester)
   (preprocess (action
@@ -49,6 +49,6 @@
   ;./test018prjc.exe
   ;./test019tablingCache.exe
   ;./test020.exe
-  ;./test021structural.exe
-  ;./test022newsyntax.exe
+  ./test021structural.exe
+  ./test022newsyntax.exe
 ))

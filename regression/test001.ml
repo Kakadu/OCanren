@@ -1,11 +1,6 @@
 open GT
 open OCanren
 open OCanren.Std
-
-let _ : int logic List.logic Stream.t =
-  run q (fun q -> q === !!1 % nil ()) (fun r -> r#reify (Std.List.reify Reifier.reify))
-
-
 open Tester
 open Printf
 
@@ -38,8 +33,6 @@ let show_int       = show(int)
 let show_int_list   = show(List.ground) (show int)
 let show_intl_list  = show(List.logic ) (show(logic) (show int))
 
-  (* let (===) = unitrace (fun h t -> show_intl_list @@ List.reify OCanren.reify h t) *)
-
 let rec appendo a b ab =
   conde
     [ ((a === nil ()) &&& (b === ab))
@@ -60,7 +53,7 @@ let rec reverso a b =
 
 (* let runL n         = runR (List.reify OCanren.reify) show_int_list show_intl_list n *)
 
-let run_exn eta = run_new (Std.List.prj_exn OCanren.prj) eta
+let run_exn eta = run_new (Std.List.prj OCanren.prj) eta
 let _ =
   run_exn show_int_list  1  q qh (REPR (fun q   -> q === !!1 % q));
   run_exn show_int_list  1  q qh (REPR (fun q   -> appendo q (ilist [3; 4]) (ilist [1; 2; 3; 4])   ));

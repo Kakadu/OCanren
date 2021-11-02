@@ -149,7 +149,7 @@ module Answer :
 
 module Prunes : sig
   type rez = Violated | NonViolated
-  type ('a, 'b) reifier = Env.t -> 'a Logic.ilogic -> 'b
+  type ('a, 'b) reifier = ('a,'b) Reifier.t
   type 'b cond = 'b -> bool
   type t
 
@@ -160,8 +160,8 @@ module Prunes : sig
   val extend  : t -> Term.VarTbl.key -> ('a, 'b) reifier -> 'b cond -> t
 end = struct
   type rez = Violated | NonViolated
-  type ('a, 'b) reifier = Env.t -> 'a Logic.ilogic -> 'b
-  type reifier_untyped = Env.t -> Obj.t -> Obj.t
+  type ('a, 'b) reifier = ('a,'b) Reifier.t
+  type reifier_untyped = Obj.t
   type 'b cond = 'b -> bool
   type cond_untyped = Obj.t -> bool
 
@@ -176,15 +176,17 @@ end = struct
   let check_last map env subst =
     try
       let (term, (reifier, checker)) = List.hd map in
+      let reifier : (_,_) reifier = Obj.obj reifier in
       let reified = reifier env (Obj.magic @@ Subst.apply env subst term) in
       if not (checker reified) then raise Fail;
       NonViolated
     with Not_found -> NonViolated
        | Fail -> Violated
 
-  let recheck ps env s =
+  let recheck (ps: t) env s =
     try
        ps |> List.iter (fun (k, (reifier, checker)) ->
+          let reifier : (_,_) Reifier.t = Obj.obj reifier in
           let reified = reifier env (Obj.magic @@ Subst.apply env s k) in
           if not (checker reified) then raise Fail
        );
@@ -397,13 +399,15 @@ let debug_var v reifier call = fun st ->
   in
   call xs st
 
-
-
-let structural term rr k st =
+let structural : 'a  ->
+  ('a , 'b) Reifier.t ->
+  ('b -> bool) ->
+  goal = fun term rr k st ->
   let new_constraints = Prunes.extend (State.prunes st) (Obj.magic term) rr k in
   match Prunes.check_last new_constraints (State.env st) (State.subst st) with
   | Prunes.Violated -> failure st
   | NonViolated -> success { st with State.prunes = new_constraints }
+
 (*
 include (struct
   @type cost = CFixed of GT.int | CAtLeast of GT.int with show

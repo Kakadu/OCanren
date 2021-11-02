@@ -38,7 +38,7 @@ val call_fresh : ('a ilogic -> goal) -> goal
 val (===) : 'a ilogic -> 'a ilogic -> goal
 
 (** [unify x y] is a prefix synonym for [x === y] *)
-(* val unify : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal *)
+val unify : 'a ilogic -> 'a ilogic -> goal
 
 
 (** [x =/= y] creates a goal, which introduces a disequality constraint for [x] and [y] *)
@@ -54,11 +54,11 @@ val (=/=) : 'a ilogic -> 'a ilogic -> goal
 
  See also: {!debug_var}.
 *)
-(* val structural :
-  ('a,'b) injected ->
-  (Env.t -> ('a,'b) injected -> 'b) ->
+val structural :
+  'a  ->
+  ('a , 'b) Reifier.t ->
   ('b -> bool) ->
-  goal *)
+  goal
 
 (** [diseq x y] is a prefix synonym for [x =/= y] *)
 (* val diseq : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal *)

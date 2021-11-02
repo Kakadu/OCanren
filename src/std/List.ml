@@ -100,22 +100,19 @@ let rec reify : ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t =
           reify ra >>= fun fr ->
           Env.Monad.return (fun lx ->
               match lx with
-              | Var (v,_) -> Var (v,[])
+              | Var (v, xs) ->
+                Format.printf "reification of constraints is not implemented %s\n%!" __FILE__;
+                Var (v, [])
               | Value x -> Value (GT.gmap t fa fr x))
         )
 
-
-(* let rec prjc fa onvar env xs = F.prjc fa (prjc fa onvar) onvar env xs *)
-let rec prj_exn : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t =
+let rec prj : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t =
   fun ra ->
-  failwith "not implemented"
-(*
     let ( >>= ) = Env.Monad.bind in
     Reifier.compose Reifier.prj_exn
     (ra >>= fun fa ->
-     prj_exn ra >>= fun fr ->
+     prj ra >>= fun fr ->
      Env.Monad.return (fun x -> GT.gmap t fa fr x))
- *)
 
 let nil () : 'a groundi = Logic.inj Nil
 let cons : 'a -> 'a groundi -> 'a groundi = fun x y ->

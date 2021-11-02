@@ -78,7 +78,7 @@ val list : 'a  GT.list -> 'a groundi
 (** Reifier *)
 val reify :  ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t
 
-val prj_exn : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t
+val prj : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t
 (*
 (** Relational foldr *)
 val foldro : (('a, 'b) injected -> ('acc, _ logic' as 'acc2) injected -> ('acc, 'acc2) injected -> goal) -> ('acc, 'acc2) injected -> ('a, 'b) groundi -> ('acc, 'acc2) injected -> goal

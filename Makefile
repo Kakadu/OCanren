@@ -22,7 +22,7 @@ syntax:
 regression:
 	dune build regression
 
-test: regression samples
+test: regression #samples
 	./test.sh all
 
 promote:

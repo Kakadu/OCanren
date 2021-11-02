@@ -75,9 +75,13 @@ let inj = inji
 
 let (!!) = inj
 
-let observe : ('a ilogic -> 'a logic) Env.Monad.t =
+let rec observe : ('a ilogic -> 'a logic) Env.Monad.t =
   fun env t ->
-    match Term.var t with None -> Value (Obj.magic t) | Some v -> Var (v.Term.Var.index, [])
+    match Term.var t with
+    | None -> Value (Obj.magic t)
+    | Some v ->
+      let i, cs = Term.Var.reify (observe env) v in
+      Var (i, cs)
 
 
 module Reifier = struct
@@ -103,6 +107,8 @@ module Reifier = struct
   let fmap f r env a = f (r env a)
 
   let fcomap f r env a = r env (f a)
+
+  let rec fix f = fun env -> f (fix f) env
 end
 
 let reify = Reifier.reify
@@ -110,22 +116,14 @@ let prj = Reifier.prj_exn
 
 class type ['a, 'b] reified = object
   method is_open : bool
-  (* method prj     : ('a ilogic, 'b) Reifier.t -> 'b *)
   method reify   : ('a ilogic, 'b) Reifier.t -> 'b
-  (* method prjc    : (Env.t -> ('a, 'b) injected -> 'a) -> 'a
-  method reify2  : (Env.t -> 'b ilogic -> 'b) -> 'b *)
 end
 
 let make_rr : Env.t -> 'a ilogic -> ('a, 'b) reified  = fun env x ->
   object (self)
     method is_open            = Env.is_open env x
-    (* method prj                =
-      if self#is_open then raise Not_a_value
-      else Obj.magic x *)
     method reify : ('a ilogic, 'b) Reifier.t -> 'b = fun reifier ->
       Reifier.apply reifier (env, x)
-    (* method prjc  onvar        = onvar   env x *)
-    (* method reify2 reifier     = reifier env (to_ilogic x) *)
   end
 
 (* let prj x = let rr = make_rr (Env.empty ()) x in rr#prj *)
@@ -140,7 +138,7 @@ let rec prjc of_int env x =
   | Some v -> let i, cs = Term.Var.reify (prjc of_int env) v in of_int i cs
   | None   -> Obj.magic x
  *)
-(* let project rr = rr#prj *)
+
 (*
 module type T1 =
   sig
@@ -268,10 +266,3 @@ module Fmap6 (T : T6) = struct
     | None   -> T.fmap (r1 env) (r2 env) (r3 env) (r4 env) (r5 env) (r6 env) x
 end
 *)
-
-module ILogic = struct
-  type _ ilogic = Obj.t
-
-  external inj : 'a -> 'a ilogic = "%identity"
-
-end

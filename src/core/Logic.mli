@@ -72,6 +72,8 @@ module Reifier : sig
   val fmap : ('b -> 'c) -> ('a, 'b) t -> ('a, 'c) t
 
   val fcomap : ('a -> 'b) -> ('b, 'c) t -> ('a, 'c) t
+
+  val fix: ( ('a, 'b) t as 'c -> 'c) -> 'c
 end
 
 
@@ -121,5 +123,3 @@ val make_rr : Env.t -> 'a ilogic -> ('a,'b) reified
 (* val reify : Env.t -> ('a, 'a logic) injected -> 'a logic *)
 
 (* val prjc : (int -> 'a list -> 'a) -> Env.t -> ('a, 'a logic) injected -> 'a *)
-
-(* val project : ('a, 'b) reified -> 'a *)

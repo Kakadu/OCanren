@@ -5,6 +5,7 @@ open OCanren.Std
 open Tester
 
 let (!) = inji
+let (!!) = inji
 let g123 x   = conde [x === !1; x === !2; x === !3]
 let g12  x   = (g123 x) &&& (x =/= !3)
 let gxy  x y = (g123 x) &&& (g123 y)
@@ -43,4 +44,4 @@ let show_bool = show(bool)
 let runB n = run_new OCanren.reify (show(logic) show_bool) n
 
 let _ =
-  runB (-1) qr qrh (REPR (fun q r -> (q =/= (!true)) &&& (q =/= r)))
+  runB (-1) qr qrh (REPR (fun q r -> (q =/= (!!true)) &&& (q =/= r)))
