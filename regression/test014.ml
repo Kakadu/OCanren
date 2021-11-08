@@ -324,7 +324,7 @@ let show_int_list   = GT.(show List.ground @@ show int)
 let show_intl_List = GT.(show List.logic @@ show logic @@ show int)
 
 let _ : int ilogic Std.List.groundi -> _ = multo
-let run_num n = run_new (List.prj prj) show_int_list n
+let run_num n = run_new (List.prj_exn prj_exn) show_int_list n
 
 let _ffoo _ =
   run_num (-1)  qr qrh (REPR (fun q r     -> multo q r (build_num 1)                          ));

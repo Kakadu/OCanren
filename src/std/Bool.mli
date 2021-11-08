@@ -48,7 +48,7 @@ type groundi = ground ilogic
 val reify: (bool ilogic, bool Logic.logic) Reifier.t
 
 (** Shallow reifier *)
-val prj: (bool ilogic, bool) Reifier.t
+val prj_exn: (bool ilogic, bool) Reifier.t
 
 (** Constants *)
 val falso : groundi

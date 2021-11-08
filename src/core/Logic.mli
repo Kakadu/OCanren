@@ -57,9 +57,10 @@ module Reifier : sig
   (* this one projects implicit logic into the underlying type,
     * raising an exception if it finds a variable
     *)
-  val prj_exn :
-    (* (int -> 'a) -> *)
-    ('a ilogic, 'a) t
+  val prj_exn : ('a ilogic, 'a) t
+
+  val prj : (int -> 'a) -> ('a ilogic, 'a) t
+
 
   (* Interesting part --- we can apply a reifier to a value dipped into `State.t` comonad *)
   (* val apply : ('a, 'b) t -> 'a State.t -> 'b *)
@@ -88,10 +89,14 @@ val inj : 'a -> 'a ilogic
 (** A synonym for [fun x -> inj @@ lift x] (for non-parametric types) *)
 val (!!) : 'a -> 'a ilogic
 
-(** [prj x] returns a regular value from injected representation.
+(** [prj_exn x] returns a regular value from injected representation.
     Raises exception [Not_a_value] if [x] contains free variables
  *)
-val prj : ('a ilogic, 'a) Reifier.t
+val prj_exn : ('a ilogic, 'a) Reifier.t
+
+val prj : (int -> 'a) -> ('a ilogic, 'a) Reifier.t
+
+
 
 (* A default shallow reifier *)
 (** Alias of [Reifier.reify] *)

@@ -16,11 +16,11 @@ let bools = list (!!)
 
 let sumo = List.foldro Nat.addo ?$0
 
-let run_bool n = run_new OCanren.prj show_bool n
-let run_nat n = run_new Nat.prj (GT.show Nat.ground) n
-let run_nat_list n = run_new (List.prj Nat.prj) (GT.show List.ground @@ GT.show Nat.ground) n
-let run_bool_list n = run_new (List.prj Bool.prj) (GT.show List.ground @@ GT.show Bool.ground) n
-let run_option_nat n = run_new (Option.prj Nat.prj) (GT.show Option.ground @@ GT.show Nat.ground) n
+let run_bool n = run_new OCanren.prj_exn show_bool n
+let run_nat n = run_new Nat.prj_exn (GT.show Nat.ground) n
+let run_nat_list n = run_new (List.prj_exn Nat.prj_exn) (GT.show List.ground @@ GT.show Nat.ground) n
+let run_bool_list n = run_new (List.prj_exn Bool.prj_exn) (GT.show List.ground @@ GT.show Bool.ground) n
+let run_option_nat n = run_new (Option.prj_exn Nat.prj_exn) (GT.show Option.ground @@ GT.show Nat.ground) n
 
 let () =
   run_bool        1    q  qh (REPR (fun q     -> Bool.noto Bool.truo  q                       ));

@@ -45,7 +45,7 @@ type groundi = groundi t Logic.ilogic
 val reify : (groundi, logic) Reifier.t
 
 (* Shallow non-variable projection *)
-val prj : (groundi, ground) Reifier.t
+val prj_exn : (groundi, ground) Reifier.t
 
 (** [of_int n] converts integer [n] into [ground]; negative integers become [O] *)
 val of_int : int -> ground

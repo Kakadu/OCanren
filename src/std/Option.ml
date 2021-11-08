@@ -51,19 +51,20 @@ let inj f x = to_logic (GT.(gmap option) f x)
 
 type 'a groundi = 'a ground ilogic
 
-let rec reify : ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t =
+let rec reify : 'a 'b . ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t =
   fun ra ->
   let ( >>= ) = Env.Monad.bind in
   Reifier.reify >>= fun r ->
   ra >>= fun fa ->
-  Env.Monad.return (fun x ->
-    match r x with
-    | Var (v, _) ->
-      Format.eprintf "Reification of constraints is not implemented\n%!";
-      Var (v,[])
-    | Value t -> Value (GT.gmap ground fa t))
+  Reifier.compose Reifier.reify (
+    let rec foo = function
+    | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
+    | Value t -> Value (GT.gmap ground fa t)
+    in
+    Env.Monad.return foo
+  )
 
-let prj : 'a 'b. ('a, 'b) Reifier.t ->
+let prj_exn : 'a 'b. ('a, 'b) Reifier.t ->
   (* (int -> 'b) ->  *)
   ('a groundi, 'b ground) Reifier.t
     =

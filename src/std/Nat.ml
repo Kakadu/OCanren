@@ -67,7 +67,7 @@ let reify =
         Env.Monad.return foo
     ))
 
-let prj : (groundi, ground) Reifier.t =
+let prj_exn : (groundi, ground) Reifier.t =
   let ( >>= ) = Env.Monad.bind in
   Reifier.fix (fun self ->
     Reifier.compose Reifier.prj_exn

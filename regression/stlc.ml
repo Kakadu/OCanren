@@ -39,7 +39,7 @@ module GLam = struct
         Env.Monad.return foo
     ))
 
-  let prj : (injected, ground) Reifier.t =
+  let prj_exn : (injected, ground) Reifier.t =
     let ( >>= ) = Env.Monad.bind in
     Reifier.fix (fun self ->
       Reifier.compose Reifier.prj_exn

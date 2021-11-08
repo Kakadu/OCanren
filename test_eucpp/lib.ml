@@ -8,7 +8,7 @@ module TestOption = struct
   let%test _ =
     let goal q = q === inji @@ Some (inji 42) in
     let xs : int option Stream.t =
-      OCanren.(run q) goal (fun rr -> rr#reify (Std.Option.prj Reifier.prj_exn))
+      OCanren.(run q) goal (fun rr -> rr#reify (Std.Option.prj_exn Reifier.prj_exn))
     in
     match Stream.take xs with
     | [ Some 42 ] -> true

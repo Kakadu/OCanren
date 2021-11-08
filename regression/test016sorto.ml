@@ -14,8 +14,8 @@ let minmaxo a b min max = Nat.(
       ]
   )
 
-let run n = run_new prj GT.(show bool) n
-let run_nat n = run_new Nat.prj GT.(show Nat.ground) n
+let run n = run_new prj_exn GT.(show bool) n
+let run_nat n = run_new Nat.prj_exn GT.(show Nat.ground) n
 let () =
     run  (-1)   q  qh (REPR (fun q   -> Nat.leo (nat 1) (nat 2) q));
     run  (-1)   q  qh (REPR (fun q   -> Nat.leo (nat 2) (nat 1) q));

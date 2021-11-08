@@ -50,7 +50,7 @@ let logic = {
 let inj = to_logic
 
 let reify : (bool ilogic, bool Logic.logic) Reifier.t = Logic.reify
-let prj : (bool ilogic, bool) Reifier.t = Logic.prj
+let prj_exn : (bool ilogic, bool) Reifier.t = Logic.prj_exn
 
 let falso = Logic.inj false
 let truo  = Logic.inj true

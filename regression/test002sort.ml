@@ -65,19 +65,18 @@ let rec sorto x y =
 let _ : (Nat.groundi List.groundi, Nat.logic List.logic) Reifier.t =
   List.reify Nat.reify
 let _ : (Nat.groundi List.groundi, Nat.ground List.ground) Reifier.t =
-  List.prj Nat.prj
+  List.prj_exn Nat.prj_exn
 
 let _ = Stream.take ~n:10 @@
   run qrst  (fun q1 q2 q3 p -> sorto (q1 % (q2 % (q3 % nil ()))) p)
             (fun _  _  _ rr ->
-              (* let _ : int = rr in *)
               printf "%s\n%!"  @@ (if rr#is_open
               then
                 GT.(show List.logic (show Nat.logic)) @@
                   rr#reify (List.reify Nat.reify)
               else
                 GT.(show List.ground (show Nat.ground)) @@
-                  rr#reify (List.prj Nat.prj)
+                  rr#reify (List.prj_exn  Nat.prj_exn)
               )
             )
 
@@ -86,7 +85,7 @@ let sort l =
   List.to_list Nat.to_int @@
   Stream.hd @@
     run q (sorto @@ nat_list l)
-          (fun rr -> rr#reify (List.prj Nat.prj) )
+          (fun rr -> rr#reify (List.prj_exn Nat.prj_exn) )
 
 (* Veeeeery straightforward implementation of factorial *)
 let rec fact = function 0 -> 1 | n -> n * fact (n-1)
@@ -97,14 +96,14 @@ let perm l =
   L.map (List.to_list Nat.to_int) @@
   Stream.take ~n:(fact @@ L.length l) @@
     run q (fun q -> sorto q @@ nat_list (L.sort Stdlib.compare l))
-          (fun rr -> rr#reify (List.prj Nat.prj))
+          (fun rr -> rr#reify (List.prj_exn Nat.prj_exn))
 
 (* More hardcore version: no standard sorting required *)
 let perm' l =
   L.map (List.to_list Nat.to_int) @@
   Stream.take ~n:(fact @@ L.length l) @@
     run q (fun q -> fresh (r) (sorto (nat_list l) r) (sorto q r))
-          (fun rr -> rr#reify (List.prj Nat.prj))
+          (fun rr -> rr#reify (List.prj_exn  Nat.prj_exn ))
 
 (* Entry point *)
 let _ =

@@ -35,7 +35,7 @@ module GExpr = struct
         Env.Monad.return foo
     ))
 
-  let prj : (fexpr, expr) Reifier.t =
+  let prj_exn : (fexpr, expr) Reifier.t =
     let ( >>= ) = Env.Monad.bind in
     Reifier.fix (fun self ->
       Reifier.compose Reifier.prj_exn
@@ -87,9 +87,9 @@ and pTop i i' r = pAdd i i' r
 
 let pExpr i r = fresh (i') (pTop i i' r) (eof i')
 
-let runE_exn n = run_new GExpr.prj GExpr.show_expr n
+let runE_exn n = run_new GExpr.prj_exn GExpr.show_expr n
 let show_stream xs = show(List.ground) show_token xs
-let run_stream n = run_new (List.prj OCanren.prj) show_stream n
+let run_stream n = run_new (List.prj_exn OCanren.prj_exn) show_stream n
 
 let _ =
   runE_exn   1   q   qh (REPR (fun q -> pExpr (list (!!) [Id]) q                  ));

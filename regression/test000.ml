@@ -11,7 +11,7 @@ let show_intl      = show(logic)  (show(int))
 let show_intl_optl = show(logic)  (show(option) (show(logic) (show(int))))
 
 let run_opt eta = run_new (Option.reify OCanren.reify) show_intl_optl eta
-let run_int eta = run_new OCanren.prj show_int eta
+let run_int eta = run_new OCanren.prj_exn show_int eta
 
 let _ = Option.(
     run_int 1 q qh (REPR(fun q -> q === !!5));

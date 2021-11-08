@@ -9,9 +9,6 @@ open Tester
 open Stlc
 
 module GTyp = struct
-
-
-
   @type ('a, 'b) t =
   | P   of 'a      (* primitive *)
   | Arr of 'b * 'b (* arrow *)
@@ -42,7 +39,7 @@ module GTyp = struct
         Env.Monad.return foo
     ))
 
-  let prj : (injected, rtyp) Reifier.t =
+  let prj_exn : (injected, rtyp) Reifier.t =
     let ( >>= ) = Env.Monad.bind in
     Reifier.fix (fun self ->
       Reifier.compose Reifier.prj_exn
@@ -51,8 +48,6 @@ module GTyp = struct
         Env.Monad.return (fun x -> GT.gmap t rstring fr x))
       )
 end
-(*
-let rec gtyp_reifier c x = GTyp.reify OCanren.reify gtyp_reifier c x *)
 
 open GLam
 open GTyp
@@ -90,9 +85,9 @@ let show_stringl = show(logic) (show(string))
 let inj_list_p xs = List.list @@ L.map (fun (x,y) -> pair x y) xs
 
 (* Without free variables *)
-let run_lam eta = run_new GLam.prj GLam.show_rlam eta
-let run_string eta = run_new OCanren.prj (GT.show GT.string) eta
-let run_typ eta = run_new GTyp.prj GTyp.show_rtyp eta
+let run_lam eta = run_new GLam.prj_exn GLam.show_rlam eta
+let run_string eta = run_new OCanren.prj_exn (GT.show GT.string) eta
+let run_typ eta = run_new GTyp.prj_exn GTyp.show_rtyp eta
 
 let () =
   run_lam    1 q qh (REPR (fun q -> lookupo varX (inj_list_p [])  q                                   ));

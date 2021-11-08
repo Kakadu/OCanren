@@ -85,12 +85,15 @@ module Reifier = struct
     * without allocation of `'a logic`,
     * but for demonstration purposes this implementation is okay
     *)
-  let prj_exn(*  onvar *) env t =
+  let prj_exn env t =
     match reify env t with
     | Value x -> x
     | Var (v, _) -> raise Not_a_value
-      (* onvar v  *)
 
+  let prj onvar env t =
+    match reify env t with
+    | Value x -> x
+    | Var (v, _) -> onvar v
 
   let apply r (env, a) = r env a
 
@@ -104,7 +107,8 @@ module Reifier = struct
 end
 
 let reify = Reifier.reify
-let prj = Reifier.prj_exn
+let prj_exn = Reifier.prj_exn
+let prj = Reifier.prj
 
 class type ['a] reified = object
   method is_open : bool

@@ -53,7 +53,7 @@ let rec reverso a b =
 
 (* let runL n         = runR (List.reify OCanren.reify) show_int_list show_intl_list n *)
 
-let run_exn eta = run_new (Std.List.prj OCanren.prj) eta
+let run_exn eta = run_new (Std.List.prj_exn OCanren.prj_exn) eta
 let _ =
   run_exn show_int_list  1  q qh (REPR (fun q   -> q === !!1 % q));
   run_exn show_int_list  1  q qh (REPR (fun q   -> appendo q (ilist [3; 4]) (ilist [1; 2; 3; 4])   ));
@@ -63,7 +63,7 @@ let _ =
   run_exn show_int_list  1  q qh (REPR (fun q   -> reverso (ilist [1]) q                           ));
   run_exn show_int_list  1  q qh (REPR (fun q   -> occurs q                                        ))
 
-let run_exn eta = run_new OCanren.prj eta
+let run_exn eta = run_new OCanren.prj_exn  eta
 let _ =
   run_exn show_int       1  q qh (REPR (fun q   -> a_and_b q                                       ));
   run_exn show_int       2  q qh (REPR (fun q   -> a_and_b' q                                      ));

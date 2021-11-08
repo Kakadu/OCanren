@@ -14,7 +14,7 @@ let gnot5 x  = x =/= !5
 
 let show_int = show(int)
 
-let run_int eta = run_new OCanren.prj show_int eta
+let run_int eta = run_new OCanren.prj_exn show_int eta
 
 let _ =
   run_int    3    q   qh (REPR (fun q   -> g123 q ));

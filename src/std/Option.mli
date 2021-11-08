@@ -50,7 +50,7 @@ type 'a groundi = 'a ground ilogic
 val reify : ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t
 
 (* Shallow non-variable projection *)
-val prj : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t
+val prj_exn : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t
 
 (** {3 Constructors} *)
 val some : 'a -> 'a groundi

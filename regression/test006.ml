@@ -51,7 +51,7 @@ let a_la_quine q r s =
     ; evalo (app s q) r
     ]
 
-let run_lam n = run_new GLam.prj GLam.show_rlam n
+let run_lam n = run_new GLam.prj_exn GLam.show_rlam n
 let _ =
   run_lam 1    q   qh (REPR (fun q   -> substo (v varX) varX (v varY) q                       ));
   run_lam 1    q   qh (REPR (fun q   -> evalo (abs varX (v varX)) q                           ));

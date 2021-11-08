@@ -42,7 +42,7 @@ let rec evalo m n =
     )
     (fun _ _ -> n === m)
 
-let run_lam eta = run_new GLam.prj GLam.show_rlam eta
+let run_lam eta = run_new GLam.prj_exn GLam.show_rlam eta
 let _ =
   run_lam 1    q   qh (REPR (fun q   -> substo (v varX) varX (v varY) q                   ));
   run_lam 2    q   qh (REPR (fun q   -> evalo (abs varX (v varX)) q                       ));
