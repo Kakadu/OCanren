@@ -3,95 +3,191 @@
   which will be stored internally as disjunction of conjunction (DNF)
 *)
 
+open Format
+
+exception Violated
+
 let ( !!! ) = Obj.magic
 
-module Conjunct = struct
-  type t = Subst.Binding.t
+open Term
 
-  let pp ppf Subst.Binding.{ var; term } =
-    Format.fprintf ppf "{ %d -> '%s' }" var.Term.Var.index (Term.show term)
-  ;;
+let is_wc_var v =
+  match Term.var v with
+  | Some { Var.index = -42 } -> true
+  | _ -> false
+;;
 
-  let intersects_with ~set : t -> bool =
-    let open Subst.Binding in
-    let rec helper set = function
-      | [] -> false
-      | { var; term } :: tl when Term.VarSet.mem var set -> true
-      | { term } :: tl ->
-        (match Term.var term with
-        | Some var when Term.VarSet.mem var set -> true
-        | _ -> helper set tl)
-    in
-    fun c -> helper set [ c ]
-  ;;
-end
+module type EXTRA = sig end
 
-module Disjunct = struct
-  type t = Conjunct.t list
+module Make (FDC : EXTRA) = struct
+  module Conjunct = struct
+    type t = Subst.Binding.t
 
-  let empty = []
-  let singleton : Term.Var.t -> _ -> t = fun var term -> [ Subst.Binding.{ var; term } ]
+    let pp ppf Subst.Binding.{ var; term } =
+      Format.fprintf ppf "{ %d -> '%s' }" var.Term.Var.index (Term.show term)
+    ;;
+
+    let intersects_with ~set : t -> bool =
+      let open Subst.Binding in
+      let rec helper set = function
+        | [] -> false
+        | { var; term } :: tl when Term.VarSet.mem var set -> true
+        | { term } :: tl ->
+          (match Term.var term with
+          | Some var when Term.VarSet.mem var set -> true
+          | _ -> helper set tl)
+      in
+      fun c -> helper set [ c ]
+    ;;
+  end
+
+  module Disjunct : sig
+    type t
+
+    val pp : Format.formatter -> t -> unit
+    val empty : t
+    val is_empty : t -> bool
+    val singleton : Var.t -> Obj.t -> t
+    val of_bindings : Subst.Binding.t list -> t
+    val intersects_with : set:VarSet.t -> t -> bool
+    val conj : t -> t -> t
+
+    (* val union : t -> t -> t *)
+    val recheck_exn : Env.t -> Subst.t -> Subst.Binding.t list -> t -> t option
+    val extract : t -> Term.Var.t -> Obj.t list
+  end = struct
+    type t =
+      { conjs : Conjunct.t list
+      ; wcs : VarSet.t
+      }
+
+    let empty = { wcs = VarSet.empty; conjs = [] }
+
+    let is_empty = function
+      | { conjs = []; wcs } when VarSet.is_empty wcs -> true
+      | _ -> false
+    ;;
+
+    let singleton : Term.Var.t -> _ -> t =
+     fun var term ->
+      if is_wc_var var && is_var term
+      then { conjs = []; wcs = VarSet.(add !!!term empty) }
+      else if is_wc_var term && is_var var
+      then { conjs = []; wcs = VarSet.(add !!!var empty) }
+      else { conjs = [ Subst.Binding.{ var; term } ]; wcs = VarSet.empty }
+   ;;
+
+    let pp ppf { wcs; conjs } =
+      Format.fprintf ppf "[ ";
+      Stdlib.List.iter (Conjunct.pp ppf) conjs;
+      Format.fprintf ppf " ]"
+    ;;
+
+    let conj : t -> t -> t =
+     fun l r -> { wcs = VarSet.union l.wcs r.wcs; conjs = List.append l.conjs r.conjs }
+   ;;
+
+    let intersects_with ~set { conjs } =
+      (* TODO: should we check wildcard variables *)
+      let rec helper = function
+        | [] -> false
+        | c :: ctl -> if Conjunct.intersects_with ~set c then true else helper ctl
+      in
+      helper conjs
+    ;;
+
+    let of_bindings bnds =
+      assert (not ([] = bnds));
+      Stdlib.List.fold_left
+        (fun ({ wcs; conjs } as acc) Subst.Binding.{ var; term } ->
+          (* TODO: *)
+          acc)
+        empty
+        bnds
+    ;;
+
+    (* let union : t -> t -> t = fun l r -> assert false *)
+
+    let recheck_exn env subst bnds { wcs; conjs } =
+      let a = List.map (fun { Subst.Binding.var } -> var) conjs in
+      let b = List.map (fun { Subst.Binding.term } -> term) conjs in
+      (* TODO: implement unification of bindings list *)
+      match Subst.unify env subst (Obj.repr a) (Obj.repr b) with
+      | None -> None
+      | Some ([], _) -> raise Violated
+      | Some (bnds, _) -> Some (of_bindings bnds)
+    ;;
+
+    let extract { conjs } v =
+      let rec helper acc = function
+        | [] -> acc
+        | { Subst.Binding.var; Subst.Binding.term } :: ctl ->
+          let acc = if Term.Var.equal var v then term :: acc else acc in
+          let acc =
+            match Term.var term with
+            | None -> acc
+            | Some v2 when Term.Var.equal v v2 -> Obj.repr var :: acc
+          in
+          helper acc ctl
+      in
+      helper [] conjs
+    ;;
+  end
+
+  type t = Disjunct.t list
 
   let pp ppf xs =
-    Format.fprintf ppf "[ ";
-    Stdlib.List.iter (Conjunct.pp ppf) xs;
-    Format.fprintf ppf " ]"
+    printf "All disjuncts (%d)\n%!" (List.length xs);
+    Stdlib.List.iteri (fun i x -> fprintf ppf "\t%d%a\n%!" i Disjunct.pp x) xs
   ;;
 
-  let conj : t -> t -> t = fun l r -> l @ r
+  let empty : t = []
+  let disj : t -> t -> t = Stdlib.List.append
 
-  let intersects_with ~set =
-    let rec helper = function
-      | [] -> false
-      | c :: ctl -> if Conjunct.intersects_with ~set c then true else helper ctl
-    in
-    helper
+  let conj : t -> t -> t =
+   fun l r ->
+    l
+    |> Stdlib.List.concat_map (fun (c1 : Disjunct.t) ->
+           Stdlib.List.map (fun (c2 : Disjunct.t) -> Disjunct.conj c1 c2) r)
+ ;;
+
+  let disequality_of_terms l r : t =
+    try
+      Term.fold_monoid
+        l
+        r
+        ~fvar:(fun v t -> [ Disjunct.singleton v (Obj.magic t) ])
+        ~fk:(fun _ v t -> [ Disjunct.singleton v (Obj.magic t) ])
+        ~empty
+        ~fval:(fun v1 v2 ->
+          (* two non-boxed values that are not equal *)
+          empty)
+        ~join:Stdlib.List.append
+    with
+    | Term.Different_shape (_, _) -> empty
   ;;
-end
 
-type t = Disjunct.t list
+  let add env subst cstrs l r : t option =
+    printf "add: %s %d\n%!" __FILE__ __LINE__;
+    match Subst.unify env subst l r with
+    | None -> Some cstrs
+    | Some ([], _) ->
+      (* easily violated *)
+      None
+    | Some (bnds, _subst) ->
+      (match cstrs with
+      | [] ->
+        printf "%s %d\n%!" __FILE__ __LINE__;
+        let ans = [ Disjunct.of_bindings bnds ] in
+        Format.printf "all disjuncts: %a\n%!" pp ans;
+        Some ans
+      | cstrs ->
+        let ans = Stdlib.List.map Disjunct.(conj (of_bindings bnds)) cstrs in
+        Format.printf "all disjuncts: %a\n%!" pp ans;
+        Some ans)
+  ;;
 
-let pp ppf xs = Stdlib.List.iter (Disjunct.pp ppf) xs
-let empty : t = []
-let disj : t -> t -> t = Stdlib.List.append
-
-let conj : t -> t -> t =
- fun l r ->
-  l
-  |> Stdlib.List.concat_map (fun (c1 : Disjunct.t) ->
-         Stdlib.List.map (fun (c2 : Disjunct.t) -> Disjunct.conj c1 c2) r)
-;;
-
-let disequality_of_terms l r : t =
-  try
-    Term.fold_monoid
-      l
-      r
-      ~fvar:(fun v t -> [ Disjunct.singleton v (Obj.magic t) ])
-      ~fk:(fun _ v t -> [ Disjunct.singleton v (Obj.magic t) ])
-      ~empty
-      ~fval:(fun v1 v2 ->
-        (* two non-boxed values that are not equal *)
-        empty)
-      ~join:Stdlib.List.append
-  with
-  | Term.Different_shape (_, _) -> empty
-;;
-
-let add env subst cstrs l r : t option =
-  match Subst.unify env subst l r with
-  | None -> Some cstrs
-  | Some ([], _) ->
-    (* easily violated *)
-    None
-  | Some (bnds, _subst) ->
-    let add_to_disjunct d = Some d in
-    (match cstrs with
-    | [] -> Some [ bnds ]
-    | cstrs -> Some (Stdlib.List.map (Stdlib.List.append bnds) cstrs))
-;;
-
-(* let rec unify_list env fst snd (subst as _acc) = function
+  (* let rec unify_list env fst snd (subst as _acc) = function
   | [] -> acc
   | h :: tl ->
     (match Subst.unify env subst !!!(fst h) !!!(snd tl) with
@@ -99,96 +195,78 @@ let add env subst cstrs l r : t option =
     | Some (_, subst) -> unify_list env fst snd subst tl )
 ;; *)
 
-exception Violated
-
-let recheck env subst cs bnds =
-  (* For every disjunct we try to simplify it using [bnds]. If it simplifies to empty disjunct, then we simplify it to False.
+  let recheck env subst cs bnds =
+    (* For every disjunct we try to simplify it using [bnds]. If it simplifies to empty disjunct, then we simplify it to False.
     If all disjuncts has been simpifies to False, then constraint is violated *)
-  let simplify =
-    let rec helper acc = function
-      | [] -> acc
-      | hc :: tlc ->
-        let (_ : Disjunct.t) = hc in
-        (* Format.printf "got a disjunct: %a\n%!" Disjunct.pp hc; *)
-        let rez =
-          let a = List.map (fun { Subst.Binding.var } -> var) hc in
-          let b = List.map (fun { Subst.Binding.term } -> term) hc in
-          (* TODO: implement unification of bindings list *)
-          Subst.unify env subst (Obj.repr a) (Obj.repr b)
-        in
-        (match rez with
-        | None -> helper acc tlc
-        | Some ([], _) -> raise Violated
-        | Some (bnds, subst1) ->
-          (* We have an updated disjunct *)
-          helper (bnds :: acc) tlc)
+    let simplify =
+      let rec helper acc = function
+        | [] -> acc
+        | hc :: tlc ->
+          let (_ : Disjunct.t) = hc in
+          (* Format.printf "got a disjunct: %a\n%!" Disjunct.pp hc; *)
+          let rez = Disjunct.recheck_exn env subst bnds hc in
+          (match rez with
+          | None -> helper acc tlc
+          | Some d ->
+            (* We have an updated disjunct *)
+            helper (d :: acc) tlc)
+      in
+      helper []
     in
-    helper []
-  in
-  try
-    match cs with
-    | [] -> Some []
-    | _ ->
-      (match simplify cs with
-      | [] -> raise Violated
-      | newc -> Some newc)
-  with
-  | Violated -> None
-;;
-
-(* match Term.is_var l, Term.is_var r with
-  | _, _ -> assert false *)
-
-let merge_disjoint _ = assert false
-
-module Answer = struct
-  type t = Disjunct.t
-
-  let extract ans v =
-    let rec helper acc = function
-      | [] -> acc
-      | { Subst.Binding.var; Subst.Binding.term } :: ctl ->
-        let acc = if Term.Var.equal var v then term :: acc else acc in
-        let acc =
-          match Term.var term with
-          | None -> acc
-          | Some v2 when Term.Var.equal v v2 -> Obj.repr var :: acc
-        in
-        helper acc ctl
-    in
-    helper [] ans
+    try
+      match cs with
+      | [] -> Some []
+      | _ ->
+        (match simplify cs with
+        | [] -> raise Violated
+        | newc -> Some newc)
+    with
+    | Violated -> None
   ;;
 
-  let subsumed _env c1 c2 = false
+  let merge_disjoint _ = assert false
+
+  module Answer = struct
+    type t = Disjunct.t
+
+    let extract d v =
+      Format.printf "Extracting from %a\n%!" Disjunct.pp d;
+      Disjunct.extract d v
+    ;;
+
+    let subsumed _env c1 c2 = false
+  end
+
+  let vars_in_term =
+    let rec helper acc x =
+      if Obj.is_block x
+      then (
+        match Term.var x with
+        | Some v -> Term.VarSet.add v acc
+        | None ->
+          let rec inner acc i =
+            if i >= Obj.size x then acc else helper acc (Obj.field x i)
+          in
+          inner acc 0)
+      else acc
+    in
+    fun root -> helper Term.VarSet.empty (Obj.repr root)
+  ;;
+
+  let reify env subst cs t =
+    Format.printf "reify: %s %d\n%!" __FILE__ __LINE__;
+    Format.printf "all : %a\n%!" pp cs;
+    let vars = vars_in_term t in
+    cs
+    |> List.filter_map (fun d ->
+           if Disjunct.intersects_with ~set:vars d then Some d else None)
+  ;;
 end
-
-let vars_in_term =
-  let rec helper acc x =
-    if Obj.is_block x
-    then (
-      match Term.var x with
-      | Some v -> Term.VarSet.add v acc
-      | None ->
-        let rec inner acc i =
-          if i >= Obj.size x then acc else helper acc (Obj.field x i)
-        in
-        inner acc 0)
-    else acc
-  in
-  fun root -> helper Term.VarSet.empty (Obj.repr root)
-;;
-
-let reify env subst cs t =
-  (* Format.printf "%s %d\n%!" __FILE__ __LINE__;
-  Format.printf "%a\n%!" pp cs; *)
-  let vars = vars_in_term t in
-  cs
-  |> List.filter_map (fun d ->
-         if Disjunct.intersects_with ~set:vars d then Some d else None)
-;;
 
 (** *******************  tests ***************************  *)
 module _ = struct
+  open Make ()
+
   let make_var i = Obj.magic (Term.Var.make ~env:0 ~scope:Term.Var.non_local_scope i)
 
   let%expect_test _ =

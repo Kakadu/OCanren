@@ -297,7 +297,7 @@ let set_skip_prunes_count n =
   max_prunes_skipped := n
 *)
 module State = struct
-  module Disequality = Disequality2
+  module Disequality = Disequality2.Make ()
 
   type t =
     { env : Env.t
