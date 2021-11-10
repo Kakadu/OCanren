@@ -8,6 +8,8 @@ open Format
 exception Violated
 
 let ( !!! ) = Obj.magic
+let use_logging = true
+let log fmt = Format.kasprintf (fun s -> if use_logging then Format.printf "%s\n%!" s) fmt
 
 open Term
 
@@ -28,17 +30,19 @@ module Make (FDC : EXTRA) = struct
     ;;
 
     let intersects_with ~set : t -> bool =
+     fun c ->
+      (* log "set = %a" Term.VarSet.pp set; *)
       let open Subst.Binding in
-      let rec helper set = function
-        | [] -> false
-        | { var; term } :: tl when Term.VarSet.mem var set -> true
-        | { term } :: tl ->
-          (match Term.var term with
-          | Some var when Term.VarSet.mem var set -> true
-          | _ -> helper set tl)
-      in
-      fun c -> helper set [ c ]
-    ;;
+      let { var; term } = c in
+      if Term.VarSet.mem var set
+      then true
+      else (
+        match Term.var term with
+        | Some var when Term.VarSet.mem var set -> true
+        | _ ->
+          (* log "%s %d" __FILE__ __LINE__; *)
+          false)
+   ;;
   end
 
   module Disjunct : sig
@@ -80,7 +84,14 @@ module Make (FDC : EXTRA) = struct
     let pp ppf { wcs; conjs } =
       Format.fprintf ppf "[ ";
       Stdlib.List.iter (Conjunct.pp ppf) conjs;
-      Format.fprintf ppf " ]"
+      Format.fprintf ppf " ] {| ";
+      VarSet.iteri
+        (fun i v ->
+          match Term.var v with
+          | None -> fprintf ppf "..; "
+          | Some v -> fprintf ppf "%d; " v.Term.Var.index)
+        wcs;
+      Format.fprintf ppf "|}"
     ;;
 
     let conj : t -> t -> t =
@@ -88,25 +99,29 @@ module Make (FDC : EXTRA) = struct
    ;;
 
     let intersects_with ~set { conjs } =
-      (* TODO: should we check wildcard variables *)
+      (* TODO: should we check wildcard variables ? *)
       let rec helper = function
         | [] -> false
         | c :: ctl -> if Conjunct.intersects_with ~set c then true else helper ctl
       in
-      helper conjs
+      let ans = helper conjs in
+      (* log "Disjunct.intersects_with = %b" ans; *)
+      ans
     ;;
 
     let of_bindings bnds =
       assert (not ([] = bnds));
       Stdlib.List.fold_left
-        (fun ({ wcs; conjs } as acc) Subst.Binding.{ var; term } ->
-          (* TODO: *)
-          acc)
+        (fun ({ wcs; conjs } as acc) (Subst.Binding.{ var; term } as bnd) ->
+          if Term.Var.is_wildcard var
+          then
+            if Term.is_var term
+            then { conjs; wcs = VarSet.add (Obj.magic term) wcs }
+            else acc
+          else { conjs = bnd :: conjs; wcs })
         empty
         bnds
     ;;
-
-    (* let union : t -> t -> t = fun l r -> assert false *)
 
     let recheck_exn env subst bnds { wcs; conjs } =
       let a = List.map (fun { Subst.Binding.var } -> var) conjs in
@@ -138,7 +153,7 @@ module Make (FDC : EXTRA) = struct
 
   let pp ppf xs =
     printf "All disjuncts (%d)\n%!" (List.length xs);
-    Stdlib.List.iteri (fun i x -> fprintf ppf "\t%d%a\n%!" i Disjunct.pp x) xs
+    Stdlib.List.iteri (fun i x -> fprintf ppf "\t%d: %a\n%!" i Disjunct.pp x) xs
   ;;
 
   let empty : t = []
@@ -168,7 +183,7 @@ module Make (FDC : EXTRA) = struct
   ;;
 
   let add env subst cstrs l r : t option =
-    printf "add: %s %d\n%!" __FILE__ __LINE__;
+    (* printf "add: %s %d\n%!" __FILE__ __LINE__; *)
     match Subst.unify env subst l r with
     | None -> Some cstrs
     | Some ([], _) ->
@@ -177,13 +192,13 @@ module Make (FDC : EXTRA) = struct
     | Some (bnds, _subst) ->
       (match cstrs with
       | [] ->
-        printf "%s %d\n%!" __FILE__ __LINE__;
+        (* printf "%s %d\n%!" __FILE__ __LINE__; *)
         let ans = [ Disjunct.of_bindings bnds ] in
-        Format.printf "all disjuncts: %a\n%!" pp ans;
+        (* Format.printf "all disjuncts: %a\n%!" pp ans; *)
         Some ans
       | cstrs ->
         let ans = Stdlib.List.map Disjunct.(conj (of_bindings bnds)) cstrs in
-        Format.printf "all disjuncts: %a\n%!" pp ans;
+        (* Format.printf "all disjuncts: %a\n%!" pp ans; *)
         Some ans)
   ;;
 
@@ -230,7 +245,7 @@ module Make (FDC : EXTRA) = struct
     type t = Disjunct.t
 
     let extract d v =
-      Format.printf "Extracting from %a\n%!" Disjunct.pp d;
+      (* Format.printf "Extracting from %a\n%!" Disjunct.pp d; *)
       Disjunct.extract d v
     ;;
 
@@ -244,8 +259,9 @@ module Make (FDC : EXTRA) = struct
         match Term.var x with
         | Some v -> Term.VarSet.add v acc
         | None ->
+          let sz = Obj.size x in
           let rec inner acc i =
-            if i >= Obj.size x then acc else helper acc (Obj.field x i)
+            if i >= sz then acc else inner (helper acc (Obj.field x i)) (1 + i)
           in
           inner acc 0)
       else acc
@@ -254,12 +270,13 @@ module Make (FDC : EXTRA) = struct
   ;;
 
   let reify env subst cs t =
-    Format.printf "reify: %s %d\n%!" __FILE__ __LINE__;
-    Format.printf "all : %a\n%!" pp cs;
+    (* log "reify: %s %d" __FILE__ __LINE__; *)
+    (* Format.printf "all : %a\n%!" pp cs; *)
+    let t = Subst.reify env subst t in
     let vars = vars_in_term t in
-    cs
-    |> List.filter_map (fun d ->
-           if Disjunct.intersects_with ~set:vars d then Some d else None)
+    List.filter_map
+      (fun d -> if Disjunct.intersects_with ~set:vars d then Some d else None)
+      cs
   ;;
 end
 
@@ -272,36 +289,41 @@ module _ = struct
   let%expect_test _ =
     let v1 = make_var 1 in
     Format.printf "%a" pp (disequality_of_terms v1 v1);
-    [%expect {|
-      [ { 1 -> '_.1' } ]
-    |}]
+    [%expect {xxx|
+      All disjuncts (1)
+      	0: [ { 1 -> '_.1' } ] {| |}
+    |xxx}]
   ;;
 
   let%expect_test _ =
     let v1 = make_var 1 in
     let v2 = make_var 2 in
     Format.printf "%a" pp (disequality_of_terms !!!(1, 2) !!!(v1, v2));
-    [%expect {|
-      [ { 1 -> 'int<1>' } ][ { 2 -> 'int<2>' } ]
-    |}]
+    [%expect {xxx|
+      All disjuncts (2)
+      	0: [ { 1 -> 'int<1>' } ] {| |}
+      	1: [ { 2 -> 'int<2>' } ] {| |}
+    |xxx}]
   ;;
 
   let%expect_test _ =
     let v1 = make_var 1 in
     let v2 = make_var 2 in
     Format.printf "%a" pp (disequality_of_terms !!!(1, v1) !!!(2, v2));
-    [%expect {|
-      [ { 1 -> '_.2' } ]
-    |}]
+    [%expect {xxx|
+      All disjuncts (1)
+      	0: [ { 1 -> '_.2' } ] {| |}
+    |xxx}]
   ;;
 
   let%expect_test _ =
     let v1 = make_var 1 in
     let v2 = make_var 2 in
     Format.printf "%a" pp (disequality_of_terms !!!(1, v1) !!!(2, v2));
-    [%expect {|
-      [ { 1 -> '_.2' } ]
-    |}]
+    [%expect {xxx|
+      All disjuncts (1)
+      	0: [ { 1 -> '_.2' } ] {| |}
+    |xxx}]
   ;;
 
   let%expect_test _ =
@@ -316,10 +338,20 @@ module _ = struct
     let d3 = conj d1 d2 in
     Format.printf "%a" pp d3;
     [%expect
-      {|
-      [ { 1 -> 'int<1>' } ][ { 2 -> 'int<2>' } ]
-      [ { 3 -> 'int<3>' } ][ { 4 -> 'int<4>' } ]
-      [ { 1 -> 'int<1>' }{ 3 -> 'int<3>' } ][ { 1 -> 'int<1>' }{ 4 -> 'int<4>' } ][ { 2 -> 'int<2>' }{ 3 -> 'int<3>' } ][ { 2 -> 'int<2>' }{ 4 -> 'int<4>' } ]
-    |}]
+      {xxx|
+      All disjuncts (2)
+      	0: [ { 1 -> 'int<1>' } ] {| |}
+      	1: [ { 2 -> 'int<2>' } ] {| |}
+
+      All disjuncts (2)
+      	0: [ { 3 -> 'int<3>' } ] {| |}
+      	1: [ { 4 -> 'int<4>' } ] {| |}
+
+      All disjuncts (4)
+      	0: [ { 1 -> 'int<1>' }{ 3 -> 'int<3>' } ] {| |}
+      	1: [ { 1 -> 'int<1>' }{ 4 -> 'int<4>' } ] {| |}
+      	2: [ { 2 -> 'int<2>' }{ 3 -> 'int<3>' } ] {| |}
+      	3: [ { 2 -> 'int<2>' }{ 4 -> 'int<4>' } ] {| |}
+    |xxx}]
   ;;
 end

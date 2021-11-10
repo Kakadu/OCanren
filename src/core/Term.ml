@@ -83,6 +83,18 @@ end
 module VarSet = struct
   include Set.Make (Var)
 
+  let iteri f set =
+    let (_ : int) =
+      fold
+        (fun x i ->
+          f i x;
+          i + 1)
+        set
+        0
+    in
+    ()
+  ;;
+
   let pp ppf s =
     Format.fprintf ppf "{| ";
     iter (fun { Var.index } -> Format.fprintf ppf "%d " index) s;

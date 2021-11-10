@@ -46,6 +46,7 @@ let _ =
   [%tester
     run_pair (-1) (fun q -> fresh () (q =/= pair __ !!1) (q === pair !!1 __))]
 
+(* let _ = exit 0 *)
 let _ = [%tester run_pair (-1) (fun q -> pair !!1 __ === pair __ !!1)]
 
 let _ =

@@ -50,6 +50,7 @@ end
 module VarSet : sig
   include Set.S with type elt = Var.t
 
+  val iteri : (int -> elt -> unit) -> t -> unit
   val pp : Format.formatter -> t -> unit
 end
 

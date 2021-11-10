@@ -26,7 +26,7 @@ let trace_pair (q : (_, _, _, _) Pair.groundi) =
       success )
 
 let _ = [%tester run_int (-1) (fun q -> trace_int q)]
-let _ = [%tester run_int (-1) (fun q -> q === !!1 &&& trace_int q)]
+let __ _ = [%tester run_int (-1) (fun q -> q === !!1 &&& trace_int q)]
 let _ = [%tester run_int (-1) (fun q -> q =/= !!1 &&& trace_int q)]
 
 let _ =

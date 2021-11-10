@@ -3,10 +3,6 @@
   _.10
   q=_.10;
   }
-  fun q -> (q === (!! 1)) &&& (trace_int q), all answers {
-  1
-  q=1;
-  }
   fun q -> (q =/= (!! 1)) &&& (trace_int q), all answers {
   _.10 [=/= 1]
   q=_.10 [=/= 1];
