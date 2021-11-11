@@ -297,7 +297,12 @@ let set_skip_prunes_count n =
   max_prunes_skipped := n
 *)
 module State = struct
-  module Disequality = Disequality2.Make ()
+  module Disequality = Disequality2.Make (struct
+    type t = FM.t
+
+    let neq = FM.neq
+    let is_interesting_var = FM.is_interesting_var
+  end)
 
   type t =
     { env : Env.t
@@ -338,8 +343,8 @@ module State = struct
     in
     Subst.unify ~scope env subst x y
     >>=? fun (prefix, subst) ->
-    Disequality.recheck env subst ctrs prefix
-    >>=? fun ctrs ->
+    Disequality.recheck env subst ctrs prefix fd
+    >>=? fun (ctrs, fd) ->
     FM.recheck env subst fd prefix
     >>=? fun fd ->
     let next_state = { st with subst; ctrs; fd } in
@@ -354,13 +359,13 @@ module State = struct
       Some next_state)
   ;;
 
-  let diseq x y ({ env; subst; ctrs; scope } as st) =
-    match Disequality.add env subst ctrs x y with
+  let diseq x y ({ env; subst; ctrs; scope; fd } as st) =
+    match Disequality.add env subst ctrs x y fd with
     | None -> None
-    | Some ctrs ->
+    | Some (ctrs, fd) ->
       (match Prunes.recheck (prunes st) env subst with
       | Prunes.Violated -> None
-      | NonViolated -> Some { st with ctrs })
+      | NonViolated -> Some { st with ctrs; fd })
   ;;
 
   (* returns always non-empty list *)
@@ -523,6 +528,7 @@ let structural term rr k st =
   | NonViolated -> success { st with State.prunes = new_constraints }
 ;;
 
+(*
 include (
   struct
     type cost =
@@ -581,6 +587,7 @@ include (
         -> ('logicvar -> goal)
         -> goal
     end)
+*)
 
 let ( &&& ) = conj
 let ( ?& ) gs = List.fold_right ( &&& ) gs success
@@ -716,7 +723,6 @@ let run n g h =
 (** ************************************************************************* *)
 
 (** Tabling primitives                                                        *)
-
 module Table : sig
   (* Type of table.
    * Table is a map from answer term to the set of answer terms,
@@ -781,7 +787,7 @@ end = struct
             let answ, tail = Answer.lift env @@ List.hd curr, List.tl curr in
             match State.unify (Obj.repr args) (Answer.unctr_term answ) st with
             | None -> helper start tail seen
-            | Some ({ subst = subst'; ctrs = ctrs' } as st') ->
+            | Some ({ subst = subst'; ctrs = ctrs'; fd } as st') ->
               (* check `answ` disequalities against external substitution *)
               let ctrs =
                 ListLabels.fold_left
@@ -790,16 +796,20 @@ end = struct
                   ~f:
                     (let open Subst.Binding in
                     fun acc { var; term } ->
-                      match Disequality.add env Subst.empty acc (Term.repr var) term with
+                      match
+                        Disequality.add env Subst.empty acc (Term.repr var) term fd
+                      with
                       (* we should not violate disequalities *)
                       | None -> assert false
-                      | Some acc -> acc)
+                      | Some (acc, _fd) ->
+                        (* TODO: we may need to take into account _fd *)
+                        acc)
               in
-              (match Disequality.recheck env subst' ctrs (Subst.split subst') with
+              (match Disequality.recheck env subst' ctrs (Subst.split subst') fd with
               | None -> helper start tail seen
-              | Some ctrs ->
+              | Some (ctrs, fd) ->
                 let st' =
-                  { st' with ctrs = Disequality.merge_disjoint env subst' ctrs' ctrs }
+                  { st' with fd; ctrs = Disequality.merge_disjoint env subst' ctrs' ctrs }
                 in
                 Stream.(cons st' (from_fun @@ fun () -> helper start tail seen))))
         in
@@ -832,16 +842,17 @@ end = struct
         let cache = Cache.create () in
         H.add tbl key cache;
         (* auxiliary goal for addition of new answer to the cache  *)
-        let hook ({ env = env'; subst = subst'; ctrs = ctrs' } as st') =
+        let hook ({ env = env'; subst = subst'; ctrs = ctrs'; fd } as st') =
           let answ = make_answ args st' in
           if not (Cache.contains cache answ)
           then (
             Cache.add cache answ;
             (* TODO: we only need to check diff, i.e. [subst' \ subst] *)
-            match Disequality.recheck env subst' ctrs (Subst.split subst') with
+            match Disequality.recheck env subst' ctrs (Subst.split subst') fd with
             | None -> failure ()
-            | Some ctrs ->
-              success { st' with ctrs = Disequality.merge_disjoint env subst' ctrs ctrs' })
+            | Some (ctrs, fd) ->
+              success
+                { st' with fd; ctrs = Disequality.merge_disjoint env subst' ctrs ctrs' })
           else failure ()
         in
         (g args &&& hook) abs_st

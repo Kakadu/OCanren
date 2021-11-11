@@ -548,6 +548,7 @@ let domain (v : inti) ints store =
   in
   Store.add_domain v ints store
 ;;
+
 (*
   try
     fold_cps ~init:[] store ~f:(fun acc (set,is) tl k ->
@@ -562,3 +563,5 @@ let domain (v : inti) ints store =
         k ((set,is)::acc)
     ) |> (fun x -> Some x)
   with Bad -> None *)
+
+let is_interesting_var _ _ = assert false

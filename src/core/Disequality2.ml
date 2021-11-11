@@ -19,7 +19,14 @@ let is_wc_var v =
   | _ -> false
 ;;
 
-module type EXTRA = sig end
+module type EXTRA = sig
+  type t
+
+  open Logic
+
+  val neq : (int, int logic) injected -> (int, int logic) injected -> t -> t option
+  val is_interesting_var : Term.Var.t -> t -> bool
+end
 
 module Make (FDC : EXTRA) = struct
   module Conjunct = struct
@@ -45,6 +52,8 @@ module Make (FDC : EXTRA) = struct
    ;;
   end
 
+  type extra = FDC.t
+
   module Disjunct : sig
     type t
 
@@ -57,7 +66,7 @@ module Make (FDC : EXTRA) = struct
     val conj : t -> t -> t
 
     (* val union : t -> t -> t *)
-    val recheck_exn : Env.t -> Subst.t -> Subst.Binding.t list -> t -> t option
+    val recheck_exn : Env.t -> Subst.t -> Subst.Binding.t list -> extra -> t -> t option
     val extract : t -> Term.Var.t -> Obj.t list
   end = struct
     type t =
@@ -123,7 +132,7 @@ module Make (FDC : EXTRA) = struct
         bnds
     ;;
 
-    let recheck_exn env subst bnds { wcs; conjs } =
+    let recheck_exn env subst bnds _ { wcs; conjs } =
       let a = List.map (fun { Subst.Binding.var } -> var) conjs in
       let b = List.map (fun { Subst.Binding.term } -> term) conjs in
       (* TODO: implement unification of bindings list *)
@@ -182,10 +191,10 @@ module Make (FDC : EXTRA) = struct
     | Term.Different_shape (_, _) -> empty
   ;;
 
-  let add env subst cstrs l r : t option =
+  let add env subst cstrs l r extra =
     (* printf "add: %s %d\n%!" __FILE__ __LINE__; *)
     match Subst.unify env subst l r with
-    | None -> Some cstrs
+    | None -> Some (cstrs, extra)
     | Some ([], _) ->
       (* easily violated *)
       None
@@ -195,22 +204,14 @@ module Make (FDC : EXTRA) = struct
         (* printf "%s %d\n%!" __FILE__ __LINE__; *)
         let ans = [ Disjunct.of_bindings bnds ] in
         (* Format.printf "all disjuncts: %a\n%!" pp ans; *)
-        Some ans
+        Some (ans, extra)
       | cstrs ->
         let ans = Stdlib.List.map Disjunct.(conj (of_bindings bnds)) cstrs in
         (* Format.printf "all disjuncts: %a\n%!" pp ans; *)
-        Some ans)
+        Some (ans, extra))
   ;;
 
-  (* let rec unify_list env fst snd (subst as _acc) = function
-  | [] -> acc
-  | h :: tl ->
-    (match Subst.unify env subst !!!(fst h) !!!(snd tl) with
-    | None -> None
-    | Some (_, subst) -> unify_list env fst snd subst tl )
-;; *)
-
-  let recheck env subst cs bnds =
+  let recheck env subst cs bnds extra =
     (* For every disjunct we try to simplify it using [bnds]. If it simplifies to empty disjunct, then we simplify it to False.
     If all disjuncts has been simpifies to False, then constraint is violated *)
     let simplify =
@@ -219,7 +220,7 @@ module Make (FDC : EXTRA) = struct
         | hc :: tlc ->
           let (_ : Disjunct.t) = hc in
           (* Format.printf "got a disjunct: %a\n%!" Disjunct.pp hc; *)
-          let rez = Disjunct.recheck_exn env subst bnds hc in
+          let rez = Disjunct.recheck_exn env subst bnds extra hc in
           (match rez with
           | None -> helper acc tlc
           | Some d ->
@@ -230,11 +231,11 @@ module Make (FDC : EXTRA) = struct
     in
     try
       match cs with
-      | [] -> Some []
+      | [] -> Some ([], extra)
       | _ ->
         (match simplify cs with
         | [] -> raise Violated
-        | newc -> Some newc)
+        | newc -> Some (newc, extra))
     with
     | Violated -> None
   ;;
@@ -282,7 +283,12 @@ end
 
 (** *******************  tests ***************************  *)
 module _ = struct
-  open Make ()
+  open Make (struct
+    type t
+
+    let neq _ _ _ = assert false
+    let is_interesting_var _ _ = assert false
+  end)
 
   let make_var i = Obj.magic (Term.Var.make ~env:0 ~scope:Term.Var.non_local_scope i)
 
@@ -299,7 +305,8 @@ module _ = struct
     let v1 = make_var 1 in
     let v2 = make_var 2 in
     Format.printf "%a" pp (disequality_of_terms !!!(1, 2) !!!(v1, v2));
-    [%expect {xxx|
+    [%expect
+      {xxx|
       All disjuncts (2)
       	0: [ { 1 -> 'int<1>' } ] {| |}
       	1: [ { 2 -> 'int<2>' } ] {| |}
