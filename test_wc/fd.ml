@@ -33,3 +33,8 @@ let _ =
   [%tester
     run_int (-1) (fun q ->
         fresh () (FD.domain q [1; 2]) (q =/= !!1) (q =/= !!2) )]
+
+let _ =
+  [%tester
+    run_int (-1) (fun q ->
+        fresh () (FD.domain q [1; 2]) (FD.neq q !!1) (FD.neq q !!2) )]

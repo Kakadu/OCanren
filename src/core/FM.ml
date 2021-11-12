@@ -2,6 +2,9 @@ open Logic
 open Term
 open Format
 
+let use_logging = true
+let log fmt = Format.kasprintf (fun s -> if use_logging then Format.printf "%s\n%!" s) fmt
+
 let rec fold_cps ~f ~init xs =
   match xs with
   | [] -> init
@@ -36,6 +39,29 @@ type phormula0 =
   | FMDom of var_idx * GT.int GT.list
   | FMBinop of op * term0 * term0
 [@@deriving gt ~options:{ fmt }]
+
+let pp_term ppf = function
+  | Const n -> Format.pp_print_int ppf n
+  | Var n -> Format.fprintf ppf "_.%d" n
+;;
+
+let pp_binop ppf = function
+  | EQ -> Format.fprintf ppf "==="
+  | NEQ -> Format.fprintf ppf "=/="
+;;
+
+let pp_phormula ppf =
+  let open Format in
+  function
+  | FMDom (n, xs) ->
+    fprintf
+      ppf
+      "_.%d \\in [ %a ]"
+      n
+      (Format.pp_print_list ~pp_sep:(fun ppf () -> fprintf ppf " ") pp_print_int)
+      xs
+  | FMBinop (op, l, r) -> Format.fprintf ppf "%a%a%a" pp_term l pp_binop op pp_term r
+;;
 
 let domain v ints = FMDom (v.Term.Var.index, ints)
 let fmneq l r = FMBinop (NEQ, l, r)
@@ -247,7 +273,14 @@ module MYZ3 = struct
     { solver : Z3.Solver.solver
     ; vars : (Z3.Expr.expr * int list option) IntMap.t
     ; sorts : Z3.Sort.sort IntListMap.t
+    ; phs : phormula0 list
     }
+
+  let pp ppf { phs } =
+    Format.fprintf ppf "{| ";
+    List.iter (Format.fprintf ppf "%a; " pp_phormula) phs;
+    Format.fprintf ppf "|}"
+  ;;
 
   let is_interesting_var { vars } idx =
     match IntMap.find idx vars with
@@ -255,7 +288,7 @@ module MYZ3 = struct
     | _ -> true
   ;;
 
-  let mk solver vars sorts = { solver; vars; sorts }
+  let mk solver vars sorts phs = { solver; vars; sorts; phs }
 
   let check { vars; solver } =
     match Z3.Solver.check solver [] with
@@ -263,25 +296,27 @@ module MYZ3 = struct
       (match Z3.Solver.get_model solver with
       | None -> true
       | Some m ->
-        IntMap.iter
-          (fun k (ve, _) ->
-            Format.printf
-              "%s -> %s "
-              (Z3.Expr.to_string ve)
-              (Z3.Model.eval m ve false |> Stdlib.Option.get |> Z3.Expr.to_string))
-          vars;
-        Format.printf "\n %!";
+        let __ _ =
+          IntMap.iter
+            (fun k (ve, _) ->
+              Format.printf
+                "%s -> %s "
+                (Z3.Expr.to_string ve)
+                (Z3.Model.eval m ve false |> Stdlib.Option.get |> Z3.Expr.to_string))
+            vars;
+          Format.printf "\n%!"
+        in
         true)
     | Z3.Solver.UNSATISFIABLE -> false
     | Z3.Solver.UNKNOWN -> assert false
   ;;
 
-  let make () = mk (Z3.Solver.mk_simple_solver ctx) IntMap.empty IntListMap.empty
+  let make () = mk (Z3.Solver.mk_simple_solver ctx) IntMap.empty IntListMap.empty []
 
-  let clone { solver; vars; sorts } =
+  let clone { solver; vars; sorts; phs } =
     (* TODO: maybe we neeed a new context here *)
     (* TODO: maybe we should clone sorts too ? *)
-    mk (Z3.Solver.translate solver ctx) vars sorts
+    mk (Z3.Solver.translate solver ctx) vars sorts phs
   ;;
 
   let list_find_index v xs =
@@ -300,15 +335,13 @@ module MYZ3 = struct
     helper 0 xs
   ;;
 
-  let extend ({ solver; vars; sorts } as s) ph0 =
-    Format.printf "extending by %a\n%!" (GT.fmt phormula0) ph0;
+  let extend ({ solver; vars; sorts; phs } as s) ph0 =
+    (* log "MYSOLVER.extend: extending by %a\n%!" (GT.fmt phormula0) ph0; *)
     let makef = function
       | EQ -> Boolean.mk_eq
-      (* | LT -> Arithmetic.mk_lt *)
-      (* | LE -> Arithmetic.mk_le *)
       | NEQ -> fun ctx l r -> Boolean.mk_not ctx (Boolean.mk_eq ctx l r)
     in
-    let ph _s = function
+    let on_phormula _s = function
       | FMDom (vidx, ints) ->
         (match IntMap.find vidx vars with
         | vexpr, None ->
@@ -324,6 +357,7 @@ module MYZ3 = struct
             solver
             (IntMap.add vidx (vexpr, Some ints) vars)
             (IntListMap.add ints sort sorts)
+            phs
         | _, Some ints_old when ints_old = ints -> _s
         | _, Some ints_old ->
           failwith
@@ -354,39 +388,49 @@ module MYZ3 = struct
                 ints
                 vidx)
           in
-          mk solver (IntMap.add vidx (v, Some ints) vars) (IntListMap.add ints sort sorts))
+          mk
+            solver
+            (IntMap.add vidx (v, Some ints) vars)
+            (IntListMap.add ints sort sorts)
+            (ph0 :: phs))
       | FMBinop (op, Var v1, Var v2) as ph ->
-        (match IntMap.find_opt v1 vars, IntMap.find_opt v2 vars with
-        | Some (e1, dom1), Some (e2, dom2) ->
-          Solver.add solver [ makef op ctx e1 e2 ];
-          s
-        | Some (e1, Some dom1), None ->
-          let sort = IntListMap.find dom1 sorts in
-          let e2 = Expr.mk_fresh_const ctx (sprintf "v%d" v2) sort in
-          Solver.add solver [ makef op ctx e1 e2 ];
-          s
-        | None, Some (e2, Some dom2) ->
-          let sort = IntListMap.find dom2 sorts in
-          let e1 = Expr.mk_fresh_const ctx (sprintf "v%d" v1) sort in
-          Solver.add solver [ makef op ctx e1 e2 ];
-          s
-        | None, _ | _, None ->
-          Format.eprintf "Can't add to Z3 phormula %a\n%!" (GT.fmt phormula0) ph;
-          s)
+        let () =
+          match IntMap.find_opt v1 vars, IntMap.find_opt v2 vars with
+          | Some (e1, dom1), Some (e2, dom2) -> Solver.add solver [ makef op ctx e1 e2 ]
+          | Some (e1, Some dom1), None ->
+            let sort = IntListMap.find dom1 sorts in
+            let e2 = Expr.mk_fresh_const ctx (sprintf "v%d" v2) sort in
+            Solver.add solver [ makef op ctx e1 e2 ]
+          | None, Some (e2, Some dom2) ->
+            let sort = IntListMap.find dom2 sorts in
+            let e1 = Expr.mk_fresh_const ctx (sprintf "v%d" v1) sort in
+            Solver.add solver [ makef op ctx e1 e2 ]
+          | None, _ | _, None ->
+            Format.eprintf "Can't add to Z3 phormula %a\n%!" (GT.fmt phormula0) ph
+        in
+        { s with phs = ph0 :: s.phs }
       | FMBinop (op, Const v1, Const _) -> assert false
       | FMBinop (op, Const n, Var v) | FMBinop (op, Var v, Const n) ->
-        let vexpr, Some ints = IntMap.find v vars in
+        let vexpr, ints =
+          match IntMap.find v vars with
+          | vexpr, Some ints -> vexpr, ints
+          | _, None -> failwith "should not happen"
+        in
         let vsort = Expr.get_sort vexpr in
         let rhs = Enumeration.get_const vsort (list_find_index n ints) in
         Solver.add solver [ makef op ctx vexpr rhs ];
-        s
+        { s with phs = ph0 :: s.phs }
     in
-    ph s ph0
+    on_phormula s ph0
   ;;
 
   let extend_and_check so ph0 =
     let s = extend so ph0 in
-    if check s then Some s else None
+    if check s
+    then Some s
+    else (
+      let () = log "extend_and_check failed %s %d" __FILE__ __LINE__ in
+      None)
   ;;
 end
 
@@ -461,6 +505,7 @@ module Store = struct
 
   let extend_and_check ~clone op a b store =
     let store = extend ~clone store op a b in
+    (* log "after extension: %a\n%!" MYSOLVER.pp store; *)
     match check store with
     | false -> None
     | true -> Some store
@@ -564,4 +609,4 @@ let domain (v : inti) ints store =
     ) |> (fun x -> Some x)
   with Bad -> None *)
 
-let is_interesting_var _ _ = assert false
+let is_interesting_var v store = MYSOLVER.is_interesting_var store v.Term.Var.index

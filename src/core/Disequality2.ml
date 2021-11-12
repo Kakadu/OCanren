@@ -8,7 +8,7 @@ open Format
 exception Violated
 
 let ( !!! ) = Obj.magic
-let use_logging = true
+let use_logging = false
 let log fmt = Format.kasprintf (fun s -> if use_logging then Format.printf "%s\n%!" s) fmt
 
 open Term
@@ -61,12 +61,18 @@ module Make (FDC : EXTRA) = struct
     val empty : t
     val is_empty : t -> bool
     val singleton : Var.t -> Obj.t -> t
-    val of_bindings : Subst.Binding.t list -> t
+    val of_bindings : Subst.Binding.t list -> extra -> (t * extra) option
     val intersects_with : set:VarSet.t -> t -> bool
     val conj : t -> t -> t
 
-    (* val union : t -> t -> t *)
-    val recheck_exn : Env.t -> Subst.t -> Subst.Binding.t list -> extra -> t -> t option
+    val recheck_exn
+      :  Env.t
+      -> Subst.t
+      -> Subst.Binding.t list
+      -> extra
+      -> t
+      -> (t * extra) option
+
     val extract : t -> Term.Var.t -> Obj.t list
   end = struct
     type t =
@@ -118,28 +124,47 @@ module Make (FDC : EXTRA) = struct
       ans
     ;;
 
-    let of_bindings bnds =
+    let of_bindings bnds extra0 =
       assert (not ([] = bnds));
-      Stdlib.List.fold_left
-        (fun ({ wcs; conjs } as acc) (Subst.Binding.{ var; term } as bnd) ->
-          if Term.Var.is_wildcard var
-          then
-            if Term.is_var term
-            then { conjs; wcs = VarSet.add (Obj.magic term) wcs }
-            else acc
-          else { conjs = bnd :: conjs; wcs })
-        empty
-        bnds
+      try
+        Stdlib.List.fold_left
+          (fun ({ wcs; conjs }, extra) (Subst.Binding.{ var; term } as bnd) ->
+            if Term.Var.is_wildcard var
+            then
+              if Term.is_var term
+              then { conjs; wcs = VarSet.add (Obj.magic term) wcs }, extra
+              else { wcs; conjs }, extra
+            else (
+              (* need to check finite domain constraints too *)
+              let checker =
+                FDC.is_interesting_var var extra
+                ||
+                match Term.var term with
+                | None -> false
+                | Some v when Term.Var.is_wildcard v -> false
+                | Some v -> FDC.is_interesting_var var extra
+              in
+              if not checker
+              then { conjs = bnd :: conjs; wcs }, extra
+              else (
+                match FDC.neq (Obj.magic var) (Obj.magic term) extra with
+                | None -> raise Violated
+                | Some e -> { conjs = bnd :: conjs; wcs }, e)))
+          (empty, extra0)
+          bnds
+        |> Stdlib.Option.some
+      with
+      | Violated -> None
     ;;
 
-    let recheck_exn env subst bnds _ { wcs; conjs } =
+    let recheck_exn env subst bnds extra { wcs; conjs } =
       let a = List.map (fun { Subst.Binding.var } -> var) conjs in
       let b = List.map (fun { Subst.Binding.term } -> term) conjs in
       (* TODO: implement unification of bindings list *)
       match Subst.unify env subst (Obj.repr a) (Obj.repr b) with
       | None -> None
       | Some ([], _) -> raise Violated
-      | Some (bnds, _) -> Some (of_bindings bnds)
+      | Some (bnds, _) -> of_bindings bnds extra
     ;;
 
     let extract { conjs } v =
@@ -191,6 +216,8 @@ module Make (FDC : EXTRA) = struct
     | Term.Different_shape (_, _) -> empty
   ;;
 
+  let ( >>=? ) : 'a 'b. 'a option -> ('a -> 'b option) -> 'b option = Stdlib.Option.bind
+
   let add env subst cstrs l r extra =
     (* printf "add: %s %d\n%!" __FILE__ __LINE__; *)
     match Subst.unify env subst l r with
@@ -201,12 +228,12 @@ module Make (FDC : EXTRA) = struct
     | Some (bnds, _subst) ->
       (match cstrs with
       | [] ->
-        (* printf "%s %d\n%!" __FILE__ __LINE__; *)
-        let ans = [ Disjunct.of_bindings bnds ] in
-        (* Format.printf "all disjuncts: %a\n%!" pp ans; *)
-        Some (ans, extra)
+        (Disjunct.of_bindings bnds extra >>=? fun (d, extra) -> Some ([ d ], extra)
+          : (t * extra) option)
       | cstrs ->
-        let ans = Stdlib.List.map Disjunct.(conj (of_bindings bnds)) cstrs in
+        Disjunct.of_bindings bnds extra
+        >>=? fun (d, extra) ->
+        let ans = Stdlib.List.map Disjunct.(conj d) cstrs in
         (* Format.printf "all disjuncts: %a\n%!" pp ans; *)
         Some (ans, extra))
   ;;
@@ -215,19 +242,19 @@ module Make (FDC : EXTRA) = struct
     (* For every disjunct we try to simplify it using [bnds]. If it simplifies to empty disjunct, then we simplify it to False.
     If all disjuncts has been simpifies to False, then constraint is violated *)
     let simplify =
-      let rec helper acc = function
+      let rec helper extra acc = function
         | [] -> acc
         | hc :: tlc ->
           let (_ : Disjunct.t) = hc in
           (* Format.printf "got a disjunct: %a\n%!" Disjunct.pp hc; *)
           let rez = Disjunct.recheck_exn env subst bnds extra hc in
           (match rez with
-          | None -> helper acc tlc
-          | Some d ->
+          | None -> helper extra acc tlc
+          | Some (d, extra) ->
             (* We have an updated disjunct *)
-            helper (d :: acc) tlc)
+            helper extra (d :: acc) tlc)
       in
-      helper []
+      helper extra []
     in
     try
       match cs with
