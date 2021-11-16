@@ -38,3 +38,20 @@ let _ =
   [%tester
     run_int (-1) (fun q ->
         fresh () (FD.domain q [1; 2]) (FD.neq q !!1) (FD.neq q !!2) )]
+
+let run_option eta =
+  runR
+    (Option.reify OCanren.reify)
+    (GT.show Option.ground @@ GT.show GT.int)
+    (GT.show Option.logic (GT.show logic @@ GT.show GT.int))
+    eta
+
+(* this test doesn't work properly *)
+let _ =
+  [%tester
+    run_option (-1) (fun q ->
+        fresh x
+          (q =/= Option.some __)
+          (FD.domain x [1; 2; 3])
+          (x =/= !!1) (x =/= !!2)
+          (q === Option.some x) )]

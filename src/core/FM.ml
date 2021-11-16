@@ -336,7 +336,7 @@ module MYZ3 = struct
   ;;
 
   let extend ({ solver; vars; sorts; phs } as s) ph0 =
-    (* log "MYSOLVER.extend: extending by %a\n%!" (GT.fmt phormula0) ph0; *)
+    (* log "MYSOLVER.extend: extending by %a" (GT.fmt phormula0) ph0; *)
     let makef = function
       | EQ -> Boolean.mk_eq
       | NEQ -> fun ctx l r -> Boolean.mk_not ctx (Boolean.mk_eq ctx l r)

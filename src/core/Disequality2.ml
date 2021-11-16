@@ -8,7 +8,7 @@ open Format
 exception Violated
 
 let ( !!! ) = Obj.magic
-let use_logging = false
+let use_logging = true
 let log fmt = Format.kasprintf (fun s -> if use_logging then Format.printf "%s\n%!" s) fmt
 
 open Term
@@ -149,7 +149,14 @@ module Make (FDC : EXTRA) = struct
               else (
                 match FDC.neq (Obj.magic var) (Obj.magic term) extra with
                 | None -> raise Violated
-                | Some e -> { conjs = bnd :: conjs; wcs }, e)))
+                | Some e ->
+                  let __ _ =
+                    log
+                      "Successfully added new  FD constraint %s=/=%s"
+                      (Term.show !!!var)
+                      (Term.show term)
+                  in
+                  { conjs = bnd :: conjs; wcs }, e)))
           (empty, extra0)
           bnds
         |> Stdlib.Option.some
