@@ -46,6 +46,13 @@ let run_option eta =
     (GT.show Option.logic (GT.show logic @@ GT.show GT.int))
     eta
 
+let run_pair eta =
+  runR
+    (Pair.reify OCanren.reify OCanren.reify)
+    (GT.show Pair.ground (GT.show GT.int) (GT.show GT.int))
+    (GT.show Pair.logic show_intl show_intl)
+    eta
+
 let _ =
   [%tester
     run_option (-1) (fun q ->
@@ -68,3 +75,9 @@ let _ =
           (FD.domain x [1; 2])
           (x =/= !!1) (x =/= !!2)
           (q === Option.some x) )]
+
+let _ = print_newline ()
+
+let _ =
+  [%tester
+    run_pair (-1) (fun q -> fresh x (q =/= pair __ !!1) (q === pair !!1 __))]
