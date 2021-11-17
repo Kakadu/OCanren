@@ -232,7 +232,7 @@ let rec show x =
     else assert false)
 ;;
 
-(* ) else string_of_int (Obj.magic x) *)
+let pp ppf x = Format.fprintf ppf "%s" (show x)
 
 let rec fold ~fvar ~fval ~init x =
   let tx = Obj.tag x in

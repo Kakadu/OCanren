@@ -9,7 +9,12 @@ exception Violated
 
 let ( !!! ) = Obj.magic
 let use_logging = true
-let log fmt = Format.kasprintf (fun s -> if use_logging then Format.printf "%s\n%!" s) fmt
+
+let log fmt =
+  if use_logging
+  then Format.kasprintf (fun s -> Format.printf "%s\n%!" s) fmt
+  else Format.ifprintf Format.std_formatter fmt
+;;
 
 open Term
 
@@ -164,15 +169,43 @@ module Make (FDC : EXTRA) = struct
       | Violated -> None
     ;;
 
-    let recheck_exn env subst bnds extra { wcs; conjs } =
-      let a = List.map (fun { Subst.Binding.var } -> var) conjs in
+    let recheck_exn env subst _bnds extra { wcs; conjs } =
+      (* For every conjunct we should check that this conjuct is a sensible constraint.
+         For every wildcard variable we should check that they could be inhabited. (but let's implement it later)
+      *)
+      log "recheck_exn of %a" pp { wcs; conjs };
+      try
+        let conjs =
+          List.filter
+            (fun { Subst.Binding.var; term } ->
+              log "In current subst var is '%a'" Term.pp (Subst.reify env subst var);
+              match Subst.unify env subst (Obj.repr var) (Obj.repr term) with
+              | None -> false
+              | Some ([], _) -> raise Violated
+              | Some (bnds, _) ->
+                log "bnds = %a" Subst.pp_binding_list bnds;
+                log
+                  "lefting as is: %s =/= %s"
+                  (Term.show @@ Obj.repr var)
+                  (Term.show @@ Obj.repr term);
+                true)
+            conjs
+        in
+        of_bindings conjs extra
+      with
+      | Violated -> None
+    ;;
+
+    (* let a = List.map (fun { Subst.Binding.var } -> var) conjs in
       let b = List.map (fun { Subst.Binding.term } -> term) conjs in
       (* TODO: implement unification of bindings list *)
       match Subst.unify env subst (Obj.repr a) (Obj.repr b) with
-      | None -> None
+      | None ->
+        log "%s %d unification failed" __FILE__ __LINE__;
+        log "  conjs = %a" pp { wcs; conjs };
+        None
       | Some ([], _) -> raise Violated
-      | Some (bnds, _) -> of_bindings bnds extra
-    ;;
+      | Some (bnds, _) -> of_bindings bnds extra *)
 
     let extract { conjs } v =
       let rec helper acc = function
@@ -246,6 +279,7 @@ module Make (FDC : EXTRA) = struct
   ;;
 
   let recheck env subst cs bnds extra =
+    log "Disequality2.recheck";
     (* For every disjunct we try to simplify it using [bnds]. If it simplifies to empty disjunct, then we simplify it to False.
     If all disjuncts has been simpifies to False, then constraint is violated *)
     let simplify =
@@ -253,25 +287,38 @@ module Make (FDC : EXTRA) = struct
         | [] -> acc
         | hc :: tlc ->
           let (_ : Disjunct.t) = hc in
-          (* Format.printf "got a disjunct: %a\n%!" Disjunct.pp hc; *)
-          let rez = Disjunct.recheck_exn env subst bnds extra hc in
-          (match rez with
-          | None -> helper extra acc tlc
+          log "got a disjunct: %a\n%!" Disjunct.pp hc;
+          (match Disjunct.recheck_exn env subst bnds extra hc with
+          | exception Violated ->
+            log "rechecking disjunct failed %s %d" __FILE__ __LINE__;
+            helper extra acc tlc
+          | None ->
+            log "rechecking disjunct failed %s %d" __FILE__ __LINE__;
+            helper extra acc tlc
           | Some (d, extra) ->
             (* We have an updated disjunct *)
+            log "Updated disjunct%s %d: %a" __FILE__ __LINE__ Disjunct.pp d;
             helper extra (d :: acc) tlc)
       in
       helper extra []
     in
     try
       match cs with
-      | [] -> Some ([], extra)
+      | [] ->
+        log "%s %d" __FILE__ __LINE__;
+        Some ([], extra)
       | _ ->
         (match simplify cs with
-        | [] -> raise Violated
-        | newc -> Some (newc, extra))
+        | [] ->
+          log "%s %d" __FILE__ __LINE__;
+          raise Violated
+        | newc ->
+          (* log "recheck successful %s %d" __FILE__ __LINE__; *)
+          Some (newc, extra))
     with
-    | Violated -> None
+    | Violated ->
+      log "got exception Violated %s %d" __FILE__ __LINE__;
+      None
   ;;
 
   let merge_disjoint _ = assert false

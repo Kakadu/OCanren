@@ -46,12 +46,25 @@ let run_option eta =
     (GT.show Option.logic (GT.show logic @@ GT.show GT.int))
     eta
 
-(* this test doesn't work properly *)
+let _ =
+  [%tester
+    run_option (-1) (fun q ->
+        fresh x (q =/= Option.some __) (q === Option.some x) )]
+
 let _ =
   [%tester
     run_option (-1) (fun q ->
         fresh x
           (q =/= Option.some __)
           (FD.domain x [1; 2; 3])
+          (x =/= !!1) (x =/= !!2)
+          (q === Option.some x) )]
+
+let _ =
+  [%tester
+    run_option (-1) (fun q ->
+        fresh x
+          (q =/= Option.some __)
+          (FD.domain x [1; 2])
           (x =/= !!1) (x =/= !!2)
           (q === Option.some x) )]

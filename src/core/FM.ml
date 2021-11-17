@@ -2,7 +2,7 @@ open Logic
 open Term
 open Format
 
-let use_logging = true
+let use_logging = false
 let log fmt = Format.kasprintf (fun s -> if use_logging then Format.printf "%s\n%!" s) fmt
 
 let rec fold_cps ~f ~init xs =
@@ -336,7 +336,7 @@ module MYZ3 = struct
   ;;
 
   let extend ({ solver; vars; sorts; phs } as s) ph0 =
-    (* log "MYSOLVER.extend: extending by %a" (GT.fmt phormula0) ph0; *)
+    log "MYSOLVER.extend: trying to extend by %a" (GT.fmt phormula0) ph0;
     let makef = function
       | EQ -> Boolean.mk_eq
       | NEQ -> fun ctx l r -> Boolean.mk_not ctx (Boolean.mk_eq ctx l r)
@@ -505,7 +505,7 @@ module Store = struct
 
   let extend_and_check ~clone op a b store =
     let store = extend ~clone store op a b in
-    (* log "after extension: %a\n%!" MYSOLVER.pp store; *)
+    log "after extension: %a\n%!" MYSOLVER.pp store;
     match check store with
     | false -> None
     | true -> Some store

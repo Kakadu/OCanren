@@ -1,6 +1,6 @@
 (*
  * OCanren.
- * Copyright (C) 2015-2017
+ * Copyright (C) 2015-2021
  * Dmitri Boulytchev, Dmitry Kosarev, Alexey Syomin, Evgeny Moiseenko
  * St.Petersburg State University, JetBrains Research
  *
@@ -25,6 +25,14 @@ let walk_counter () = stat.walk_count
 let walk_incr () = stat.walk_count <- stat.walk_count + 1
 
 [%%endif]
+
+let use_logging = false
+
+let log fmt =
+  if use_logging
+  then Format.kasprintf (fun s -> Format.printf "%s\n%!" s) fmt
+  else Format.ifprintf Format.std_formatter fmt
+;;
 
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
@@ -54,6 +62,15 @@ module Binding = struct
 
   let hash { var; term } = Hashtbl.hash (Term.Var.hash var, Term.hash term)
 end
+
+let pp_binding_list ppf xs =
+  Format.fprintf ppf "{bnds| ";
+  List.iter
+    (fun { Binding.var; term } ->
+      Format.fprintf ppf "%a -> %a; " Term.pp (Obj.repr var) Term.pp (Obj.repr term))
+    xs;
+  Format.fprintf ppf " |bnds}"
+;;
 
 type t = Term.t Term.VarMap.t
 
@@ -202,16 +219,30 @@ let unify ?(subsume = false) ?(scope = Term.Var.non_local_scope) env subst x y =
         | z, Var v when Term.Var.is_wildcard v ->
           (* let newvar  = Env.fresh ~scope:Term.Var.non_local_scope env in
             extend newvar (Obj.magic z) acc *)
-          acc
+          log "got (variable?) %s and wildcard " (Term.show @@ Obj.repr z);
+          extend (Obj.magic z) (Obj.repr @@ Var v) acc
         | Var v, z when Term.Var.is_wildcard v ->
           (* let newvar  = Env.fresh ~scope:Term.Var.non_local_scope env in
             extend newvar (Obj.magic z) acc *)
+          log "got (variable?) %s and wildcard " (Term.show @@ Obj.repr z);
           acc
         | Var x, Var y -> if Var.equal x y then acc else extend x (Term.repr y) acc
         | Var x, Value y -> extend x y acc
         | Value x, Var y -> extend y x acc
         | Value x, Value y -> helper x y acc)
-      ~fval:(fun acc x y -> if x = y then acc else raise Unification_failed)
+      ~fval:(fun acc x y ->
+        if x = y
+        then acc
+        else (
+          let __ () =
+            log
+              "%s %d:  '%s' and '%s'"
+              __FILE__
+              __LINE__
+              (Term.show @@ Obj.repr x)
+              (Term.show @@ Obj.repr y)
+          in
+          raise Unification_failed))
       ~fk:(fun ((_, subst) as acc) l v y ->
         if Term.Var.is_wildcard v
         then
@@ -219,7 +250,9 @@ let unify ?(subsume = false) ?(scope = Term.Var.non_local_scope) env subst x y =
             extend newvar (Obj.magic y) acc *)
           acc
         else if subsume && l = Term.R
-        then raise Unification_failed
+        then (
+          let () = log "%s %d" __FILE__ __LINE__ in
+          raise Unification_failed)
         else (
           match walk env subst v with
           | Var v -> extend v y acc
