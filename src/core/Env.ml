@@ -1,6 +1,6 @@
 (*
  * OCanren.
- * Copyright (C) 2015-2017
+ * Copyright (C) 2015-2021
  * Dmitri Boulytchev, Dmitry Kosarev, Alexey Syomin, Evgeny Moiseenko
  * St.Petersburg State University, JetBrains Research
  *
@@ -70,4 +70,8 @@ module Monad = struct
   let fmap f r env = f (r env)
 
   let bind r k env = k (r env) env
+
+  module Syntax = struct
+    let (let*) x f    = bind x f
+  end
 end

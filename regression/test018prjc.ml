@@ -29,9 +29,10 @@ module Y = struct
 
   let prj_exn : 'a 'b. ('a, 'b) Reifier.t -> ('a ilogic, 'b t) Reifier.t =
      fun ra ->
-      let ( >>= ) = Env.Monad.bind in
-      Reifier.prj_exn  >>= fun r ->
-      ra >>= fun fa -> Env.Monad.return (fun x -> try GT.gmap t fa (r x) with Not_a_value -> Var2 11)
+      let open Env.Monad.Syntax in
+      let* r = Reifier.prj_exn in
+      let* fa = ra in
+      Env.Monad.return (fun x -> try GT.gmap t fa (r x) with Not_a_value -> Var2 11)
 
 (*
   (* ERROR *)

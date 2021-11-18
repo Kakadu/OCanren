@@ -50,4 +50,9 @@ module Monad : sig
   val fmap : ('a -> 'b) -> 'a t -> 'b t
 
   val bind : 'a t -> ('a -> 'b t) -> 'b t
+
+  module Syntax : sig
+    (* Monad *)
+    val ( let* ) : 'a t -> ('a -> 'b t ) -> 'b t
+  end
 end
