@@ -1,0 +1,16 @@
+(executable
+ (name test001)
+ (modules test001)
+ (preprocess
+  (pps
+   ;OCanren-ppx.ppx_wildcard
+   OCanren-ppx.ppx_repr
+   OCanren-ppx.ppx_fresh
+   OCanren-ppx.ppx_distrib
+   GT.ppx_all
+   ;OCanren-ppx.ppx_tester
+   ))
+ (libraries OCanren OCanren.tester))
+
+(cram
+ (deps ./test001.exe test001.ml %{project_root}/ppx/pp_distrib.exe))

@@ -23,10 +23,10 @@ regression:
 	dune build regression
 
 test: regression #samples
-	./test.sh all
+	dune test
 
 promote:
-	./test.sh --promote all
+	dune test --auto-promote
 
 discover-tests:
 	dune build @discover-tests
@@ -36,14 +36,8 @@ discover-tests:
 samples:
 	dune build samples
 
-clean-test:
-	rm -f regression/*.log regression/*.diff
-
-clean-samples:
-	rm -f samples/*.log samples/*.diff
-
 celan: clean
-clean: clean-test clean-samples
+clean:
 	dune clean
 
 watch:

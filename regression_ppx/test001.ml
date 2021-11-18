@@ -1,2 +1,10 @@
+open OCanren
+module Fmap1(X:sig end) = struct
+  let distrib _ = Obj.magic ()
+  let reify _ = Obj.magic ()
+end
 
-type ('a, 'b) list = Nil | Cons of 'a * ('a,'b) list [@@distrib] [@@deriving gt ~options:{show; gmap}]
+[%%distrib
+  type nonrec 'a t = Z | S of 'a [@@deriving gt ~options:{gmap}]
+  type ground = ground t
+]

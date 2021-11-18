@@ -27,3 +27,6 @@
  (package OCanren-ppx)
  (libraries ppx_repr ppx_fresh ppx_distrib)
  (modules pp_ocanren_all))
+
+(cram
+ (deps ./pp_distrib.exe))
