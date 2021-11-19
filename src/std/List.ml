@@ -94,19 +94,17 @@ type 'a groundi = ('a, 'a groundi) t Logic.ilogic
 
 let reify : 'a 'b . ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t =
   fun ra ->
-    let ( >>= ) = Env.Monad.bind in
+    let open Env.Monad.Syntax in
     Reifier.fix (fun self ->
     Reifier.compose Reifier.reify
-    @@ ( ra >>= fun fa ->
-         self >>= fun fr ->
-          let rec foo = (fun lx ->
-              match lx with
-              | Var (v, xs) ->
-                Var (v, Stdlib.List.map foo xs)
-              | Value x -> Value (GT.gmap t fa fr x))
-          in
-          Env.Monad.return foo
-        ))
+      ( let* fa = ra in
+        let* fr = self in
+        let rec foo = function
+          | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
+          | Value x -> Value (GT.gmap t fa fr x)
+        in
+        Env.Monad.return foo
+      ))
 
 let rec prj_exn : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t =
   fun ra ->

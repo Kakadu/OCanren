@@ -574,10 +574,10 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       match t.ptyp_desc with
       | Ptyp_constr ({ txt = Ldot (Lident "GT", s) }, []) ->
         ptyp_constr ~loc (oca_logic_ident ~loc:t.ptyp_loc) [ t ]
-      | Ptyp_constr ({ txt = Ldot (path, "ground") }, []) ->
-        ptyp_constr ~loc (Located.mk ~loc (Ldot (path, "logic"))) []
-      | Ptyp_constr ({ txt = Lident "ground" }, []) ->
-        ptyp_constr ~loc (Located.mk ~loc (Lident "logic")) []
+      | Ptyp_constr ({ txt = Ldot (path, "ground") }, xs) ->
+        ptyp_constr ~loc (Located.mk ~loc (Ldot (path, "logic"))) xs
+      | Ptyp_constr ({ txt = Lident "ground" }, xs) ->
+        ptyp_constr ~loc (Located.mk ~loc (Lident "logic")) xs
       | _ -> t
     in
     let ptype_manifest =
@@ -604,6 +604,25 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
         | _ -> failwith "should not happen")
   in
   let injected_typ =
+    let oca_logic_ident ~loc = Located.mk ~loc (Ldot (Lident "OCanren", "ilogic")) in
+    let rec mangle_typ t =
+      match t.ptyp_desc with
+      | Ptyp_constr ({ txt = Ldot (Lident "GT", s) }, []) ->
+        ptyp_constr ~loc (oca_logic_ident ~loc:t.ptyp_loc) [ t ]
+      | Ptyp_constr ({ txt = Ldot (path, "ground") }, []) ->
+        ptyp_constr ~loc (Located.mk ~loc (Ldot (path, "injected"))) []
+      | Ptyp_constr ({ txt = Lident "ground" }, xs) ->
+        ptyp_constr ~loc (Located.mk ~loc (Lident "injected")) (List.map ~f:mangle_typ xs)
+      | _ -> t
+    in
+    let ptype_manifest =
+      match tdecl.ptype_manifest with
+      | None -> failwith ""
+      | Some { ptyp_desc = Ptyp_constr (id, args) } ->
+        let ttt = ptyp_constr ~loc id (List.map ~f:mangle_typ args) in
+        Option.some (ptyp_constr ~loc (oca_logic_ident ~loc) [ ttt ])
+      | t -> t
+    in
     type_declaration
       ~loc
       ~name:(Located.mk ~loc "injected")
@@ -611,55 +630,57 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       ~kind:Ptype_abstract
       ~cstrs:[]
       ~params:(List.map names ~f:(fun s -> Typ.var s, (NoVariance, NoInjectivity)))
-      ~manifest:None
+      ~manifest:ptype_manifest
   in
+  let mk_arg_reifier s = sprintf "r%s" s in
   let make_reifier is_rec tdecl =
     let add_args, add_heading, add_to_gmap =
       let loc = tdecl.ptype_loc in
       let args rhs =
         List.fold_right names ~init:rhs ~f:(fun name acc ->
-            [%expr fun [%p Pat.var (Located.mk ~loc:Location.none name)] -> [%e acc]])
+            [%expr fun [%p Pat.var (Located.mk ~loc (mk_arg_reifier name))] -> [%e acc]])
       in
-      let mk_arg_reifier s = sprintf "r%s" s in
       let heading rhs =
         let rhs =
-          if is_rec
-          then
-            [%expr
-              Reifier.fix (fun rself ->
-                  Reifier.compose
-                    Reifier.reify
-                    (let* self = rself in
-                     [%e rhs]))]
-          else rhs
+          [%expr
+            [%e
+              List.fold_right
+                names
+                ~f:(fun s acc ->
+                  [%expr
+                    let* [%p Pat.var (Located.mk ~loc s)] =
+                      [%e Exp.ident (Located.mk ~loc (Lident (mk_arg_reifier s)))]
+                    in
+                    [%e acc]])
+                ~init:rhs]]
         in
         [%expr
           let open Env.Monad.Syntax in
-          let* r = OCanren.reify in
           [%e
-            List.fold_right
-              names
-              ~f:(fun s acc ->
-                [%expr
-                  let* [%p Pat.var (Located.mk ~loc (mk_arg_reifier s))] =
-                    [%e Exp.ident (Located.mk ~loc (Lident s))]
-                  in
-                  [%e acc]])
-              ~init:rhs]]
+            if is_rec
+            then
+              [%expr
+                Reifier.fix (fun rself ->
+                    Reifier.compose
+                      Reifier.reify
+                      (let* self = rself in
+                       [%e rhs]))]
+            else [%expr Reifier.compose Reifier.reify [%e rhs]]]]
       in
       let add_to_gmap init =
         List.fold_left ~init names ~f:(fun acc s ->
-            [%expr [%e acc] [%e Exp.ident (Located.mk ~loc (Lident (mk_arg_reifier s)))]])
+            [%expr [%e acc] [%e Exp.ident (Located.mk ~loc (Lident s))]])
       in
       args, heading, add_to_gmap
     in
     let rec helper typ =
       match typ.ptyp_desc with
-      | Ptyp_constr ({ txt = Lident "ground" }, []) -> [%expr self]
-      | Ptyp_constr ({ txt = Ldot (Lident "GT", _) }, []) -> [%expr OCanren.reify]
-      | Ptyp_constr ({ txt = Ldot (m, "ground") }, args) ->
-        pexp_ident ~loc (Located.mk ~loc (Ldot (m, "reify")))
-      | _ -> [%expr reify]
+      | Ptyp_constr ({ txt = Lident "ground" }, _) -> [%expr self]
+      (* | Ptyp_constr ({ txt = Ldot (Lident "GT", _) }, []) -> [%expr OCanren.reify] *)
+      (* | Ptyp_constr ({ txt = Ldot (m, "ground") }, args) ->
+        pexp_ident ~loc (Located.mk ~loc (Ldot (m, "reify"))) *)
+      | Ptyp_var s -> pexp_ident ~loc (Located.mk ~loc (lident s))
+      | _ -> [%expr reify23s]
     in
     let body =
       match tdecl.ptype_manifest with
@@ -679,13 +700,13 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
             Env.Monad.return foo]
         | _ -> failwith "should not happen")
     in
-    let typ = [%type: (_, _) Reifier.t] in
+    (* let typ = [%type: (_, _) Reifier.t] in *)
     pstr_value
       ~loc
       Nonrecursive
       [ value_binding
-          ~loc
-          ~pat:(Pat.constraint_ [%pat? reify] typ)
+          ~loc (* ~pat:(Pat.constraint_ [%pat? reify] typ) *)
+          ~pat:[%pat? reify]
           ~expr:[%expr [%e add_args (add_heading body)]]
       ]
   in

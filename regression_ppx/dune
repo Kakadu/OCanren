@@ -16,4 +16,6 @@
  (deps ;
   ./test001.exe
   test001.ml
-  %{project_root}/ppx/pp_distrib.exe))
+  %{project_root}/ppx/pp_distrib.exe
+  test002repr.ml
+  %{project_root}/ppx/pp_repr.exe))
