@@ -10,6 +10,7 @@ open Ppxlib
 open Ppxlib.Ast_builder.Default
 open Ppxlib.Ast_helper
 open Printf
+module Format = Caml.Format
 
 let notify fmt =
   Printf.ksprintf
@@ -67,7 +68,7 @@ end
 
 (* TODO: maybe use Ppxlib.name_type_params_in_td ? *)
 let extract_names =
-  List.map ~f:(fun typ ->
+  List.map ~f:(fun (typ, _) ->
       match typ.ptyp_desc with
       | Ptyp_var s -> s
       | _ ->
@@ -77,10 +78,10 @@ let extract_names =
 
 let nolabel = Asttypes.Nolabel
 
-let get_param_names pcd_args =
+(* let get_param_names pcd_args =
   let (Pcstr_tuple pcd_args) = pcd_args in
   extract_names pcd_args
-;;
+;; *)
 
 let mangle_construct_name name =
   let low =
@@ -120,6 +121,7 @@ module Exp = struct
   ;;
 end
 
+(*
 let prepare_distribs ~loc fully_abstract_tname tdecl fmap_decl =
   let open Longident in
   let constructors =
@@ -213,27 +215,27 @@ let prepare_distribs ~loc fully_abstract_tname tdecl fmap_decl =
                   ~init:body)
           ])
 ;;
-
+*)
 (* At the moment we genrate fmap here but it is totally fine to reuse the one genrated by GT *)
-let prepare_fmap ~loc tdecl =
+(* let prepare_fmap ~loc tdecl =
   [%stri
     let rec fmap _eta =
       GT.gmap [%e Exp.ident ~loc (Located.mk ~loc @@ lident tdecl.ptype_name.txt)] _eta
     ;;]
-;;
+;; *)
 
-let mangle_string s = s ^ "_ltyp"
+(* let mangle_string s = s ^ "_ltyp" *)
 
-let map_deepest_lident ~f lident =
+(* let map_deepest_lident ~f lident =
   let rec helper = function
     | Lident s -> Lident (f s)
     | Ldot (l, s) -> Ldot (l, f s)
     | Lapply (l, r) -> Lapply (l, helper r)
   in
   helper lident
-;;
+;; *)
 
-let mangle_lident lident = map_deepest_lident ~f:mangle_string lident
+(* let mangle_lident lident = map_deepest_lident ~f:mangle_string lident
 
 let mangle_core_type typ =
   let rec helper typ =
@@ -250,9 +252,9 @@ let mangle_core_type typ =
       | _ -> failwith "should not happen")
   in
   helper typ
-;;
+;; *)
 
-let mangle_reifier typ =
+(* let mangle_reifier typ =
   let rec helper typ =
     let loc = typ.ptyp_loc in
     match typ with
@@ -270,8 +272,9 @@ let mangle_reifier typ =
       | _ -> failwith "should not happen")
   in
   helper typ
-;;
+;; *)
 
+(*
 let revisit_adt
     ~loc
     ?(gen_gtyp = true)
@@ -481,9 +484,8 @@ let revisit_adt
   in
   ans
 ;;
-
+*)
 let has_name_attr (xs : attributes) =
-  (* Format.printf "%s %d: has_to_gen_attr of list len %d\n%!" __FILE__ __LINE__ (List.length xs); *)
   let exception Found of string in
   try
     List.iter xs ~f:(function
@@ -497,7 +499,7 @@ let has_name_attr (xs : attributes) =
   | Found s -> Some s
 ;;
 
-let has_to_gen_attr (xs : attributes) =
+(* let has_to_gen_attr (xs : attributes) =
   (* Format.printf "%s %d: has_to_gen_attr of list len %d\n%!" __FILE__ __LINE__ (List.length xs); *)
   let ours, others =
     List.partition_map xs ~f:(fun ({ attr_name = { txt }; _ } as attr) ->
@@ -508,9 +510,9 @@ let has_to_gen_attr (xs : attributes) =
   | [] -> None
   | [ h ] -> Some (h, others)
   | _ -> failwith "to many distrib attributes"
-;;
+;; *)
 
-let suitable_tydecl_wrap ~on_ok ~on_fail tdecl =
+(* let suitable_tydecl_wrap ~on_ok ~on_fail tdecl =
   match tdecl.ptype_kind with
   | Ptype_variant cs when Option.is_none tdecl.ptype_manifest ->
     (match has_to_gen_attr tdecl.ptype_attributes with
@@ -523,9 +525,9 @@ let suitable_tydecl_wrap ~on_ok ~on_fail tdecl =
 
 let suitable_tydecl =
   suitable_tydecl_wrap ~on_ok:(fun _ _ _ -> true) ~on_fail:(fun () -> false)
-;;
+;; *)
 
-let str_type_decl ~loc (flg, tdls) =
+(* let str_type_decl ~loc (flg, tdls) =
   let wrap_tydecls loc ts =
     let f tdecl =
       suitable_tydecl_wrap
@@ -536,9 +538,9 @@ let str_type_decl ~loc (flg, tdls) =
     List.concat (List.map ~f ts)
   in
   wrap_tydecls loc tdls
-;;
+;; *)
 
-let decorate_with_gt tdecl =
+(* let decorate_with_gt tdecl =
   let loc = tdecl.ptype_loc in
   { tdecl with
     ptype_attributes =
@@ -548,11 +550,11 @@ let decorate_with_gt tdecl =
         ~payload:(PStr [%str gt ~options:{ gmap; show; fmt; foldl }])
       :: tdecl.ptype_attributes
   }
-;;
+;; *)
 
 let decorate_with_attributes tdecl ptype_attributes = { tdecl with ptype_attributes }
 
-let is_super_suitable tdecl =
+(* let is_super_suitable tdecl =
   (* TODO: check that type name is ground *)
   match tdecl.ptype_kind with
   | Ptype_open | Ptype_variant _ | Ptype_record _ -> None
@@ -563,26 +565,13 @@ let is_super_suitable tdecl =
       (match typ.ptyp_desc with
       | Ptyp_constr ({ txt = Lident id }, args) -> Some (id, args)
       | _ -> None))
-;;
+;; *)
 
 let process_main ~loc base_tdecl (rec_, tdecl) =
   let is_rec =
     match rec_ with
     | Recursive -> true
     | Nonrecursive -> false
-  in
-  let base_generated =
-    match base_tdecl.ptype_kind with
-    | Ptype_variant cds ->
-      revisit_adt
-        ~loc:base_tdecl.ptype_loc
-        ~gen_gtyp:false
-        ~gen_ltyp:false
-        ~gen_reifier:false
-        []
-        base_tdecl
-        cds
-    | _ -> failwith ""
   in
   let ltyp =
     let oca_logic_ident ~loc = Located.mk ~loc (Ldot (Lident "OCanren", "logic")) in
@@ -612,13 +601,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
     in
     { tdecl with ptype_name = Located.mk ~loc "logic"; ptype_manifest; ptype_attributes }
   in
-  let names =
-    List.map tdecl.ptype_params ~f:(fun (t, _) ->
-        match t.ptyp_desc with
-        | Ptyp_var s -> s
-        | Ptyp_any -> failwith "not supported"
-        | _ -> failwith "should not happen")
-  in
+  let names = extract_names tdecl.ptype_params in
   let injected_typ =
     let oca_logic_ident ~loc = Located.mk ~loc (Ldot (Lident "OCanren", "ilogic")) in
     let rec mangle_typ t =
@@ -727,9 +710,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       ]
   in
   let creators =
-    let name cd =
-      String.mapi cd.pcd_name.txt ~f:(fun i c -> if i = 0 then Char.lowercase c else c)
-    in
+    let name cd = mangle_construct_name cd.pcd_name.txt in
     match base_tdecl.ptype_kind with
     | Ptype_variant cds ->
       List.map cds ~f:(fun cd ->
@@ -781,7 +762,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
     ]
 ;;
 
-let process_super_suitable ~loc revhist (rec_, tdecl) =
+(* let process_super_suitable ~loc revhist (rec_, tdecl) =
   let base_tname, args = Option.value_exn (is_super_suitable tdecl) in
   let base_tdecl =
     try
@@ -799,4 +780,4 @@ let process_super_suitable ~loc revhist (rec_, tdecl) =
     | Not_found_s _ -> failwithf "basic type called '%s' not found" base_tname ()
   in
   process_main ~loc base_tdecl (rec_, tdecl)
-;;
+;; *)
