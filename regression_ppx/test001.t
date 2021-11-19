@@ -1,14 +1,8 @@
-  $ ./test001.exe
-
-  $ ../ppx/pp_distrib.exe test001.ml
-  open OCanren
-  module Fmap1(X:sig  end) =
-    struct let distrib _ = Obj.magic ()
-           let reify _ = Obj.magic () end
+  $ ../ppx/pp_distrib.exe test001.ml | ocamlformat --impl --enable-outside-detected-project --profile=compact -
   include
     struct
       type nonrec 'a t =
-        | Z 
+        | Z
         | S of 'a [@@deriving gt ~options:{ gmap }]
       module Distribs_t =
         (Fmap1)(struct
@@ -21,3 +15,5 @@
       type logic = logic t OCanren.logic[@@deriving gt ~options:{ gmap }]
       let rec reify eta = (Distribs_t.reify reify) eta
     end
+$ OCAMLRUNPARAM=b ./test001.exe
+  $ ./test001.exe

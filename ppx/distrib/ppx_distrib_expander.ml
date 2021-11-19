@@ -526,18 +526,15 @@ let decorate_with_gt tdecl =
   let loc = tdecl.ptype_loc in
   { tdecl with
     ptype_attributes =
-       (attribute
-          ~loc
-          ~name:(Located.mk ~loc "deriving")
-          ~payload:(PStr [%str gt ~options:{ gmap; show; fmt; foldl }])) :: tdecl.ptype_attributes
-
+      attribute
+        ~loc
+        ~name:(Located.mk ~loc "deriving")
+        ~payload:(PStr [%str gt ~options:{ gmap; show; fmt; foldl }])
+      :: tdecl.ptype_attributes
   }
 ;;
-let decorate_with_attributes tdecl ptype_attributes =
-  { tdecl with ptype_attributes }
-;;
 
-
+let decorate_with_attributes tdecl ptype_attributes = { tdecl with ptype_attributes }
 
 let is_super_suitable tdecl =
   (* TODO: check that type name is ground *)
@@ -553,6 +550,11 @@ let is_super_suitable tdecl =
 ;;
 
 let process_main ~loc base_tdecl (rec_, tdecl) =
+  let is_rec =
+    match rec_ with
+    | Recursive -> true
+    | Nonrecursive -> false
+  in
   let base_generated =
     match base_tdecl.ptype_kind with
     | Ptype_variant cds ->
@@ -594,10 +596,66 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
     in
     { tdecl with ptype_name = Located.mk ~loc "logic"; ptype_manifest; ptype_attributes }
   in
+  let names =
+    List.map tdecl.ptype_params ~f:(fun (t, _) ->
+        match t.ptyp_desc with
+        | Ptyp_var s -> s
+        | Ptyp_any -> failwith "not supported"
+        | _ -> failwith "should not happen")
+  in
+  let injected_typ =
+    type_declaration
+      ~loc
+      ~name:(Located.mk ~loc "injected")
+      ~private_:Public
+      ~kind:Ptype_abstract
+      ~cstrs:[]
+      ~params:(List.map names ~f:(fun s -> Typ.var s, (NoVariance, NoInjectivity)))
+      ~manifest:None
+  in
   let make_reifier is_rec tdecl =
+    let add_args, add_heading, add_to_gmap =
+      let loc = tdecl.ptype_loc in
+      let args rhs =
+        List.fold_right names ~init:rhs ~f:(fun name acc ->
+            [%expr fun [%p Pat.var (Located.mk ~loc:Location.none name)] -> [%e acc]])
+      in
+      let mk_arg_reifier s = sprintf "r%s" s in
+      let heading rhs =
+        let rhs =
+          if is_rec
+          then
+            [%expr
+              Reifier.fix (fun rself ->
+                  Reifier.compose
+                    Reifier.reify
+                    (let* self = rself in
+                     [%e rhs]))]
+          else rhs
+        in
+        [%expr
+          let open Env.Monad.Syntax in
+          let* r = OCanren.reify in
+          [%e
+            List.fold_right
+              names
+              ~f:(fun s acc ->
+                [%expr
+                  let* [%p Pat.var (Located.mk ~loc (mk_arg_reifier s))] =
+                    [%e Exp.ident (Located.mk ~loc (Lident s))]
+                  in
+                  [%e acc]])
+              ~init:rhs]]
+      in
+      let add_to_gmap init =
+        List.fold_left ~init names ~f:(fun acc s ->
+            [%expr [%e acc] [%e Exp.ident (Located.mk ~loc (Lident (mk_arg_reifier s)))]])
+      in
+      args, heading, add_to_gmap
+    in
     let rec helper typ =
       match typ.ptyp_desc with
-      | Ptyp_constr ({ txt = Lident "ground" }, []) -> [%expr reify]
+      | Ptyp_constr ({ txt = Lident "ground" }, []) -> [%expr self]
       | Ptyp_constr ({ txt = Ldot (Lident "GT", _) }, []) -> [%expr OCanren.reify]
       | Ptyp_constr ({ txt = Ldot (m, "ground") }, args) ->
         pexp_ident ~loc (Located.mk ~loc (Ldot (m, "reify")))
@@ -609,24 +667,36 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       | Some m ->
         (match m.ptyp_desc with
         | Ptyp_constr ({ txt = Lident id }, args) ->
-          let foo =
-            pexp_ident ~loc
-            @@ Located.mk ~loc Longident.(Ldot (Lident (Naming.functor_name id), "reify"))
+          let add =
+            let foo = [%expr GT.gmap t] in
+            pexp_apply ~loc foo (List.map ~f:(fun s -> Nolabel, helper s) args)
           in
-          pexp_apply ~loc foo (List.map ~f:(fun s -> Nolabel, helper s) args)
+          [%expr
+            let rec foo = function
+              | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
+              | Value x -> Value ([%e add] x)
+            in
+            Env.Monad.return foo]
         | _ -> failwith "should not happen")
     in
+    let typ = [%type: (_, _) Reifier.t] in
     pstr_value
       ~loc
-      is_rec
-      [ value_binding ~loc ~pat:[%pat? reify] ~expr:[%expr fun eta -> [%e body] eta] ]
+      Nonrecursive
+      [ value_binding
+          ~loc
+          ~pat:(Pat.constraint_ [%pat? reify] typ)
+          ~expr:[%expr [%e add_args (add_heading body)]]
+      ]
   in
   List.concat
-    [ [ pstr_type ~loc Nonrecursive [ base_tdecl ] ]
-    ; base_generated
-    ; [ pstr_type ~loc rec_ [ decorate_with_attributes tdecl base_tdecl.ptype_attributes ] ]
-    ; [ pstr_type ~loc rec_ [ decorate_with_attributes ltyp base_tdecl.ptype_attributes  ] ]
-    ; [ make_reifier rec_ tdecl ]
+    [ [ pstr_type ~loc Nonrecursive [ base_tdecl ] ] (* ; base_generated *)
+    ; [ pstr_type ~loc rec_ [ decorate_with_attributes tdecl base_tdecl.ptype_attributes ]
+      ]
+    ; [ pstr_type ~loc rec_ [ decorate_with_attributes ltyp base_tdecl.ptype_attributes ]
+      ]
+    ; [ pstr_type ~loc rec_ [ injected_typ ] ]
+    ; [ make_reifier is_rec tdecl ]
     ]
 ;;
 

@@ -13,4 +13,7 @@
  (libraries OCanren OCanren.tester))
 
 (cram
- (deps ./test001.exe test001.ml %{project_root}/ppx/pp_distrib.exe))
+ (deps ;
+  ./test001.exe
+  test001.ml
+  %{project_root}/ppx/pp_distrib.exe))

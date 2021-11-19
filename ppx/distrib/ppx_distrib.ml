@@ -29,7 +29,7 @@ let () =
               __
               (type_declaration
                  ~name:(string "ground")
-                 ~params:nil
+                 ~params:__
                  ~cstrs:nil
                  ~kind:__
                  ~private_:__
@@ -41,7 +41,7 @@ let () =
         name
         Extension.Context.Structure_item
         pattern
-        (fun ~loc ~path attributes1 params1 kind1 private1 rec_2 kind2 private2 manifest2 ->
+        (fun ~loc ~path attributes1 params1 kind1 private1 rec_2 params2 kind2 private2 manifest2 ->
           let open Ppxlib.Ast_builder.Default in
           let base_tdecl =
             let td =
@@ -63,7 +63,7 @@ let () =
               ( rec_2
               , type_declaration
                   ~loc
-                  ~params:[]
+                  ~params:params2
                   ~cstrs:[]
                   ~name:(Located.mk ~loc "ground")
                   ~kind:kind2

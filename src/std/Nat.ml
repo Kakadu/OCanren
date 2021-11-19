@@ -55,10 +55,11 @@ let rec to_int   = function O -> 0 | S n -> 1 + to_int n
 let rec inj n = to_logic (GT.(gmap t) inj n)
 
 let reify =
-  let ( >>= ) = Env.Monad.bind in
+  let open Env.Monad.Syntax in
   Reifier.fix (fun self ->
-    Reifier.compose Reifier.reify
-      ( self>>= fun fr ->
+  Reifier.compose Reifier.reify
+      (
+        let* fr = self in
         let rec foo = function
           | Var (v, xs) ->
             Var (v, Stdlib.List.map foo xs)
