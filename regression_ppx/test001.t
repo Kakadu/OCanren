@@ -18,11 +18,12 @@
                  | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
                  | Value x -> Value ((GT.gmap t self) x) in
                Env.Monad.return foo ) )
+  
+      let z () = OCanren.inji Z
+      let s _x__001_ = OCanren.inji (S _x__001_)
     end
   
     let run_peano n = run_new reify (GT.show logic) n
-    let s x = inji (S x)
-    let z () = inji Z
   
     let () =
       run_peano 1 q qh (REPR (fun q -> q === z ())) ;
@@ -47,10 +48,10 @@
              | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
              | Value x -> Value ((GT.gmap t a) x) in
            Env.Monad.return foo )
-    end
   
-    let some x = inji (Some x)
-    let none () = inji None
+      let none () = OCanren.inji None
+      let some _x__002_ = OCanren.inji (Some _x__002_)
+    end
   
     let run_option n =
       run_new (reify OCanren.reify)
@@ -65,7 +66,9 @@
   
   module _ = struct
     include struct
-      type nonrec ('a, 'b) t = [] | ( :: ) of 'a * 'b
+      type nonrec ('a, 'b) t =
+        | [] [@name "nil"]
+        | ( :: ) of 'a * 'b [@name "cons"]
       [@@deriving gt ~options:{gmap; show}]
   
       type 'a ground = ('a, 'a ground) t [@@deriving gt ~options:{gmap; show}]
@@ -85,10 +88,10 @@
                  | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
                  | Value x -> Value ((GT.gmap t a self) x) in
                Env.Monad.return foo ) )
-    end
   
-    let cons x xs = inji (x :: xs)
-    let nil () = inji []
+      let nil () = OCanren.inji []
+      let cons _x__003_ _x__004_ = OCanren.inji (_x__003_ :: _x__004_)
+    end
   
     let run_list n =
       run_new (reify OCanren.reify)
@@ -99,7 +102,6 @@
       run_list 1 q qh (REPR (fun q -> q === nil ())) ;
       run_list 1 q qh (REPR (fun q -> fresh x (q === cons x (nil ()))))
   end
-$ OCAMLRUNPARAM=b ./test001.exe
   $ ./test001.exe
   fun q -> q === (z ()), 1 answer {
   q=Z;

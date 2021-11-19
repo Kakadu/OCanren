@@ -9,8 +9,6 @@ module _ = struct
 
   let run_peano n = run_new reify  (GT.show logic) n
 
-  let s x  = inji (S x)
-  let z () = inji Z
   let () =
     run_peano 1 q qh (REPR(fun q -> q === z ()));
     run_peano 1 q qh (REPR(fun q -> q === s (z ())));
@@ -22,9 +20,6 @@ module _ = struct
     type nonrec  'a ground = 'a t
   ]
 
-  let some x  = inji (Some x)
-  let none  () = inji None
-
   let run_option n = run_new (reify OCanren.reify)  (GT.show logic (GT.show OCanren.logic (GT.show GT.int))) n
   let () =
     run_option 1 q qh (REPR(fun q -> q === none ()));
@@ -32,14 +27,11 @@ module _ = struct
     run_option 1 q qh (REPR(fun q -> fresh (x) (q === some !!42) ));
 end
 
-module _ = struct
+ module _ = struct
   [%%distrib
-    type nonrec ('a,'b) t = [] | (::) of 'a * 'b [@@deriving gt ~options:{gmap;show}]
+    type nonrec ('a,'b) t = [] [@name "nil"] | (::) of 'a * 'b  [@name "cons"] [@@deriving gt ~options:{gmap;show}]
     type   'a ground = ('a, 'a ground) t
   ]
-
-  let cons x xs = inji (x::xs)
-  let nil () = inji []
 
   let run_list n = run_new (reify OCanren.reify) (GT.show logic (GT.show OCanren.logic (GT.show GT.int))) n
   let () =

@@ -108,7 +108,8 @@ module Exp = struct
   include Exp
 
   let mytuple ~loc ?(attrs = []) = function
-    | [] -> failwith "bad_argument: mytuple"
+    (* | [] -> Exp.construct (Located.mk ~loc (lident "()")) None *)
+    | [] -> failwith "Bad argument: mytuple"
     | [ x ] -> x
     | xs -> tuple ~loc ~attrs xs
   ;;
@@ -481,6 +482,21 @@ let revisit_adt
   ans
 ;;
 
+let has_name_attr (xs : attributes) =
+  (* Format.printf "%s %d: has_to_gen_attr of list len %d\n%!" __FILE__ __LINE__ (List.length xs); *)
+  let exception Found of string in
+  try
+    List.iter xs ~f:(function
+        | { attr_loc; attr_name = { txt = "name" }; attr_payload = PStr [ si ] } ->
+          let open Ast_pattern in
+          let p = pstr_eval (pexp_constant (pconst_string __ __ none)) nil in
+          parse p attr_loc ~on_error:(fun _ -> ()) si (fun s -> raise (Found s))
+        | _ -> ());
+    None
+  with
+  | Found s -> Some s
+;;
+
 let has_to_gen_attr (xs : attributes) =
   (* Format.printf "%s %d: has_to_gen_attr of list len %d\n%!" __FILE__ __LINE__ (List.length xs); *)
   let ours, others =
@@ -710,14 +726,58 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
           ~expr:[%expr [%e add_args (add_heading body)]]
       ]
   in
+  let creators =
+    let name cd =
+      String.mapi cd.pcd_name.txt ~f:(fun i c -> if i = 0 then Char.lowercase c else c)
+    in
+    match base_tdecl.ptype_kind with
+    | Ptype_variant cds ->
+      List.map cds ~f:(fun cd ->
+          let name =
+            match has_name_attr cd.pcd_attributes with
+            | None -> name cd
+            | Some name -> name
+          in
+          match cd.pcd_args with
+          | Pcstr_tuple xs ->
+            let args = List.map xs ~f:(fun _ -> Ppxlib.gen_symbol ()) in
+            let add_args rhs =
+              match args with
+              | [] -> [%expr fun () -> [%e rhs]]
+              | args ->
+                List.fold_right ~init:rhs args ~f:(fun x acc ->
+                    Exp.fun_ nolabel None (Pat.var (Located.mk ~loc x)) acc)
+            in
+            [%stri
+              let [%p Pat.var ~loc (Located.mk ~loc name)] =
+                [%e
+                  add_args
+                    [%expr
+                      OCanren.inji
+                        [%e
+                          Exp.construct
+                            (Located.map_lident cd.pcd_name)
+                            (if List.is_empty args
+                            then None
+                            else
+                              Some
+                                (Exp.mytuple
+                                   ~loc
+                                   (List.map args ~f:(fun s ->
+                                        Exp.ident (Located.mk ~loc @@ lident s)))))]]]
+              ;;]
+          | _ -> [%stri let () = ()])
+    | _ -> assert false
+  in
   List.concat
-    [ [ pstr_type ~loc Nonrecursive [ base_tdecl ] ] (* ; base_generated *)
+    [ [ pstr_type ~loc Nonrecursive [ base_tdecl ] ]
     ; [ pstr_type ~loc rec_ [ decorate_with_attributes tdecl base_tdecl.ptype_attributes ]
       ]
     ; [ pstr_type ~loc rec_ [ decorate_with_attributes ltyp base_tdecl.ptype_attributes ]
       ]
     ; [ pstr_type ~loc rec_ [ injected_typ ] ]
     ; [ make_reifier is_rec tdecl ]
+    ; creators
     ]
 ;;
 
