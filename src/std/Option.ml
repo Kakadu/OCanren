@@ -69,9 +69,10 @@ let prj_exn : 'a 'b. ('a, 'b) Reifier.t ->
   ('a groundi, 'b ground) Reifier.t
     =
   fun ra (* onvar *) ->
-  let ( >>= ) = Env.Monad.bind in
-  Reifier.prj_exn >>= fun r ->
-  ra >>= fun fa -> Env.Monad.return (fun x -> GT.gmap ground fa (r x))
+    let open Env.Monad.Syntax in
+    let* r = Reifier.prj_exn in
+    let* fa = ra in
+    Env.Monad.return (fun x -> GT.gmap ground fa (r x))
 
 let some x  = Logic.inji (Some x)
 let none () = Logic.inji None
