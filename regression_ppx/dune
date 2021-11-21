@@ -12,10 +12,26 @@
    ))
  (libraries OCanren OCanren.tester))
 
+(executable
+ (name test003sort)
+ (modules test003sort)
+ (preprocess
+  (pps
+   OCanren-ppx.ppx_repr
+   OCanren-ppx.ppx_fresh
+   OCanren-ppx.ppx_distrib
+   GT.ppx_all
+   ;OCanren-ppx.ppx_tester
+   ))
+ (libraries OCanren OCanren.tester))
+
 (cram
  (deps ;
+  %{project_root}/ppx/pp_distrib.exe
+  %{project_root}/ppx/pp_repr.exe
   ./test001.exe
   test001.ml
-  %{project_root}/ppx/pp_distrib.exe
   test002repr.ml
-  %{project_root}/ppx/pp_repr.exe))
+  ./test003sort.exe
+  ;
+  ))
