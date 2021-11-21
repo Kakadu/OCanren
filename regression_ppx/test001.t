@@ -12,7 +12,14 @@
       let reify =
         let open Env.Monad.Syntax in
         Reifier.fix (fun rself ->
-            Reifier.compose Reifier.reify
+            Reifier.compose OCanren.prj_exn
+              (let* self = rself in
+               Env.Monad.return (GT.gmap t self) ) )
+  
+      let reify =
+        let open Env.Monad.Syntax in
+        Reifier.fix (fun rself ->
+            Reifier.compose OCanren.reify
               (let* self = rself in
                let rec foo = function
                  | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
@@ -42,7 +49,13 @@
   
       let reify ra =
         let open Env.Monad.Syntax in
-        Reifier.compose Reifier.reify
+        Reifier.compose OCanren.prj_exn
+          (let* a = ra in
+           Env.Monad.return (GT.gmap t a) )
+  
+      let reify ra =
+        let open Env.Monad.Syntax in
+        Reifier.compose OCanren.reify
           (let* a = ra in
            let rec foo = function
              | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
@@ -81,7 +94,15 @@
       let reify ra =
         let open Env.Monad.Syntax in
         Reifier.fix (fun rself ->
-            Reifier.compose Reifier.reify
+            Reifier.compose OCanren.prj_exn
+              (let* self = rself in
+               let* a = ra in
+               Env.Monad.return (GT.gmap t a self) ) )
+  
+      let reify ra =
+        let open Env.Monad.Syntax in
+        Reifier.fix (fun rself ->
+            Reifier.compose OCanren.reify
               (let* self = rself in
                let* a = ra in
                let rec foo = function
