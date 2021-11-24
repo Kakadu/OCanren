@@ -9,7 +9,7 @@
       type logic = logic t OCanren.logic [@@deriving gt ~options:{gmap; show}]
       type injected = injected t OCanren.ilogic
   
-      let reify =
+      let prj_exn =
         let open Env.Monad.Syntax in
         Reifier.fix (fun rself ->
             Reifier.compose OCanren.prj_exn
@@ -47,7 +47,7 @@
   
       type nonrec 'a injected = 'a t OCanren.ilogic
   
-      let reify ra =
+      let prj_exn ra =
         let open Env.Monad.Syntax in
         Reifier.compose OCanren.prj_exn
           (let* a = ra in
@@ -91,7 +91,7 @@
   
       type 'a injected = ('a, 'a injected) t OCanren.ilogic
   
-      let reify ra =
+      let prj_exn ra =
         let open Env.Monad.Syntax in
         Reifier.fix (fun rself ->
             Reifier.compose OCanren.prj_exn

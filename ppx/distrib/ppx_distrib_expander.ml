@@ -206,7 +206,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
     | _ -> assert false
   in
   let mk_arg_reifier s = sprintf "r%s" s in
-  let make_reifier_gen base_reifier inner_func is_rec tdecl =
+  let make_reifier_gen ~pat base_reifier inner_func is_rec tdecl =
     let add_args, add_heading, add_to_gmap =
       let loc = tdecl.ptype_loc in
       let args rhs =
@@ -274,12 +274,15 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       Nonrecursive
       [ value_binding
           ~loc (* ~pat:(Pat.constraint_ [%pat? reify] typ) *)
-          ~pat:[%pat? reify]
+          ~pat
           ~expr:[%expr [%e add_args (add_heading body)]]
       ]
   in
   let make_reifier =
-    make_reifier_gen [%expr OCanren.reify] (fun add ->
+    make_reifier_gen
+      ~pat:[%pat? reify]
+      [%expr OCanren.reify]
+      (fun add ->
         [%expr
           let rec foo = function
             | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
@@ -288,8 +291,10 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
           Env.Monad.return foo])
   in
   let make_prj_exn =
-    make_reifier_gen [%expr OCanren.prj_exn] (fun add ->
-        [%expr Env.Monad.return [%e add]])
+    make_reifier_gen
+      ~pat:[%pat? prj_exn]
+      [%expr OCanren.prj_exn]
+      (fun add -> [%expr Env.Monad.return [%e add]])
   in
   List.concat
     [ [ pstr_type ~loc Nonrecursive [ base_tdecl ] ]
