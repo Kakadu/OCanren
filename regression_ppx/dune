@@ -3,13 +3,10 @@
  (modules test001)
  (preprocess
   (pps
-   ;OCanren-ppx.ppx_wildcard
    OCanren-ppx.ppx_repr
    OCanren-ppx.ppx_fresh
    OCanren-ppx.ppx_distrib
-   GT.ppx_all
-   ;OCanren-ppx.ppx_tester
-   ))
+   GT.ppx_all))
  (libraries OCanren OCanren.tester))
 
 (executable
@@ -20,9 +17,18 @@
    OCanren-ppx.ppx_repr
    OCanren-ppx.ppx_fresh
    OCanren-ppx.ppx_distrib
-   GT.ppx_all
-   ;OCanren-ppx.ppx_tester
-   ))
+   GT.ppx_all))
+ (libraries OCanren OCanren.tester))
+
+(executable
+ (name test004)
+ (modules test004)
+ (preprocess
+  (pps
+   OCanren-ppx.ppx_repr
+   OCanren-ppx.ppx_fresh
+   OCanren-ppx.ppx_distrib
+   GT.ppx_all))
  (libraries OCanren OCanren.tester))
 
 (cram
@@ -33,5 +39,6 @@
   test001.ml
   test002repr.ml
   ./test003sort.exe
+  ./test004.exe
   ;
   ))
