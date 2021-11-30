@@ -129,39 +129,58 @@ module Make (FDC : EXTRA) = struct
       ans
     ;;
 
+    type sort =
+      | VarNTerm of Term.Var.t * Obj.t
+      | WcNVar of Term.Var.t
+      | WcNSmth of Obj.t
+
+    let classify (Subst.Binding.{ var; term } as bnd) =
+      match Term.var term with
+      | None ->
+        if Term.Var.is_wildcard var
+        then WcNSmth term
+        else (
+          let () = log "%s %d" __FILE__ __LINE__ in
+          VarNTerm (var, term))
+      | Some v2 ->
+        (match Term.Var.(is_wildcard var, is_wildcard v2) with
+        | true, true -> failwith "We should not get two wildcards from unification"
+        | false, false ->
+          log "%s %d" __FILE__ __LINE__;
+          VarNTerm (var, term)
+        | false, true -> WcNVar var
+        | true, false -> WcNVar v2)
+    ;;
+
     let of_bindings bnds extra0 =
       assert (not ([] = bnds));
       try
         Stdlib.List.fold_left
-          (fun ({ wcs; conjs }, extra) (Subst.Binding.{ var; term } as bnd) ->
-            if Term.Var.is_wildcard var
-            then
-              if Term.is_var term
-              then { conjs; wcs = VarSet.add (Obj.magic term) wcs }, extra
-              else { wcs; conjs }, extra
-            else (
+          (fun ({ wcs; conjs }, extra) bnd ->
+            log "%d %a" __LINE__ Subst.pp_binding_list [ bnd ];
+            match classify bnd with
+            | WcNVar var when FDC.is_interesting_var var extra ->
+              log "is interesting";
+              { wcs = VarSet.add var wcs; conjs }, extra
+            | WcNVar var ->
+              (* no domain spec., so domain is infinited => violated *)
+              raise Violated
+            | WcNSmth term ->
+              log "WcNSmth";
+              { wcs; conjs }, extra
+            | VarNTerm (var, term) ->
+              log "VarNTerm";
               (* need to check finite domain constraints too *)
-              let checker =
-                FDC.is_interesting_var var extra
-                ||
-                match Term.var term with
-                | None -> false
-                | Some v when Term.Var.is_wildcard v -> false
-                | Some v -> FDC.is_interesting_var var extra
-              in
-              if not checker
-              then { conjs = bnd :: conjs; wcs }, extra
-              else (
-                match FDC.neq (Obj.magic var) (Obj.magic term) extra with
-                | None -> raise Violated
-                | Some e ->
-                  let __ _ =
-                    log
-                      "Successfully added new  FD constraint %s=/=%s"
-                      (Term.show !!!var)
-                      (Term.show term)
-                  in
-                  { conjs = bnd :: conjs; wcs }, e)))
+              (match FDC.neq (Obj.magic var) (Obj.magic term) extra with
+              | None -> raise Violated
+              | Some e ->
+                let __ _ =
+                  log
+                    "Successfully added new  FD constraint %s=/=%s"
+                    (Term.show !!!var)
+                    (Term.show term)
+                in
+                { conjs = Subst.Binding.{ var; term } :: conjs; wcs }, e))
           (empty, extra0)
           bnds
         |> Stdlib.Option.some
@@ -191,7 +210,7 @@ module Make (FDC : EXTRA) = struct
                 true)
             conjs
         in
-        of_bindings conjs extra
+        Some ({ wcs; conjs }, extra)
       with
       | Violated -> None
     ;;
@@ -214,8 +233,8 @@ module Make (FDC : EXTRA) = struct
           let acc = if Term.Var.equal var v then term :: acc else acc in
           let acc =
             match Term.var term with
-            | None -> acc
             | Some v2 when Term.Var.equal v v2 -> Obj.repr var :: acc
+            | _ -> acc
           in
           helper acc ctl
       in
@@ -321,7 +340,7 @@ module Make (FDC : EXTRA) = struct
       None
   ;;
 
-  let merge_disjoint _ = assert false
+  let merge_disjoint _ = failwith "merge_disjoint is not implemented"
 
   module Answer = struct
     type t = Disjunct.t
