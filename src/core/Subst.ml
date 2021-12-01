@@ -26,7 +26,7 @@ let walk_incr () = stat.walk_count <- stat.walk_count + 1
 
 [%%endif]
 
-let use_logging = false
+let use_logging = true
 
 let log fmt =
   if use_logging
@@ -61,14 +61,15 @@ module Binding = struct
   ;;
 
   let hash { var; term } = Hashtbl.hash (Term.Var.hash var, Term.hash term)
+
+  let pp ppf { var; term } =
+    Format.fprintf ppf "%a -> %a" Term.pp (Obj.repr var) Term.pp (Obj.repr term)
+  ;;
 end
 
 let pp_binding_list ppf xs =
   Format.fprintf ppf "{bnds| ";
-  List.iter
-    (fun { Binding.var; term } ->
-      Format.fprintf ppf "%a -> %a; " Term.pp (Obj.repr var) Term.pp (Obj.repr term))
-    xs;
+  List.iter (fun bnd -> Format.fprintf ppf "%a; " Binding.pp bnd) xs;
   Format.fprintf ppf " |bnds}"
 ;;
 
@@ -93,6 +94,7 @@ let split s = Term.VarMap.fold (fun var term xs -> Binding.{ var; term } :: xs) 
 type lterm =
   | Var of Term.Var.t
   | Value of Term.t
+  | WC of Term.Var.t
 
 let walk env subst x =
   (* walk var *)
@@ -110,7 +112,7 @@ let walk env subst x =
     in
     Env.check_exn env v;
     if Term.Var.is_wildcard v
-    then Var v
+    then WC v
     else (
       match v.Term.Var.subst with
       | Some term -> walkt env subst (Obj.magic term)
@@ -131,6 +133,7 @@ let walk env subst x =
       ()
     in
     match Env.var env t with
+    | Some v when Term.Var.is_wildcard v -> WC v
     | Some v -> walkv env subst v
     | None -> Value t
   in
@@ -142,7 +145,7 @@ let map ~fvar ~fval env subst x =
   let rec deepfvar v =
     Env.check_exn env v;
     match walk env subst v with
-    | Var v -> fvar v
+    | WC v | Var v -> fvar v
     | Value x -> Term.map x ~fval ~fvar:deepfvar
   in
   Term.map x ~fval ~fvar:deepfvar
@@ -153,7 +156,7 @@ let iter ~fvar ~fval env subst x =
   let rec deepfvar v =
     Env.check_exn env v;
     match walk env subst v with
-    | Var v -> fvar v
+    | WC v | Var v -> fvar v
     | Value x -> Term.iter x ~fval ~fvar:deepfvar
   in
   Term.iter x ~fval ~fvar:deepfvar
@@ -164,7 +167,7 @@ let fold ~fvar ~fval ~init env subst x =
   let rec deepfvar acc v =
     Env.check_exn env v;
     match walk env subst v with
-    | Var v -> fvar acc v
+    | WC v | Var v -> fvar acc v
     | Value x -> Term.fold x ~fval ~fvar:deepfvar ~init:acc
   in
   Term.fold x ~init ~fval ~fvar:deepfvar
@@ -206,7 +209,9 @@ let unify ?(subsume = false) ?(scope = Term.Var.non_local_scope) env subst x y =
   (* The idea is to do the unification and collect the unification prefix during the process *)
   let extend var term (prefix, subst) =
     let subst = extend ~scope env subst var term in
-    Binding.{ var; term } :: prefix, subst
+    let new_bnd = Binding.{ var; term } in
+    (* log "new_bnd: %a" Binding.pp new_bnd; *)
+    new_bnd :: prefix, subst
   in
   let rec helper x y acc =
     let open Term in
@@ -216,19 +221,19 @@ let unify ?(subsume = false) ?(scope = Term.Var.non_local_scope) env subst x y =
       ~init:acc
       ~fvar:(fun ((_, subst) as acc) x y ->
         match walk env subst x, walk env subst y with
-        | z, Var v when Term.Var.is_wildcard v ->
+        | WC _, WC _ -> failwith "unifying two wildcards will be fixed later"
+        | Var z, WC v | WC v, Var z -> extend (Obj.magic v) (Obj.repr z) acc
+        | Value z, WC v | WC v, Value z ->
+          (* acc  *)
+          extend (Obj.magic v) (Obj.repr z) acc
+        | Value y, Var x | Var x, Value y ->
           (* let newvar  = Env.fresh ~scope:Term.Var.non_local_scope env in
             extend newvar (Obj.magic z) acc *)
-          log "got (variable?) %s and wildcard " (Term.show @@ Obj.repr z);
-          extend (Obj.magic z) (Obj.repr @@ Var v) acc
-        | Var v, z when Term.Var.is_wildcard v ->
-          (* let newvar  = Env.fresh ~scope:Term.Var.non_local_scope env in
-            extend newvar (Obj.magic z) acc *)
-          log "got (variable?) %s and wildcard " (Term.show @@ Obj.repr z);
-          acc
+          (* log "got (variable?) %s and wildcard " (Term.show @@ Obj.repr y); *)
+          extend x y acc
         | Var x, Var y -> if Var.equal x y then acc else extend x (Term.repr y) acc
-        | Var x, Value y -> extend x y acc
-        | Value x, Var y -> extend y x acc
+        (* | Var x, Value y -> extend x y acc *)
+        (* | Value x, Var y -> extend y x acc *)
         | Value x, Value y -> helper x y acc)
       ~fval:(fun acc x y ->
         if x = y

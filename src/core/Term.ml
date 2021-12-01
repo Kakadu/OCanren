@@ -18,6 +18,14 @@
 
 open Printf
 
+let use_logging = false
+
+let log fmt =
+  if use_logging
+  then Format.kasprintf (fun s -> Format.printf "%s\n%!" s) fmt
+  else Format.ifprintf Format.std_formatter fmt
+;;
+
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
 
@@ -45,23 +53,15 @@ module Var = struct
     ; index : int
     ; mutable subst : Obj.t option
     ; scope : scope
-    ; constraints : Obj.t list (* is_wildcard   : bool *)
+    ; constraints : Obj.t list
     }
 
   let make ~env ~scope index =
-    { env
-    ; anchor = global_anchor
-    ; subst = None
-    ; constraints = []
-    ; (* is_wildcard = false; *)
-      index
-    ; scope
-    }
+    { env; anchor = global_anchor; subst = None; constraints = []; index; scope }
   ;;
 
   let is_wildcard { index } = index = -42
   let make_wc ~env ~scope = make ~env ~scope (-42)
-  (* with is_wildcard = true  *)
 
   let dummy =
     let env = 0 in
@@ -69,7 +69,12 @@ module Var = struct
     make ~env ~scope 0
   ;;
 
-  let valid_anchor anchor = anchor == global_anchor
+  let valid_anchor anchor =
+    let open Format in
+    let rez = anchor == global_anchor in
+    (* printf "valid_anchor says %b\n%!" rez; *)
+    rez
+  ;;
 
   let reify r { index; constraints } =
     index, List.map (fun x -> r @@ Obj.obj x) constraints
@@ -129,11 +134,14 @@ let var_tag, var_size =
 ;;
 
 let has_var_structure tx sx x =
+  (* log "%s %d tx=%d sx=%d" __FILE__ __LINE__ tx sx; *)
   if tx = var_tag && sx = var_size
   then (
     let anchor = (Obj.obj x : Var.t).Var.anchor in
+    (* log "%s %d" __FILE__ __LINE__; *)
     (Obj.is_block @@ Obj.repr anchor) && Var.valid_anchor anchor)
-  else false
+  else (* let () = log "%s %d" __FILE__ __LINE__ in *)
+    false
 ;;
 
 let is_box t =
@@ -157,6 +165,7 @@ let is_valid_tag_exn t =
 let var x =
   let x = Obj.repr x in
   let tx = Obj.tag x in
+  log "%s %d" __FILE__ __LINE__;
   if is_box tx
   then (
     let sx = Obj.size x in

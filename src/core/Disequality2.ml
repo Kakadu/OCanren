@@ -134,15 +134,17 @@ module Make (FDC : EXTRA) = struct
       | WcNVar of Term.Var.t
       | WcNSmth of Obj.t
 
-    let classify (Subst.Binding.{ var; term } as bnd) =
+    let classify Subst.Binding.{ var; term } =
+      let () = log "%s %d" __FILE__ __LINE__ in
       match Term.var term with
       | None ->
+        let () = log "%s %d" __FILE__ __LINE__ in
         if Term.Var.is_wildcard var
         then WcNSmth term
-        else (
-          let () = log "%s %d" __FILE__ __LINE__ in
-          VarNTerm (var, term))
+        else (* let () = log "%s %d" __FILE__ __LINE__ in *)
+          VarNTerm (var, term)
       | Some v2 ->
+        let () = log "%s %d" __FILE__ __LINE__ in
         (match Term.Var.(is_wildcard var, is_wildcard v2) with
         | true, true -> failwith "We should not get two wildcards from unification"
         | false, false ->
@@ -207,6 +209,7 @@ module Make (FDC : EXTRA) = struct
                   "lefting as is: %s =/= %s"
                   (Term.show @@ Obj.repr var)
                   (Term.show @@ Obj.repr term);
+                (* TODO: what if we would rewrite a disjunct here ??? *)
                 true)
             conjs
         in
@@ -278,18 +281,28 @@ module Make (FDC : EXTRA) = struct
   let ( >>=? ) : 'a 'b. 'a option -> ('a -> 'b option) -> 'b option = Stdlib.Option.bind
 
   let add env subst cstrs l r extra =
-    (* printf "add: %s %d\n%!" __FILE__ __LINE__; *)
+    log
+      "add: '%a' and '%a' on  %s %d"
+      Term.pp
+      (Obj.repr l)
+      Term.pp
+      (Obj.repr r)
+      __FILE__
+      __LINE__;
     match Subst.unify env subst l r with
     | None -> Some (cstrs, extra)
     | Some ([], _) ->
       (* easily violated *)
+      log "violated";
       None
     | Some (bnds, _subst) ->
+      log "%d %a" __LINE__ Subst.pp_binding_list bnds;
       (match cstrs with
       | [] ->
         (Disjunct.of_bindings bnds extra >>=? fun (d, extra) -> Some ([ d ], extra)
           : (t * extra) option)
       | cstrs ->
+        log "%s %d" __FILE__ __LINE__;
         Disjunct.of_bindings bnds extra
         >>=? fun (d, extra) ->
         let ans = Stdlib.List.map Disjunct.(conj d) cstrs in
@@ -299,6 +312,8 @@ module Make (FDC : EXTRA) = struct
 
   let recheck env subst cs bnds extra =
     log "Disequality2.recheck";
+    log "bindings = %d %a" __LINE__ Subst.pp_binding_list bnds;
+    log "cs = %a" pp cs;
     (* For every disjunct we try to simplify it using [bnds]. If it simplifies to empty disjunct, then we simplify it to False.
     If all disjuncts has been simpifies to False, then constraint is violated *)
     let simplify =
@@ -316,7 +331,7 @@ module Make (FDC : EXTRA) = struct
             helper extra acc tlc
           | Some (d, extra) ->
             (* We have an updated disjunct *)
-            log "Updated disjunct%s %d: %a" __FILE__ __LINE__ Disjunct.pp d;
+            log "Updated disjunct %s %d: %a" __FILE__ __LINE__ Disjunct.pp d;
             helper extra (d :: acc) tlc)
       in
       helper extra []
@@ -371,7 +386,8 @@ module Make (FDC : EXTRA) = struct
   ;;
 
   let reify env subst cs t =
-    (* log "reify: %s %d" __FILE__ __LINE__; *)
+    log "reify: %s %d" __FILE__ __LINE__;
+    log "constraints: %a" pp cs;
     (* Format.printf "all : %a\n%!" pp cs; *)
     let t = Subst.reify env subst t in
     let vars = vars_in_term t in
