@@ -5,12 +5,15 @@
  * St.Petersburg State University, JetBrains Research
  *)
 
+module PPP = Printast
 open Base
 open Ppxlib
 open Ppxlib.Ast_builder.Default
 open Ppxlib.Ast_helper
 open Printf
 module Format = Caml.Format
+
+let failwiths fmt = Format.ksprintf failwith fmt
 
 let notify fmt =
   Printf.ksprintf
@@ -237,6 +240,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
                     Reifier.compose
                       [%e base_reifier]
                       (let* self = rself in
+                       let* _shallowr = OCanren.reify in
                        [%e rhs]))]
             else [%expr Reifier.compose [%e base_reifier] [%e rhs]]]]
       in
@@ -247,26 +251,37 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       args, heading, add_to_gmap
     in
     let rec helper typ =
-      match typ.ptyp_desc with
-      | Ptyp_constr ({ txt = Lident "ground" }, _) -> [%expr self]
+      Format.eprintf "%a\n%!" (PPP.payload 0) (PTyp typ);
+      match typ with
+      | { ptyp_desc = Ptyp_constr ({ txt = Lident "ground" }, _) } -> [%expr self]
       (* | Ptyp_constr ({ txt = Ldot (Lident "GT", _) }, []) -> [%expr OCanren.reify] *)
       (* | Ptyp_constr ({ txt = Ldot (m, "ground") }, args) ->
         pexp_ident ~loc (Located.mk ~loc (Ldot (m, "reify"))) *)
-      | Ptyp_var s -> pexp_ident ~loc (Located.mk ~loc (lident s))
+      | { ptyp_desc = Ptyp_var s } -> pexp_ident ~loc (Located.mk ~loc (lident s))
+      | [%type: GT.int] | { ptyp_desc = Ptyp_constr ({ txt = Lident "int" }, []) } ->
+        base_reifier
+      | { ptyp_desc = Ptyp_constr ({ txt = Ldot (Lident m, _) }, args) } ->
+        pexp_apply
+          ~loc
+          (pexp_ident ~loc (Located.mk ~loc (Ldot (lident m, "reify"))))
+          (List.map args ~f:(fun t -> nolabel, helper t))
       | _ -> [%expr reify23s]
     in
     let body =
       match tdecl.ptype_manifest with
-      | None -> failwith "should not happen"
+      | None -> failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__
       | Some m ->
         (match m.ptyp_desc with
-        | Ptyp_constr ({ txt = Lident id }, args) ->
+        | Ptyp_constr ({ txt }, args) ->
           let add =
             let foo = [%expr GT.gmap t] in
             pexp_apply ~loc foo (List.map ~f:(fun s -> Nolabel, helper s) args)
           in
           inner_func add
-        | _ -> failwith "should not happen")
+        | _ ->
+          (* Format.eprintf "%a\n%!" Pprintast.core_type m; *)
+          (* Format.eprintf "%a\n%!" (PPP.payload 0) (PTyp m); *)
+          failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__)
     in
     (* let typ = [%type: (_, _) Reifier.t] in *)
     pstr_value

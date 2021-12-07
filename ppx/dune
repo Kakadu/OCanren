@@ -28,5 +28,15 @@
  (libraries ppx_repr ppx_fresh ppx_distrib)
  (modules pp_ocanren_all))
 
+(executable
+ (name pp_distrib_gt)
+ (libraries ppx_distrib GT.ppx_all)
+ (modules pp_distrib_gt))
+
+(executable
+ (name pp_gt)
+ (libraries GT.ppx_all)
+ (modules pp_gt))
+
 (cram
  (deps ./pp_distrib.exe))
