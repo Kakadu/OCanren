@@ -1,4 +1,46 @@
   $ ../ppx/pp_distrib.exe test001.ml | ocamlformat --impl --enable-outside-detected-project --profile=compact -
+  core_type (test001.ml[11,143+16]..[11,143+22])
+    Ptyp_constr "ground" (test001.ml[11,143+16]..[11,143+22])
+    []
+  
+  core_type (test001.ml[11,143+16]..[11,143+22])
+    Ptyp_constr "ground" (test001.ml[11,143+16]..[11,143+22])
+    []
+  
+  core_type (test001.ml[28,472+26]..[28,472+28])
+    Ptyp_var a
+  
+  core_type (test001.ml[28,472+26]..[28,472+28])
+    Ptyp_var a
+  
+  core_type (test001.ml[51,1012+20]..[51,1012+22])
+    Ptyp_var a
+  
+  core_type (test001.ml[51,1012+24]..[51,1012+33])
+    Ptyp_constr "ground" (test001.ml[51,1012+27]..[51,1012+33])
+    [
+      core_type (test001.ml[51,1012+24]..[51,1012+26])
+        Ptyp_var a
+    ]
+  
+  core_type (test001.ml[51,1012+20]..[51,1012+22])
+    Ptyp_var a
+  
+  core_type (test001.ml[51,1012+24]..[51,1012+33])
+    Ptyp_constr "ground" (test001.ml[51,1012+27]..[51,1012+33])
+    [
+      core_type (test001.ml[51,1012+24]..[51,1012+26])
+        Ptyp_var a
+    ]
+  
+  core_type (test001.ml[77,1546+23]..[77,1546+29])
+    Ptyp_constr "GT.int" (test001.ml[77,1546+23]..[77,1546+29])
+    []
+  
+  core_type (test001.ml[77,1546+23]..[77,1546+29])
+    Ptyp_constr "GT.int" (test001.ml[77,1546+23]..[77,1546+29])
+    []
+  
   open OCanren
   open Tester
   
@@ -14,6 +56,7 @@
         Reifier.fix (fun rself ->
             Reifier.compose OCanren.prj_exn
               (let* self = rself in
+               let* _shallowr = OCanren.reify in
                Env.Monad.return (GT.gmap t self) ) )
   
       let reify =
@@ -21,6 +64,7 @@
         Reifier.fix (fun rself ->
             Reifier.compose OCanren.reify
               (let* self = rself in
+               let* _shallowr = OCanren.reify in
                let rec foo = function
                  | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
                  | Value x -> Value ((GT.gmap t self) x) in
@@ -96,6 +140,7 @@
         Reifier.fix (fun rself ->
             Reifier.compose OCanren.prj_exn
               (let* self = rself in
+               let* _shallowr = OCanren.reify in
                let* a = ra in
                Env.Monad.return (GT.gmap t a self) ) )
   
@@ -104,6 +149,7 @@
         Reifier.fix (fun rself ->
             Reifier.compose OCanren.reify
               (let* self = rself in
+               let* _shallowr = OCanren.reify in
                let* a = ra in
                let rec foo = function
                  | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
@@ -122,6 +168,42 @@
     let () =
       run_list 1 q qh (REPR (fun q -> q === nil ())) ;
       run_list 1 q qh (REPR (fun q -> fresh x (q === cons x (nil ()))))
+  end
+  
+  module _ : sig end = struct
+    include struct
+      type nonrec 'nat t =
+        | Forward of 'nat
+        | Backward of 'nat
+        | Unload of 'nat
+        | Fill of 'nat
+      [@@deriving gt ~options:{gmap; show}]
+  
+      type nonrec ground = GT.int t [@@deriving gt ~options:{gmap; show}]
+  
+      type nonrec logic = GT.int OCanren.logic t OCanren.logic
+      [@@deriving gt ~options:{gmap; show}]
+  
+      type nonrec injected = GT.int OCanren.ilogic t OCanren.ilogic
+  
+      let prj_exn =
+        let open Env.Monad.Syntax in
+        Reifier.compose OCanren.prj_exn
+          (Env.Monad.return (GT.gmap t OCanren.prj_exn))
+  
+      let reify =
+        let open Env.Monad.Syntax in
+        Reifier.compose OCanren.reify
+          (let rec foo = function
+             | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
+             | Value x -> Value ((GT.gmap t OCanren.reify) x) in
+           Env.Monad.return foo )
+  
+      let forward _x__005_ = OCanren.inji (Forward _x__005_)
+      let backward _x__006_ = OCanren.inji (Backward _x__006_)
+      let unload _x__007_ = OCanren.inji (Unload _x__007_)
+      let fill _x__008_ = OCanren.inji (Fill _x__008_)
+    end
   end
   $ ./test001.exe
   fun q -> q === (z ()), 1 answer {
