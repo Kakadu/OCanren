@@ -69,7 +69,7 @@ module _ = struct
     | Failure s -> Format.printf "Failure: %s\n%!" s
   ;;
 
-  let v : int =
+  let v : injected t OCanren__Logic.logic =
     run q (fun q -> fresh m (q === succ v)) (fun rr -> rr#reify reify_bad) |> Stream.hd
   ;;
 end
