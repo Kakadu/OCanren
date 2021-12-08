@@ -50,6 +50,6 @@ val pair : 'a ilogic -> 'b ilogic -> ('a ilogic, 'b ilogic) groundi
 val reify : ('a,'b) Reifier.t -> ('c,'d) Reifier.t ->
   ( ('a, 'c) groundi, ('b, 'd) logic ) Reifier.t
 
-val prj :
+val prj_exn :
   ('a, 'b) Reifier.t -> ('c,'d) Reifier.t ->
   ( ('a, 'c) groundi, ('b, 'd) ground) Reifier.t

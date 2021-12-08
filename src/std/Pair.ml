@@ -74,7 +74,7 @@ let reify : 'a 'b 'c 'd . ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t ->
           Env.Monad.return foo
         ))
 
-let prj : 'a 'b 'c 'd . ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t ->
+let prj_exn : 'a 'b 'c 'd . ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t ->
   (('a, 'c) groundi, ('b, 'd) ground) Reifier.t =
   fun ra rb ->
     let ( >>= ) = Env.Monad.bind in
