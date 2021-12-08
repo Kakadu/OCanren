@@ -1,46 +1,4 @@
   $ ../ppx/pp_distrib.exe test001.ml | ocamlformat --impl --enable-outside-detected-project --profile=compact -
-  core_type (test001.ml[11,143+16]..[11,143+22])
-    Ptyp_constr "ground" (test001.ml[11,143+16]..[11,143+22])
-    []
-  
-  core_type (test001.ml[11,143+16]..[11,143+22])
-    Ptyp_constr "ground" (test001.ml[11,143+16]..[11,143+22])
-    []
-  
-  core_type (test001.ml[28,472+26]..[28,472+28])
-    Ptyp_var a
-  
-  core_type (test001.ml[28,472+26]..[28,472+28])
-    Ptyp_var a
-  
-  core_type (test001.ml[51,1012+20]..[51,1012+22])
-    Ptyp_var a
-  
-  core_type (test001.ml[51,1012+24]..[51,1012+33])
-    Ptyp_constr "ground" (test001.ml[51,1012+27]..[51,1012+33])
-    [
-      core_type (test001.ml[51,1012+24]..[51,1012+26])
-        Ptyp_var a
-    ]
-  
-  core_type (test001.ml[51,1012+20]..[51,1012+22])
-    Ptyp_var a
-  
-  core_type (test001.ml[51,1012+24]..[51,1012+33])
-    Ptyp_constr "ground" (test001.ml[51,1012+27]..[51,1012+33])
-    [
-      core_type (test001.ml[51,1012+24]..[51,1012+26])
-        Ptyp_var a
-    ]
-  
-  core_type (test001.ml[77,1546+23]..[77,1546+29])
-    Ptyp_constr "GT.int" (test001.ml[77,1546+23]..[77,1546+29])
-    []
-  
-  core_type (test001.ml[77,1546+23]..[77,1546+29])
-    Ptyp_constr "GT.int" (test001.ml[77,1546+23]..[77,1546+29])
-    []
-  
   open OCanren
   open Tester
   
@@ -203,6 +161,12 @@
       let backward _x__006_ = OCanren.inji (Backward _x__006_)
       let unload _x__007_ = OCanren.inji (Unload _x__007_)
       let fill _x__008_ = OCanren.inji (Fill _x__008_)
+      let reify_moves = OCanren.Std.List.reify reify
+      let prj_exn_moves = OCanren.Std.List.reify reify
+      let reify_t1 = Std.List.reify (Std.Pair.reify OCanren.reify OCanren.reify)
+  
+      let prj_exn_t1 =
+        Std.List.prj_exn (Std.Pair.prj_exn OCanren.prj_exn OCanren.prj_exn)
     end
   end
   $ ./test001.exe

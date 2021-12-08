@@ -75,5 +75,6 @@ end = struct
   [@@deriving gt ~options:{ gmap; show }]
 
   type nonrec ground = GT.int t
-  (* type moves = ground GT.list *)]
+  type moves = ground GT.list
+  type t1 = (int * int) Std.List.ground]
 end

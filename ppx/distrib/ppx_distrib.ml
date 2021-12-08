@@ -36,7 +36,7 @@ let () =
                  ~private_:__
                  ~manifest:(some __)
               ^:: nil)
-        ^:: nil)
+        ^:: __)
     in
     [ Extension.declare
         name
@@ -54,6 +54,7 @@ let () =
           kind2
           private2
           manifest2
+          other_decls
         ->
           let open Ppxlib.Ast_builder.Default in
           let base_tdecl =
@@ -70,18 +71,21 @@ let () =
             { td with ptype_attributes = attributes1 }
           in
           let items =
-            Ppx_distrib_expander.process_main
-              ~loc
-              base_tdecl
-              ( rec_2
-              , type_declaration
+            List.concat
+              [ Ppx_distrib_expander.process_main
                   ~loc
-                  ~params:params2
-                  ~cstrs:[]
-                  ~name:(Located.mk ~loc "ground")
-                  ~kind:kind2
-                  ~private_:private2
-                  ~manifest:(Some manifest2) )
+                  base_tdecl
+                  ( rec_2
+                  , type_declaration
+                      ~loc
+                      ~params:params2
+                      ~cstrs:[]
+                      ~name:(Located.mk ~loc "ground")
+                      ~kind:kind2
+                      ~private_:private2
+                      ~manifest:(Some manifest2) )
+              ; Ppx_distrib_expander.process_composable other_decls
+              ]
           in
           pstr_include ~loc (include_infos ~loc (pmod_structure ~loc items)))
     ]
