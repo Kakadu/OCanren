@@ -26,10 +26,7 @@ let notify fmt =
 
 let ( @@ ) = Caml.( @@ )
 
-module Naming = struct
-  (* let fabst_name = sprintf "g%s" *)
-  (* let functor_name = sprintf "Distribs_%s" *)
-end
+module Naming = struct end
 
 (* TODO: maybe use Ppxlib.name_type_params_in_td ? *)
 let extract_names =
@@ -102,6 +99,91 @@ let has_name_attr (xs : attributes) =
 
 let decorate_with_attributes tdecl ptype_attributes = { tdecl with ptype_attributes }
 
+(*
+let make_reifier_composition ~pat tdecl =
+  let add_args, add_heading, add_to_gmap =
+    let loc = tdecl.ptype_loc in
+    let args rhs =
+      List.fold_right names ~init:rhs ~f:(fun name acc ->
+          [%expr fun [%p Pat.var (Located.mk ~loc (mk_arg_reifier name))] -> [%e acc]])
+    in
+    let heading rhs =
+      let rhs =
+        [%expr
+          [%e
+            List.fold_right
+              names
+              ~f:(fun s acc ->
+                [%expr
+                  let* [%p Pat.var (Located.mk ~loc s)] =
+                    [%e Exp.ident (Located.mk ~loc (Lident (mk_arg_reifier s)))]
+                  in
+                  [%e acc]])
+              ~init:rhs]]
+      in
+      [%expr
+        let open Env.Monad.Syntax in
+        [%e
+          if is_rec
+          then
+            [%expr
+              Reifier.fix (fun rself ->
+                  Reifier.compose
+                    [%e base_reifier]
+                    (let* self = rself in
+                     let* _shallowr = OCanren.reify in
+                     [%e rhs]))]
+          else [%expr Reifier.compose [%e base_reifier] [%e rhs]]]]
+    in
+    let add_to_gmap init =
+      List.fold_left ~init names ~f:(fun acc s ->
+          [%expr [%e acc] [%e Exp.ident (Located.mk ~loc (Lident s))]])
+    in
+    args, heading, add_to_gmap
+  in
+  let rec helper typ =
+    Format.eprintf "%a\n%!" (PPP.payload 0) (PTyp typ);
+    match typ with
+    | { ptyp_desc = Ptyp_constr ({ txt = Lident "ground" }, _) } -> [%expr self]
+    (* | Ptyp_constr ({ txt = Ldot (Lident "GT", _) }, []) -> [%expr OCanren.reify] *)
+    (* | Ptyp_constr ({ txt = Ldot (m, "ground") }, args) ->
+        pexp_ident ~loc (Located.mk ~loc (Ldot (m, "reify"))) *)
+    | { ptyp_desc = Ptyp_var s } -> pexp_ident ~loc (Located.mk ~loc (lident s))
+    | [%type: GT.int] | { ptyp_desc = Ptyp_constr ({ txt = Lident "int" }, []) } ->
+      base_reifier
+    | { ptyp_desc = Ptyp_constr ({ txt = Ldot (Lident m, _) }, args) } ->
+      pexp_apply
+        ~loc
+        (pexp_ident ~loc (Located.mk ~loc (Ldot (lident m, "reify"))))
+        (List.map args ~f:(fun t -> nolabel, helper t))
+    | _ -> [%expr reify23s]
+  in
+  let body =
+    match tdecl.ptype_manifest with
+    | None -> failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__
+    | Some m ->
+      (match m.ptyp_desc with
+      | Ptyp_constr ({ txt }, args) ->
+        let add =
+          let foo = [%expr GT.gmap t] in
+          pexp_apply ~loc foo (List.map ~f:(fun s -> Nolabel, helper s) args)
+        in
+        inner_func add
+      | _ ->
+        (* Format.eprintf "%a\n%!" Pprintast.core_type m; *)
+        (* Format.eprintf "%a\n%!" (PPP.payload 0) (PTyp m); *)
+        failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__)
+  in
+  pstr_value
+    ~loc
+    Nonrecursive
+    [ value_binding
+        ~loc (* ~pat:(Pat.constraint_ [%pat? reify] typ) *)
+        ~pat
+        ~expr:[%expr [%e add_args (add_heading body)]]
+    ]
+;;
+*)
 let process_main ~loc base_tdecl (rec_, tdecl) =
   let is_rec =
     match rec_ with
