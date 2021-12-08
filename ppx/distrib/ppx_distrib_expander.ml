@@ -5,7 +5,8 @@
  * St.Petersburg State University, JetBrains Research
  *)
 
-module PPP = Printast
+module PP = Printast
+module PPP = Pprintast
 open Base
 open Ppxlib
 open Ppxlib.Ast_builder.Default
@@ -114,20 +115,18 @@ let make_reifier_composition ~pat reifier_name base_reifier tdecl =
     let loc = typ.ptyp_loc in
     (* Format.eprintf "%a\n%!" (PPP.payload 0) (PTyp typ); *)
     match typ with
-    | [%type: ground] -> [%expr reify]
+    (* | [%type: ground] -> [%expr reify] *)
     | { ptyp_desc = Ptyp_constr ({ txt = Ldot (Lident "GT", "list") }, xs) } ->
       Exp.apply ~loc [%expr OCanren.Std.List.reify] @@ List.map xs ~f:helper
     | [%type: GT.int] | { ptyp_desc = Ptyp_constr ({ txt = Lident "int" }, []) } ->
       base_reifier
-    | { ptyp_desc = Ptyp_constr ({ txt = Lident "ground" }, _) } -> [%expr self]
+    | { ptyp_desc = Ptyp_constr ({ txt = Lident "ground" }, xs) } ->
+      Exp.apply ~loc [%expr reify] (List.map ~f:helper xs)
     | { ptyp_desc = Ptyp_constr ({ txt = Ldot (m, "ground") }, xs) } ->
       Exp.apply
         ~loc
         (pexp_ident ~loc (Located.mk ~loc (Ldot (m, reifier_name))))
         (List.map xs ~f:helper)
-    (* | Ptyp_constr ({ txt = Ldot (Lident "GT", _) }, []) -> [%expr OCanren.reify] *)
-    (* | Ptyp_constr ({ txt = Ldot (m, "ground") }, args) ->
-        pexp_ident ~loc (Located.mk ~loc (Ldot (m, "reify"))) *)
     | { ptyp_desc = Ptyp_var s } -> pexp_ident ~loc (Located.mk ~loc (lident s))
     | { ptyp_desc = Ptyp_constr ({ txt = Ldot (Lident m, _) }, args) } ->
       pexp_apply
@@ -149,10 +148,7 @@ let make_reifier_composition ~pat reifier_name base_reifier tdecl =
     | Some m ->
       (match m.ptyp_desc with
       | Ptyp_constr ({ txt }, args) -> helper m
-      | _ ->
-        (* Format.eprintf "%a\n%!" Pprintast.core_type m; *)
-        (* Format.eprintf "%a\n%!" (PPP.payload 0) (PTyp m); *)
-        failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__)
+      | _ -> failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__)
   in
   let loc = tdecl.ptype_loc in
   pstr_value
@@ -184,6 +180,51 @@ let process_composable =
             t
         ]
       | _ -> [ t ])
+;;
+
+let injectify ~loc typ =
+  let oca_logic_ident ~loc = Located.mk ~loc (Ldot (Lident "OCanren", "ilogic")) in
+  let add_ilogic ~loc t = ptyp_constr ~loc (oca_logic_ident ~loc) [ t ] in
+  let rec mangle_typ t =
+    (* Format.printf "HERR %a\n%!" PPP.core_type t; *)
+    match t.ptyp_desc with
+    | Ptyp_constr ({ txt = Ldot (Lident "GT", s) }, []) ->
+      ptyp_constr ~loc (oca_logic_ident ~loc:t.ptyp_loc) [ t ]
+    | Ptyp_constr ({ txt = Ldot (path, "ground") }, []) ->
+      ptyp_constr ~loc (Located.mk ~loc (Ldot (path, "injected"))) []
+    | Ptyp_constr ({ txt = Lident "t" }, xs) ->
+      add_ilogic ~loc
+      @@ ptyp_constr
+           ~loc
+           (Located.mk ~loc (Lident "injected"))
+           (List.map ~f:mangle_typ xs)
+    | Ptyp_constr ({ txt = Lident "ground" }, xs) ->
+      (* add_ilogic ~loc *)
+      (* @@  *)
+      ptyp_constr ~loc (Located.mk ~loc (Lident "injected")) (List.map ~f:mangle_typ xs)
+    | _ -> t
+  in
+  let ttt = mangle_typ typ in
+  (* ptyp_constr ~loc (oca_logic_ident ~loc) [ ttt ] *)
+  ttt
+;;
+
+let%expect_test _ =
+  let loc = Location.none in
+  let test i =
+    let t2 =
+      match i.pstr_desc with
+      | Pstr_type (_, [ { ptype_manifest = Some t } ]) -> injectify ~loc t
+      | _ -> assert false
+    in
+    (* Format.printf "%a\n%!" (PP.payload 0) (PTyp t2); *)
+    Format.printf "%a\n%!" PPP.core_type t2
+  in
+  test [%stri type nonrec x = GT.int t];
+  [%expect {|    ground t OCanren.ilogic |}];
+  test [%stri type nonrec ground = ground t];
+  [%expect {|    ground t OCanren.ilogic |}];
+  ()
 ;;
 
 let process_main ~loc base_tdecl (rec_, tdecl) =
@@ -222,23 +263,11 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
   in
   let names = extract_names tdecl.ptype_params in
   let injected_typ =
-    let oca_logic_ident ~loc = Located.mk ~loc (Ldot (Lident "OCanren", "ilogic")) in
-    let rec mangle_typ t =
-      match t.ptyp_desc with
-      | Ptyp_constr ({ txt = Ldot (Lident "GT", s) }, []) ->
-        ptyp_constr ~loc (oca_logic_ident ~loc:t.ptyp_loc) [ t ]
-      | Ptyp_constr ({ txt = Ldot (path, "ground") }, []) ->
-        ptyp_constr ~loc (Located.mk ~loc (Ldot (path, "injected"))) []
-      | Ptyp_constr ({ txt = Lident "ground" }, xs) ->
-        ptyp_constr ~loc (Located.mk ~loc (Lident "injected")) (List.map ~f:mangle_typ xs)
-      | _ -> t
-    in
     let ptype_manifest =
       match tdecl.ptype_manifest with
       | None -> failwith ""
-      | Some { ptyp_desc = Ptyp_constr (id, args) } ->
-        let ttt = ptyp_constr ~loc id (List.map ~f:mangle_typ args) in
-        Option.some (ptyp_constr ~loc (oca_logic_ident ~loc) [ ttt ])
+      | Some ({ ptyp_desc = Ptyp_constr (id, args) } as typ) ->
+        Option.some (injectify ~loc typ)
       | t -> t
     in
     type_declaration
@@ -288,9 +317,17 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
                                    (List.map args ~f:(fun s ->
                                         Exp.ident (Located.mk ~loc @@ lident s)))))]]]
               ;;]
-          | _ -> failwith "constructors with records are not implemented "
-          (* [%stri let () = ()] *))
-    | _ -> assert false
+          | _ -> failwith "constructors with records are not implemented")
+    | Ptype_record _ ->
+      failwiths
+        "%s %d Record constructors are not implemented"
+        Caml.__FILE__
+        Caml.__LINE__
+    | Ptype_open | Ptype_abstract ->
+      failwiths
+        "%s %d Open and abstract types are not supported"
+        Caml.__FILE__
+        Caml.__LINE__
   in
   let mk_arg_reifier s = sprintf "r%s" s in
   let make_reifier_gen ~pat base_reifier inner_func is_rec tdecl =
@@ -343,6 +380,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
         pexp_ident ~loc (Located.mk ~loc (Ldot (m, "reify"))) *)
       | { ptyp_desc = Ptyp_var s } -> pexp_ident ~loc (Located.mk ~loc (lident s))
       | [%type: GT.int] | { ptyp_desc = Ptyp_constr ({ txt = Lident "int" }, []) } ->
+        (* [%expr _shallowr] *)
         base_reifier
       | { ptyp_desc = Ptyp_constr ({ txt = Ldot (Lident m, _) }, args) } ->
         pexp_apply
