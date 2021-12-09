@@ -34,9 +34,11 @@ type nonrec 'nat t =
 [@@deriving gt ~options:{show;gmap}]
 
 type ground = int t
+type moves = ground GT.list
+type state = (int * int) * (int * int) GT.list
 ]
 end
-type moves = int Move.t GT.list
+(* type moves = int Move.t GT.list *)
 (*
 (* List of moves *)
 @type moves = int move GT.list with show;;

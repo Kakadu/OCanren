@@ -22,7 +22,7 @@ let log fmt =
   else Format.ifprintf Format.std_formatter fmt
 ;;
 
-let failwiths fmt = Format.ksprintf failwith fmt
+let failwiths fmt = Format.kasprintf failwith fmt
 
 let notify fmt =
   Printf.ksprintf
@@ -115,27 +115,35 @@ let lident_of_list = function
 
 include struct
   let make_typ_exn ?(ccompositional = false) ~loc oca_logic_ident kind typ =
-    let rec helper t =
-      match t.ptyp_desc with
-      | Ptyp_constr ({ txt = Ldot (Lident "GT", s) }, []) ->
-        (* ptyp_constr ~loc (oca_logic_ident ~loc:t.ptyp_loc) [ t ] *)
-        oca_logic_ident ~loc:t.ptyp_loc t
-      | Ptyp_constr ({ txt = Ldot (Lident "GT", "list") }, xs) ->
-        ptyp_constr
-          ~loc
-          (Located.mk ~loc:t.ptyp_loc (lident_of_list [ "OCanren"; "Std"; "List"; kind ]))
-          (List.map ~f:helper xs)
-      | Ptyp_constr ({ txt = Ldot (path, "ground") }, xs) ->
-        ptyp_constr ~loc (Located.mk ~loc (Ldot (path, kind))) (List.map ~f:helper xs)
-      | Ptyp_constr ({ txt = Lident "ground" }, xs) ->
-        ptyp_constr ~loc (Located.mk ~loc (Lident kind)) xs
-      | Ptyp_tuple [ l; r ] ->
-        ptyp_constr
-          ~loc
-          (Located.mk ~loc:t.ptyp_loc (lident_of_list [ "OCanren"; "Std"; "Pair"; kind ]))
-          [ helper l; helper r ]
-      | Ptyp_constr ({ txt = Lident s }, []) -> oca_logic_ident ~loc:t.ptyp_loc t
-      | _ -> t
+    let rec helper = function
+      | [%type: int] as t -> oca_logic_ident ~loc:t.ptyp_loc t
+      | t ->
+        (match t.ptyp_desc with
+        | Ptyp_constr ({ txt = Ldot (Lident "GT", s) }, []) ->
+          (* ptyp_constr ~loc (oca_logic_ident ~loc:t.ptyp_loc) [ t ] *)
+          oca_logic_ident ~loc:t.ptyp_loc t
+        | Ptyp_constr ({ txt = Ldot (Lident "GT", "list") }, xs) ->
+          ptyp_constr
+            ~loc
+            (Located.mk
+               ~loc:t.ptyp_loc
+               (lident_of_list [ "OCanren"; "Std"; "List"; kind ]))
+            (List.map ~f:helper xs)
+        | Ptyp_constr ({ txt = Ldot (path, "ground") }, xs) ->
+          ptyp_constr ~loc (Located.mk ~loc (Ldot (path, kind))) (List.map ~f:helper xs)
+        | Ptyp_constr ({ txt = Lident "ground" }, xs) ->
+          ptyp_constr ~loc (Located.mk ~loc (Lident kind)) xs
+        | Ptyp_tuple [ l; r ] ->
+          ptyp_constr
+            ~loc
+            (Located.mk
+               ~loc:t.ptyp_loc
+               (lident_of_list [ "OCanren"; "Std"; "Pair"; kind ]))
+            [ helper l; helper r ]
+        | Ptyp_constr ({ txt = Lident s }, []) -> oca_logic_ident ~loc:t.ptyp_loc t
+        | Ptyp_constr (({ txt = Lident "t" } as id), xs) ->
+          oca_logic_ident ~loc:t.ptyp_loc @@ ptyp_constr ~loc id (List.map ~f:helper xs)
+        | _ -> t)
     in
     match typ with
     | { ptyp_desc = Ptyp_constr (id, args) } ->
@@ -144,7 +152,7 @@ include struct
       else (
         let ttt = ptyp_constr ~loc id (List.map ~f:helper args) in
         oca_logic_ident ~loc ttt)
-    | _ -> failwiths "can't generate %s type" kind
+    | _ -> failwiths "can't generate %s type: %a" kind PPP.core_type typ
   ;;
 
   let ltypify_exn ?(ccompositional = false) ~loc typ =
@@ -311,7 +319,16 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
         Caml.__LINE__
   in
   let mk_arg_reifier s = sprintf "r%s" s in
-  let make_reifier_gen ~pat base_reifier inner_func is_rec tdecl =
+  let make_reifier_gen ~pat ?(typ = None) base_reifier inner_func is_rec tdecl =
+    let manifest =
+      match tdecl.ptype_manifest with
+      | None ->
+        failwiths
+          "types without manifest are not allowed %s %d"
+          Caml.__FILE__
+          Caml.__LINE__
+      | Some m -> m
+    in
     let add_args, add_heading, add_to_gmap =
       let loc = tdecl.ptype_loc in
       let args rhs =
@@ -363,38 +380,52 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
           ~loc
           (pexp_ident ~loc (Located.mk ~loc (Ldot (lident m, "reify"))))
           (List.map args ~f:(fun t -> nolabel, helper t))
+      (* | { ptyp_desc = Ptyp_constr ({ txt = Lident "t" }, xs) } ->
+        Exp.apply ~loc (pexp_ident ~loc (Located.mk ~loc @@ lident "reify"))
+        @@ List.map ~f:helper xs *)
       | _ -> [%expr reify23s]
     in
     let body =
-      match tdecl.ptype_manifest with
-      | None -> failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__
-      | Some m ->
-        (match m.ptyp_desc with
-        | Ptyp_constr ({ txt }, args) ->
-          let add =
-            let foo = [%expr GT.gmap t] in
-            pexp_apply ~loc foo (List.map ~f:(fun s -> Nolabel, helper s) args)
-          in
-          inner_func add
-        | _ ->
-          (* Format.eprintf "%a\n%!" Pprintast.core_type m; *)
-          (* Format.eprintf "%a\n%!" (PPP.payload 0) (PTyp m); *)
-          failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__)
+      match manifest.ptyp_desc with
+      | Ptyp_constr ({ txt }, args) ->
+        let add =
+          let foo = [%expr GT.gmap t] in
+          pexp_apply ~loc foo (List.map ~f:(fun s -> Nolabel, helper s) args)
+        in
+        inner_func add
+      | _ ->
+        (* Format.eprintf "%a\n%!" Pprintast.core_type m; *)
+        (* Format.eprintf "%a\n%!" (PPP.payload 0) (PTyp m); *)
+        failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__
     in
-    (* let typ = [%type: (_, _) Reifier.t] in *)
+    let pat =
+      match typ with
+      | None -> pat
+      | Some t -> ppat_constraint ~loc pat t
+    in
     pstr_value
       ~loc
       Nonrecursive
-      [ value_binding
-          ~loc (* ~pat:(Pat.constraint_ [%pat? reify] typ) *)
-          ~pat
-          ~expr:[%expr [%e add_args (add_heading body)]]
-      ]
+      [ value_binding ~loc ~pat ~expr:[%expr [%e add_args (add_heading body)]] ]
   in
-  let make_reifier =
+  let make_reifier is_rec tdecl =
+    let manifest =
+      match tdecl.ptype_manifest with
+      | None ->
+        failwiths
+          "types without manifest are not allowed %s %d"
+          Caml.__FILE__
+          Caml.__LINE__
+      | Some m -> m
+    in
     make_reifier_gen
       ~pat:[%pat? reify]
       [%expr OCanren.reify]
+      ~typ:
+        (if List.is_empty tdecl.ptype_params
+        then
+          Some [%type: (_, [%t ltypify_exn ~ccompositional:true ~loc manifest]) Reifier.t]
+        else None)
       (fun add ->
         [%expr
           let rec foo = function
@@ -402,12 +433,30 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
             | Value x -> Value ([%e add] x)
           in
           Env.Monad.return foo])
+      is_rec
+      tdecl
   in
-  let make_prj_exn =
+  let make_prj_exn is_rec tdecl =
+    let manifest =
+      match tdecl.ptype_manifest with
+      | None ->
+        failwiths
+          "types without manifest are not allowed %s %d"
+          Caml.__FILE__
+          Caml.__LINE__
+      | Some m -> m
+    in
     make_reifier_gen
       ~pat:[%pat? prj_exn]
+      ~typ:
+        (if List.is_empty tdecl.ptype_params
+        then
+          Some [%type: (_, [%t gtypify_exn ~ccompositional:true ~loc manifest]) Reifier.t]
+        else None)
       [%expr OCanren.prj_exn]
       (fun add -> [%expr Env.Monad.return [%e add]])
+      is_rec
+      tdecl
   in
   List.concat
     [ [ pstr_type ~loc Nonrecursive [ base_tdecl ] ]
@@ -461,6 +510,11 @@ let make_reifier_composition ~pat ?(typ = None) reifier_name base_reifier tdecl 
       pexp_apply
         ~loc
         (pexp_ident ~loc (Located.mk ~loc (Ldot (lident m, reifier_name))))
+        (List.map args ~f:(fun t -> nolabel, helper t))
+    | { ptyp_desc = Ptyp_constr ({ txt = Lident "t" }, args) } ->
+      pexp_apply
+        ~loc
+        (pexp_ident ~loc (Located.mk ~loc (Lident reifier_name)))
         (List.map args ~f:(fun t -> nolabel, helper t))
     | { ptyp_desc = Ptyp_tuple [ l; r ] } ->
       Exp.apply

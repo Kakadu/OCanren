@@ -63,7 +63,7 @@ module _ = struct
   ;;
 end
 
-module _ : sig end = struct
+module Moves = struct
   [%%distrib
   type nonrec 'nat t =
     | Forward of 'nat
@@ -76,3 +76,5 @@ module _ : sig end = struct
   type moves = ground GT.list
   type t1 = (int * int) Std.List.ground]
 end
+
+type xxxx = int Moves.t
