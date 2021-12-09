@@ -14,6 +14,14 @@ open Ppxlib.Ast_helper
 open Printf
 module Format = Caml.Format
 
+let use_logging = true
+
+let log fmt =
+  if use_logging
+  then Format.kasprintf (fun s -> Format.printf "%s\n%!" s) fmt
+  else Format.ifprintf Format.std_formatter fmt
+;;
+
 let failwiths fmt = Format.ksprintf failwith fmt
 
 let notify fmt =
@@ -100,93 +108,85 @@ let has_name_attr (xs : attributes) =
 
 let decorate_with_attributes tdecl ptype_attributes = { tdecl with ptype_attributes }
 
-let make_reifier_composition ~pat reifier_name base_reifier tdecl =
-  let names = extract_names tdecl.ptype_params in
-  let mk_arg_reifier = Fn.id in
-  let add_args =
-    let loc = tdecl.ptype_loc in
-    let args rhs =
-      List.fold_right names ~init:rhs ~f:(fun name acc ->
-          [%expr fun [%p Pat.var (Located.mk ~loc (mk_arg_reifier name))] -> [%e acc]])
-    in
-    args
-  in
-  let rec helper typ =
-    let loc = typ.ptyp_loc in
-    (* Format.eprintf "%a\n%!" (PPP.payload 0) (PTyp typ); *)
-    match typ with
-    (* | [%type: ground] -> [%expr reify] *)
-    | { ptyp_desc = Ptyp_constr ({ txt = Ldot (Lident "GT", "list") }, xs) } ->
-      Exp.apply ~loc [%expr OCanren.Std.List.reify] @@ List.map xs ~f:helper
-    | [%type: GT.int] | { ptyp_desc = Ptyp_constr ({ txt = Lident "int" }, []) } ->
-      base_reifier
-    | { ptyp_desc = Ptyp_constr ({ txt = Lident "ground" }, xs) } ->
-      Exp.apply ~loc [%expr reify] (List.map ~f:helper xs)
-    | { ptyp_desc = Ptyp_constr ({ txt = Ldot (m, "ground") }, xs) } ->
-      Exp.apply
-        ~loc
-        (pexp_ident ~loc (Located.mk ~loc (Ldot (m, reifier_name))))
-        (List.map xs ~f:helper)
-    | { ptyp_desc = Ptyp_var s } -> pexp_ident ~loc (Located.mk ~loc (lident s))
-    | { ptyp_desc = Ptyp_constr ({ txt = Ldot (Lident m, _) }, args) } ->
-      pexp_apply
-        ~loc
-        (pexp_ident ~loc (Located.mk ~loc (Ldot (lident m, reifier_name))))
-        (List.map args ~f:(fun t -> nolabel, helper t))
-    | { ptyp_desc = Ptyp_tuple [ l; r ] } ->
-      Exp.apply
-        ~loc
-        (pexp_ident
-           ~loc
-           (Located.mk ~loc (Ldot (Ldot (Lident "Std", "Pair"), reifier_name))))
-        [ helper l; helper r ]
-    | _ -> [%expr reify23s]
-  in
-  let body =
-    match tdecl.ptype_manifest with
-    | None -> failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__
-    | Some m ->
-      (match m.ptyp_desc with
-      | Ptyp_constr ({ txt }, args) -> helper m
-      | _ -> failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__)
-  in
-  let loc = tdecl.ptype_loc in
-  pstr_value
-    ~loc
-    Nonrecursive
-    [ value_binding ~loc ~pat ~expr:[%expr [%e add_args body]] ]
+let lident_of_list = function
+  | [] -> failwith "Bad argument: lident_of_list"
+  | s :: tl -> List.fold_left tl ~init:(Lident s) ~f:(fun acc x -> Ldot (acc, x))
 ;;
 
-let process_composable =
-  List.concat_map ~f:(fun t ->
-      let loc = t.pstr_loc in
-      match t.pstr_desc with
-      | Pstr_type (flg, [ t ]) ->
-        [ make_reifier_composition
-            "reify"
-            [%expr OCanren.reify]
-            ~pat:
-              (Pat.var
-                 ~loc
-                 (Located.mk ~loc @@ Format.sprintf "reify_%s" t.ptype_name.txt))
-            t
-        ; make_reifier_composition
-            "prj_exn"
-            [%expr OCanren.prj_exn]
-            ~pat:
-              (Pat.var
-                 ~loc
-                 (Located.mk ~loc @@ Format.sprintf "prj_exn_%s" t.ptype_name.txt))
-            t
-        ]
-      | _ -> [ t ])
-;;
+include struct
+  let make_typ_exn ?(ccompositional = false) ~loc oca_logic_ident kind typ =
+    let rec helper t =
+      match t.ptyp_desc with
+      | Ptyp_constr ({ txt = Ldot (Lident "GT", s) }, []) ->
+        (* ptyp_constr ~loc (oca_logic_ident ~loc:t.ptyp_loc) [ t ] *)
+        oca_logic_ident ~loc:t.ptyp_loc t
+      | Ptyp_constr ({ txt = Ldot (Lident "GT", "list") }, xs) ->
+        ptyp_constr
+          ~loc
+          (Located.mk ~loc:t.ptyp_loc (lident_of_list [ "OCanren"; "Std"; "List"; kind ]))
+          (List.map ~f:helper xs)
+      | Ptyp_constr ({ txt = Ldot (path, "ground") }, xs) ->
+        ptyp_constr ~loc (Located.mk ~loc (Ldot (path, kind))) (List.map ~f:helper xs)
+      | Ptyp_constr ({ txt = Lident "ground" }, xs) ->
+        ptyp_constr ~loc (Located.mk ~loc (Lident kind)) xs
+      | Ptyp_tuple [ l; r ] ->
+        ptyp_constr
+          ~loc
+          (Located.mk ~loc:t.ptyp_loc (lident_of_list [ "OCanren"; "Std"; "Pair"; kind ]))
+          [ helper l; helper r ]
+      | Ptyp_constr ({ txt = Lident s }, []) -> oca_logic_ident ~loc:t.ptyp_loc t
+      | _ -> t
+    in
+    match typ with
+    | { ptyp_desc = Ptyp_constr (id, args) } ->
+      if ccompositional
+      then helper typ
+      else (
+        let ttt = ptyp_constr ~loc id (List.map ~f:helper args) in
+        oca_logic_ident ~loc ttt)
+    | _ -> failwiths "can't generate %s type" kind
+  ;;
+
+  let ltypify_exn ?(ccompositional = false) ~loc typ =
+    let oca_logic_ident ~loc = Located.mk ~loc (lident_of_list [ "OCanren"; "logic" ]) in
+    make_typ_exn
+      ~ccompositional
+      ~loc
+      (fun ~loc t -> ptyp_constr ~loc (oca_logic_ident ~loc:t.ptyp_loc) [ t ])
+      "logic"
+      typ
+  ;;
+
+  let gtypify_exn ?(ccompositional = false) ~loc typ =
+    make_typ_exn ~ccompositional ~loc (fun ~loc t -> t) "ground" typ
+  ;;
+
+  let%expect_test _ =
+    let loc = Location.none in
+    let test i =
+      let t2 =
+        match i.pstr_desc with
+        | Pstr_type (_, [ { ptype_manifest = Some t } ]) ->
+          ltypify_exn ~ccompositional:true ~loc t
+        | _ -> assert false
+      in
+      Format.printf "%a\n%!" PPP.core_type t2
+    in
+    test [%stri type t1 = (int * int) Std.List.ground];
+    [%expect
+      {| (int OCanren.logic, int OCanren.logic) OCanren.Std.Pair.logic Std.List.logic |}];
+    ()
+  ;;
+end
 
 let injectify ~loc typ =
   let oca_logic_ident ~loc = Located.mk ~loc (Ldot (Lident "OCanren", "ilogic")) in
   let add_ilogic ~loc t = ptyp_constr ~loc (oca_logic_ident ~loc) [ t ] in
   let rec mangle_typ t =
     (* Format.printf "HERR %a\n%!" PPP.core_type t; *)
+    (* .... ground ~~~> injected ...
+       .... t      ~~~> .... t ilogic
+    *)
     match t.ptyp_desc with
     | Ptyp_constr ({ txt = Ldot (Lident "GT", s) }, []) ->
       ptyp_constr ~loc (oca_logic_ident ~loc:t.ptyp_loc) [ t ]
@@ -194,18 +194,12 @@ let injectify ~loc typ =
       ptyp_constr ~loc (Located.mk ~loc (Ldot (path, "injected"))) []
     | Ptyp_constr ({ txt = Lident "t" }, xs) ->
       add_ilogic ~loc
-      @@ ptyp_constr
-           ~loc
-           (Located.mk ~loc (Lident "injected"))
-           (List.map ~f:mangle_typ xs)
+      @@ ptyp_constr ~loc (Located.mk ~loc (Lident "t")) (List.map ~f:mangle_typ xs)
     | Ptyp_constr ({ txt = Lident "ground" }, xs) ->
-      (* add_ilogic ~loc *)
-      (* @@  *)
       ptyp_constr ~loc (Located.mk ~loc (Lident "injected")) (List.map ~f:mangle_typ xs)
     | _ -> t
   in
   let ttt = mangle_typ typ in
-  (* ptyp_constr ~loc (oca_logic_ident ~loc) [ ttt ] *)
   ttt
 ;;
 
@@ -217,13 +211,12 @@ let%expect_test _ =
       | Pstr_type (_, [ { ptype_manifest = Some t } ]) -> injectify ~loc t
       | _ -> assert false
     in
-    (* Format.printf "%a\n%!" (PP.payload 0) (PTyp t2); *)
     Format.printf "%a\n%!" PPP.core_type t2
   in
   test [%stri type nonrec x = GT.int t];
-  [%expect {|    ground t OCanren.ilogic |}];
+  [%expect {|    GT.int OCanren.ilogic t OCanren.ilogic |}];
   test [%stri type nonrec ground = ground t];
-  [%expect {|    ground t OCanren.ilogic |}];
+  [%expect {|    injected t OCanren.ilogic |}];
   ()
 ;;
 
@@ -234,23 +227,11 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
     | Nonrecursive -> false
   in
   let ltyp =
-    let oca_logic_ident ~loc = Located.mk ~loc (Ldot (Lident "OCanren", "logic")) in
-    let mangle_typ t =
-      match t.ptyp_desc with
-      | Ptyp_constr ({ txt = Ldot (Lident "GT", s) }, []) ->
-        ptyp_constr ~loc (oca_logic_ident ~loc:t.ptyp_loc) [ t ]
-      | Ptyp_constr ({ txt = Ldot (path, "ground") }, xs) ->
-        ptyp_constr ~loc (Located.mk ~loc (Ldot (path, "logic"))) xs
-      | Ptyp_constr ({ txt = Lident "ground" }, xs) ->
-        ptyp_constr ~loc (Located.mk ~loc (Lident "logic")) xs
-      | _ -> t
-    in
     let ptype_manifest =
       match tdecl.ptype_manifest with
-      | None -> failwith ""
-      | Some { ptyp_desc = Ptyp_constr (id, args) } ->
-        let ttt = ptyp_constr ~loc id (List.map ~f:mangle_typ args) in
-        Option.some (ptyp_constr ~loc (oca_logic_ident ~loc) [ ttt ])
+      | None -> failwith "no manifest"
+      | Some ({ ptyp_desc = Ptyp_constr (id, args) } as typ) ->
+        Some (ltypify_exn ~loc typ)
       | t -> t
     in
     let ptype_attributes =
@@ -353,6 +334,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
         in
         [%expr
           let open Env.Monad.Syntax in
+          let* _shallowr = [%e base_reifier] in
           [%e
             if is_rec
             then
@@ -361,7 +343,6 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
                     Reifier.compose
                       [%e base_reifier]
                       (let* self = rself in
-                       let* _shallowr = OCanren.reify in
                        [%e rhs]))]
             else [%expr Reifier.compose [%e base_reifier] [%e rhs]]]]
       in
@@ -372,16 +353,11 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       args, heading, add_to_gmap
     in
     let rec helper typ =
-      (* Format.eprintf "%a\n%!" (PPP.payload 0) (PTyp typ); *)
       match typ with
       | { ptyp_desc = Ptyp_constr ({ txt = Lident "ground" }, _) } -> [%expr self]
-      (* | Ptyp_constr ({ txt = Ldot (Lident "GT", _) }, []) -> [%expr OCanren.reify] *)
-      (* | Ptyp_constr ({ txt = Ldot (m, "ground") }, args) ->
-        pexp_ident ~loc (Located.mk ~loc (Ldot (m, "reify"))) *)
       | { ptyp_desc = Ptyp_var s } -> pexp_ident ~loc (Located.mk ~loc (lident s))
       | [%type: GT.int] | { ptyp_desc = Ptyp_constr ({ txt = Lident "int" }, []) } ->
-        (* [%expr _shallowr] *)
-        base_reifier
+        [%expr _shallowr]
       | { ptyp_desc = Ptyp_constr ({ txt = Ldot (Lident m, _) }, args) } ->
         pexp_apply
           ~loc
@@ -443,4 +419,112 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
     ; [ make_prj_exn is_rec tdecl; make_reifier is_rec tdecl ]
     ; creators
     ]
+;;
+
+let make_reifier_composition ~pat ?(typ = None) reifier_name base_reifier tdecl =
+  let names = extract_names tdecl.ptype_params in
+  let mk_arg_reifier = Fn.id in
+  let add_args =
+    let loc = tdecl.ptype_loc in
+    let args rhs =
+      List.fold_right names ~init:rhs ~f:(fun name acc ->
+          [%expr fun [%p Pat.var (Located.mk ~loc (mk_arg_reifier name))] -> [%e acc]])
+    in
+    args
+  in
+  let rec helper typ =
+    let loc = typ.ptyp_loc in
+    (* Format.eprintf "%a\n%!" (PPP.payload 0) (PTyp typ); *)
+    match typ with
+    | { ptyp_desc = Ptyp_constr ({ txt = Ldot (Lident "GT", "list") }, xs) } ->
+      (* Exp.apply ~loc base_reifier @@ List.map xs ~f:helper *)
+      Exp.apply
+        ~loc
+        (pexp_ident
+           ~loc
+           (Located.mk ~loc (lident_of_list [ "Std"; "List"; reifier_name ])))
+        (List.map xs ~f:helper)
+    | [%type: GT.int] | { ptyp_desc = Ptyp_constr ({ txt = Lident "int" }, []) } ->
+      base_reifier
+    | { ptyp_desc = Ptyp_constr ({ txt = Lident "ground" }, xs) } ->
+      Exp.apply
+        ~loc
+        (pexp_ident ~loc (Located.mk ~loc (lident reifier_name)))
+        (List.map ~f:helper xs)
+    | { ptyp_desc = Ptyp_constr ({ txt = Ldot (m, "ground") }, xs) } ->
+      Exp.apply
+        ~loc
+        (pexp_ident ~loc (Located.mk ~loc (Ldot (m, reifier_name))))
+        (List.map xs ~f:helper)
+    | { ptyp_desc = Ptyp_var s } -> pexp_ident ~loc (Located.mk ~loc (lident s))
+    | { ptyp_desc = Ptyp_constr ({ txt = Ldot (Lident m, _) }, args) } ->
+      pexp_apply
+        ~loc
+        (pexp_ident ~loc (Located.mk ~loc (Ldot (lident m, reifier_name))))
+        (List.map args ~f:(fun t -> nolabel, helper t))
+    | { ptyp_desc = Ptyp_tuple [ l; r ] } ->
+      Exp.apply
+        ~loc
+        (pexp_ident
+           ~loc
+           (Located.mk ~loc (Ldot (Ldot (Lident "Std", "Pair"), reifier_name))))
+        [ helper l; helper r ]
+    | _ -> [%expr reify23s]
+  in
+  let body =
+    match tdecl.ptype_manifest with
+    | None -> failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__
+    | Some m ->
+      (match m.ptyp_desc with
+      | Ptyp_constr ({ txt }, args) -> helper m
+      | _ -> failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__)
+  in
+  let loc = tdecl.ptype_loc in
+  let pat =
+    match typ with
+    | None -> pat
+    | Some t -> ppat_constraint ~loc pat t
+  in
+  pstr_value ~loc Nonrecursive [ value_binding ~loc ~pat ~expr:(add_args body) ]
+;;
+
+let process_composable =
+  List.concat_map ~f:(fun tdecl ->
+      let loc = tdecl.pstr_loc in
+      match tdecl.pstr_desc with
+      | Pstr_type (flg, [ t ]) ->
+        (match t.ptype_manifest with
+        | Some m ->
+          [ tdecl
+          ; make_reifier_composition
+              "reify"
+              [%expr OCanren.reify]
+              ~typ:
+                (if List.is_empty t.ptype_params
+                then
+                  Some
+                    [%type: (_, [%t ltypify_exn ~ccompositional:true ~loc m]) Reifier.t]
+                else None)
+              ~pat:
+                (Pat.var
+                   ~loc
+                   (Located.mk ~loc @@ Format.sprintf "reify_%s" t.ptype_name.txt))
+              t
+          ; make_reifier_composition
+              "prj_exn"
+              [%expr OCanren.prj_exn]
+              ~typ:
+                (if List.is_empty t.ptype_params
+                then
+                  Some
+                    [%type: (_, [%t gtypify_exn ~ccompositional:true ~loc m]) Reifier.t]
+                else None)
+              ~pat:
+                (Pat.var
+                   ~loc
+                   (Located.mk ~loc @@ Format.sprintf "prj_exn_%s" t.ptype_name.txt))
+              t
+          ]
+        | None -> failwith "no manifest")
+      | _ -> [ tdecl ])
 ;;

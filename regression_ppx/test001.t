@@ -1,32 +1,41 @@
-  $ ../ppx/pp_distrib.exe test001.ml | ocamlformat --impl --enable-outside-detected-project --profile=compact -
+  $ ../ppx/pp_distrib.exe test001.ml | ocamlformat --impl --enable-outside-detected-project --profile=janestreet -
   open OCanren
   open Tester
   
   module _ = struct
     include struct
-      type nonrec 'a t = Z | S of 'a [@@deriving gt ~options:{gmap; show}]
-      type ground = ground t [@@deriving gt ~options:{gmap; show}]
-      type logic = logic t OCanren.logic [@@deriving gt ~options:{gmap; show}]
+      type nonrec 'a t =
+        | Z
+        | S of 'a
+      [@@deriving gt ~options:{ gmap; show }]
+  
+      type ground = ground t [@@deriving gt ~options:{ gmap; show }]
+      type logic = logic t OCanren.logic [@@deriving gt ~options:{ gmap; show }]
       type injected = injected t OCanren.ilogic
   
       let prj_exn =
         let open Env.Monad.Syntax in
+        let* _shallowr = OCanren.prj_exn in
         Reifier.fix (fun rself ->
-            Reifier.compose OCanren.prj_exn
+            Reifier.compose
+              OCanren.prj_exn
               (let* self = rself in
-               let* _shallowr = OCanren.reify in
-               Env.Monad.return (GT.gmap t self) ) )
+               Env.Monad.return (GT.gmap t self)))
+      ;;
   
       let reify =
         let open Env.Monad.Syntax in
+        let* _shallowr = OCanren.reify in
         Reifier.fix (fun rself ->
-            Reifier.compose OCanren.reify
+            Reifier.compose
+              OCanren.reify
               (let* self = rself in
-               let* _shallowr = OCanren.reify in
                let rec foo = function
                  | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
-                 | Value x -> Value ((GT.gmap t self) x) in
-               Env.Monad.return foo ) )
+                 | Value x -> Value ((GT.gmap t self) x)
+               in
+               Env.Monad.return foo))
+      ;;
   
       let z () = OCanren.inji Z
       let s _x__001_ = OCanren.inji (S _x__001_)
@@ -35,48 +44,60 @@
     let run_peano n = run_new reify (GT.show logic) n
   
     let () =
-      run_peano 1 q qh (REPR (fun q -> q === z ())) ;
+      run_peano 1 q qh (REPR (fun q -> q === z ()));
       run_peano 1 q qh (REPR (fun q -> q === s (z ())))
+    ;;
   end
   
   module _ = struct
     include struct
-      type nonrec 'a t = None | Some of 'a [@@deriving gt ~options:{gmap; show}]
-      type nonrec 'a ground = 'a t [@@deriving gt ~options:{gmap; show}]
+      type nonrec 'a t =
+        | None
+        | Some of 'a
+      [@@deriving gt ~options:{ gmap; show }]
   
-      type nonrec 'a logic = 'a t OCanren.logic
-      [@@deriving gt ~options:{gmap; show}]
-  
+      type nonrec 'a ground = 'a t [@@deriving gt ~options:{ gmap; show }]
+      type nonrec 'a logic = 'a t OCanren.logic [@@deriving gt ~options:{ gmap; show }]
       type nonrec 'a injected = 'a t OCanren.ilogic
   
       let prj_exn ra =
         let open Env.Monad.Syntax in
-        Reifier.compose OCanren.prj_exn
+        let* _shallowr = OCanren.prj_exn in
+        Reifier.compose
+          OCanren.prj_exn
           (let* a = ra in
-           Env.Monad.return (GT.gmap t a) )
+           Env.Monad.return (GT.gmap t a))
+      ;;
   
       let reify ra =
         let open Env.Monad.Syntax in
-        Reifier.compose OCanren.reify
+        let* _shallowr = OCanren.reify in
+        Reifier.compose
+          OCanren.reify
           (let* a = ra in
            let rec foo = function
              | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
-             | Value x -> Value ((GT.gmap t a) x) in
-           Env.Monad.return foo )
+             | Value x -> Value ((GT.gmap t a) x)
+           in
+           Env.Monad.return foo)
+      ;;
   
       let none () = OCanren.inji None
       let some _x__002_ = OCanren.inji (Some _x__002_)
     end
   
     let run_option n =
-      run_new (reify OCanren.reify)
+      run_new
+        (reify OCanren.reify)
         (GT.show logic (GT.show OCanren.logic (GT.show GT.int)))
         n
+    ;;
   
     let () =
-      run_option 1 q qh (REPR (fun q -> q === none ())) ;
-      run_option 1 q qh (REPR (fun q -> fresh x (q === some x))) ;
+      run_option 1 q qh (REPR (fun q -> q === none ()));
+      run_option 1 q qh (REPR (fun q -> fresh x (q === some x)));
       run_option 1 q qh (REPR (fun q -> fresh x (q === some !!42)))
+    ;;
   end
   
   module _ = struct
@@ -84,48 +105,53 @@
       type nonrec ('a, 'b) t =
         | [] [@name "nil"]
         | ( :: ) of 'a * 'b [@name "cons"]
-      [@@deriving gt ~options:{gmap; show}]
+      [@@deriving gt ~options:{ gmap; show }]
   
-      type 'a ground = ('a, 'a ground) t [@@deriving gt ~options:{gmap; show}]
-  
-      type 'a logic = ('a, 'a logic) t OCanren.logic
-      [@@deriving gt ~options:{gmap; show}]
-  
+      type 'a ground = ('a, 'a ground) t [@@deriving gt ~options:{ gmap; show }]
+      type 'a logic = ('a, 'a logic) t OCanren.logic [@@deriving gt ~options:{ gmap; show }]
       type 'a injected = ('a, 'a injected) t OCanren.ilogic
   
       let prj_exn ra =
         let open Env.Monad.Syntax in
+        let* _shallowr = OCanren.prj_exn in
         Reifier.fix (fun rself ->
-            Reifier.compose OCanren.prj_exn
+            Reifier.compose
+              OCanren.prj_exn
               (let* self = rself in
-               let* _shallowr = OCanren.reify in
                let* a = ra in
-               Env.Monad.return (GT.gmap t a self) ) )
+               Env.Monad.return (GT.gmap t a self)))
+      ;;
   
       let reify ra =
         let open Env.Monad.Syntax in
+        let* _shallowr = OCanren.reify in
         Reifier.fix (fun rself ->
-            Reifier.compose OCanren.reify
+            Reifier.compose
+              OCanren.reify
               (let* self = rself in
-               let* _shallowr = OCanren.reify in
                let* a = ra in
                let rec foo = function
                  | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
-                 | Value x -> Value ((GT.gmap t a self) x) in
-               Env.Monad.return foo ) )
+                 | Value x -> Value ((GT.gmap t a self) x)
+               in
+               Env.Monad.return foo))
+      ;;
   
       let nil () = OCanren.inji []
       let cons _x__003_ _x__004_ = OCanren.inji (_x__003_ :: _x__004_)
     end
   
     let run_list n =
-      run_new (reify OCanren.reify)
+      run_new
+        (reify OCanren.reify)
         (GT.show logic (GT.show OCanren.logic (GT.show GT.int)))
         n
+    ;;
   
     let () =
-      run_list 1 q qh (REPR (fun q -> q === nil ())) ;
+      run_list 1 q qh (REPR (fun q -> q === nil ()));
       run_list 1 q qh (REPR (fun q -> fresh x (q === cons x (nil ()))))
+    ;;
   end
   
   module _ : sig end = struct
@@ -135,38 +161,60 @@
         | Backward of 'nat
         | Unload of 'nat
         | Fill of 'nat
-      [@@deriving gt ~options:{gmap; show}]
+      [@@deriving gt ~options:{ gmap; show }]
   
-      type nonrec ground = GT.int t [@@deriving gt ~options:{gmap; show}]
+      type nonrec ground = GT.int t [@@deriving gt ~options:{ gmap; show }]
   
       type nonrec logic = GT.int OCanren.logic t OCanren.logic
-      [@@deriving gt ~options:{gmap; show}]
+      [@@deriving gt ~options:{ gmap; show }]
   
       type nonrec injected = GT.int OCanren.ilogic t OCanren.ilogic
   
       let prj_exn =
         let open Env.Monad.Syntax in
-        Reifier.compose OCanren.prj_exn
-          (Env.Monad.return (GT.gmap t OCanren.prj_exn))
+        let* _shallowr = OCanren.prj_exn in
+        Reifier.compose OCanren.prj_exn (Env.Monad.return (GT.gmap t _shallowr))
+      ;;
   
       let reify =
         let open Env.Monad.Syntax in
-        Reifier.compose OCanren.reify
+        let* _shallowr = OCanren.reify in
+        Reifier.compose
+          OCanren.reify
           (let rec foo = function
              | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
-             | Value x -> Value ((GT.gmap t OCanren.reify) x) in
-           Env.Monad.return foo )
+             | Value x -> Value ((GT.gmap t _shallowr) x)
+           in
+           Env.Monad.return foo)
+      ;;
   
       let forward _x__005_ = OCanren.inji (Forward _x__005_)
       let backward _x__006_ = OCanren.inji (Backward _x__006_)
       let unload _x__007_ = OCanren.inji (Unload _x__007_)
       let fill _x__008_ = OCanren.inji (Fill _x__008_)
-      let reify_moves = OCanren.Std.List.reify reify
-      let prj_exn_moves = OCanren.Std.List.reify reify
-      let reify_t1 = Std.List.reify (Std.Pair.reify OCanren.reify OCanren.reify)
   
-      let prj_exn_t1 =
+      type moves = ground GT.list
+  
+      let (reify_moves : (_, logic OCanren.Std.List.logic) Reifier.t) = Std.List.reify reify
+  
+      let (prj_exn_moves : (_, ground OCanren.Std.List.ground) Reifier.t) =
+        Std.List.prj_exn prj_exn
+      ;;
+  
+      type t1 = (int * int) Std.List.ground
+  
+      let (reify_t1 :
+            ( _
+            , (int OCanren.logic, int OCanren.logic) OCanren.Std.Pair.logic Std.List.logic
+            )
+            Reifier.t)
+        =
+        Std.List.reify (Std.Pair.reify OCanren.reify OCanren.reify)
+      ;;
+  
+      let (prj_exn_t1 : (_, (int, int) OCanren.Std.Pair.ground Std.List.ground) Reifier.t) =
         Std.List.prj_exn (Std.Pair.prj_exn OCanren.prj_exn OCanren.prj_exn)
+      ;;
     end
   end
   $ ./test001.exe
