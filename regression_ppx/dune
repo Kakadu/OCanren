@@ -1,12 +1,16 @@
 (executable
  (name test001)
  (modules test001)
+ (flags
+  (:standard -dsource))
  (preprocess
   (pps
    OCanren-ppx.ppx_repr
    OCanren-ppx.ppx_fresh
    OCanren-ppx.ppx_distrib
-   GT.ppx_all))
+   GT.ppx_all
+   --
+   -pretty))
  (libraries OCanren OCanren.tester))
 
 (executable
@@ -35,7 +39,7 @@
  (deps ;
   %{project_root}/ppx/pp_distrib.exe
   %{project_root}/ppx/pp_repr.exe
-  ;./test001.exe
+  ./test001.exe
   test001.ml
   test002repr.ml
   ./test003sort.exe

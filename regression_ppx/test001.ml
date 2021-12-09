@@ -63,9 +63,7 @@ module _ = struct
   ;;
 end
 
-module _ : sig
-  (* val reify : int *)
-end = struct
+module _ : sig end = struct
   [%%distrib
   type nonrec 'nat t =
     | Forward of 'nat
