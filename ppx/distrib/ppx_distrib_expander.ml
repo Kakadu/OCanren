@@ -152,6 +152,11 @@ include struct
       else (
         let ttt = ptyp_constr ~loc id (List.map ~f:helper args) in
         oca_logic_ident ~loc ttt)
+    | { ptyp_desc = Ptyp_tuple [ l; r ] } ->
+      ptyp_constr
+        ~loc
+        (Located.mk ~loc @@ lident_of_list [ "OCanren"; "Std"; "Pair"; kind ])
+        (List.map ~f:helper [ l; r ])
     | _ -> failwiths "can't generate %s type: %a" kind PPP.core_type typ
   ;;
 

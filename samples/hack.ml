@@ -35,7 +35,7 @@ type nonrec 'nat t =
 
 type ground = int t
 type moves = ground GT.list
-type state = (int * int) * (int * int) GT.list
+(* type state = (int * int) * (int * int) GT.list  *)
 ]
 end
 (* type moves = int Move.t GT.list *)
