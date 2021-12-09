@@ -13,7 +13,7 @@
       type logic = logic t OCanren.logic [@@deriving gt ~options:{ gmap; show }]
       type injected = injected t OCanren.ilogic
   
-      let prj_exn =
+      let (prj_exn : (_, ground t) Reifier.t) =
         let open Env.Monad.Syntax in
         let* _shallowr = OCanren.prj_exn in
         Reifier.fix (fun rself ->
@@ -23,7 +23,7 @@
                Env.Monad.return (GT.gmap t self)))
       ;;
   
-      let reify =
+      let (reify : (_, logic t OCanren.logic) Reifier.t) =
         let open Env.Monad.Syntax in
         let* _shallowr = OCanren.reify in
         Reifier.fix (fun rself ->
@@ -154,7 +154,7 @@
     ;;
   end
   
-  module _ : sig end = struct
+  module Moves = struct
     include struct
       type nonrec 'nat t =
         | Forward of 'nat
@@ -170,13 +170,13 @@
   
       type nonrec injected = GT.int OCanren.ilogic t OCanren.ilogic
   
-      let prj_exn =
+      let (prj_exn : (_, GT.int t) Reifier.t) =
         let open Env.Monad.Syntax in
         let* _shallowr = OCanren.prj_exn in
         Reifier.compose OCanren.prj_exn (Env.Monad.return (GT.gmap t _shallowr))
       ;;
   
-      let reify =
+      let (reify : (_, GT.int OCanren.logic t OCanren.logic) Reifier.t) =
         let open Env.Monad.Syntax in
         let* _shallowr = OCanren.reify in
         Reifier.compose
@@ -217,6 +217,8 @@
       ;;
     end
   end
+  
+  type xxxx = int Moves.t
   $ ./test001.exe
   fun q -> q === (z ()), 1 answer {
   q=Z;
