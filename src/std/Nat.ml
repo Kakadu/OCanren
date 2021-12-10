@@ -34,6 +34,8 @@ with show, gmap, html, eq, compare, foldl, foldr, fmt
 
 type groundi = groundi t Logic.ilogic
 
+type injected = groundi
+
 let logic = {
   logic with
   GT.plugins =

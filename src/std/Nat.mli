@@ -41,6 +41,8 @@ val inj : ground -> logic
 (** A type synonym for injected nat *)
 type groundi = groundi t Logic.ilogic
 
+type injected = groundi
+
 (** Reifier *)
 val reify : (groundi, logic) Reifier.t
 

@@ -45,6 +45,8 @@ val unify : 'a ilogic -> 'a ilogic -> goal
 (* val (=/=) : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal *)
 val (=/=) : 'a ilogic -> 'a ilogic -> goal
 
+val diseq : 'a ilogic -> 'a ilogic -> goal
+
 (** Call [structural var reifier checker] adds a structural constraint for future use.
  Every time substitution is updated it reifies [var] using [reifier] and checks that
   the result satisfies desired predicate [checker].
