@@ -16,8 +16,6 @@
  * (enclosed in the file COPYING).
  *)
 
-open GT
-
 module L = List
 
 open OCanren
@@ -25,31 +23,31 @@ open OCanren.Std
 
 module Move = struct
 
+
 [%%distrib
 type nonrec 'nat t =
   Forward  of 'nat
 | Backward of 'nat
 | Unload   of 'nat
 | Fill     of 'nat
-[@@deriving gt ~options:{show;gmap}]
+[@@deriving gt ~options:{fmt;gmap}]
 
-type ground = int t
-type moves = ground GT.list
-(* type state = (int * int) * (int * int) GT.list  *)
+type ground = Std.Nat.ground t
 ]
 end
-(* type moves = int Move.t GT.list *)
 (*
 (* List of moves *)
+type moves = Move.ground GT.list [@@deriving reify, gt ~options:{fmt}]
+(*
 @type moves = int move GT.list with show;;
+*)
 (* ... logically *)
-@type lmoves = ocanren {int move GT.list} with show;;
+type lmoves = ocanren {GT.int Move.t GT.list} [@@deriving gt ~options:{fmt}]
 
 (* State: distance, amount of fuel, list of fuel dumps *)
-@type state = int * int * (int * int) GT.list with show;;
+type state = GT.int * GT.int * (GT.int * GT.int) GT.list [@@deriving gt ~options:{fmt}]
 (* ... logically *)
-@type lstate = ocanren {int * int * (int * int) GT.list} with show
-*)
+type lstate = ocanren {GT.int * GT.int * (GT.int * GT.int) GT.list} [@@deriving gt ~options:{fmt}]
 
 
 (*
@@ -60,7 +58,9 @@ let forward  x = inj @@ M.distrib (Forward  x)
 let backward x = inj @@ M.distrib (Backward x)
 let unload   x = inj @@ M.distrib (Unload   x)
 let fill     x = inj @@ M.distrib (Fill     x)
+*)
 
+open Move
 (* Lookups a station:
      d       : a distance
      stations: a list of stations
@@ -173,7 +173,14 @@ let steps state moves state' =
   in
   steps !!2 state moves state'
 
-let prj_moves x = List.to_list (gmap(move) Nat.to_int) (project x)
+let prj_moves x =
+  let project
+    : (_ reified -> Nat.ground Move.t)
+  =
+ fun rr -> rr#reify (Move.prj_exn Nat.prj_exn)
+in
+List.to_list (GT.gmap(Move.t) Nat.to_int) (project x)
+
 let prj_state x =
   let x, (y, z) = project x in
   (Nat.to_int x, Nat.to_int y, List.to_list (fun (x, y) -> Nat.to_int x, Nat.to_int y) z)

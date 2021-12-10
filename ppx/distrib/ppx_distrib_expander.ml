@@ -380,14 +380,11 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       | { ptyp_desc = Ptyp_var s } -> pexp_ident ~loc (Located.mk ~loc (lident s))
       | [%type: GT.int] | { ptyp_desc = Ptyp_constr ({ txt = Lident "int" }, []) } ->
         [%expr _shallowr]
-      | { ptyp_desc = Ptyp_constr ({ txt = Ldot (Lident m, _) }, args) } ->
+      | { ptyp_desc = Ptyp_constr ({ txt = Ldot (m, _) }, args) } ->
         pexp_apply
           ~loc
-          (pexp_ident ~loc (Located.mk ~loc (Ldot (lident m, "reify"))))
+          (pexp_ident ~loc (Located.mk ~loc (Ldot (m, "reify"))))
           (List.map args ~f:(fun t -> nolabel, helper t))
-      (* | { ptyp_desc = Ptyp_constr ({ txt = Lident "t" }, xs) } ->
-        Exp.apply ~loc (pexp_ident ~loc (Located.mk ~loc @@ lident "reify"))
-        @@ List.map ~f:helper xs *)
       | _ -> [%expr reify23s]
     in
     let body =
@@ -585,5 +582,28 @@ let process_composable =
               t
           ]
         | None -> failwith "no manifest")
+      | _ -> [ tdecl ])
+;;
+
+let process_composable =
+  List.concat_map ~f:(fun tdecl ->
+      let loc = tdecl.pstr_loc in
+      match tdecl.pstr_desc with
+      | Pstr_type (flg, [ t ]) ->
+        (match t.ptype_manifest with
+        | Some m ->
+          [ pstr_type
+              ~loc
+              Nonrecursive
+              [ { t with
+                  ptype_attributes =
+                    [ attribute
+                        ~loc
+                        ~name:(Located.mk ~loc "deriving")
+                        ~payload:(PStr [ [%stri reify] ])
+                    ]
+                }
+              ]
+          ])
       | _ -> [ tdecl ])
 ;;
