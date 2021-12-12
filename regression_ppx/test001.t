@@ -193,28 +193,8 @@
       let unload _x__007_ = OCanren.inji (Unload _x__007_)
       let fill _x__008_ = OCanren.inji (Fill _x__008_)
   
-      type moves = ground GT.list
-  
-      let (reify_moves : (_, logic OCanren.Std.List.logic) Reifier.t) = Std.List.reify reify
-  
-      let (prj_exn_moves : (_, ground OCanren.Std.List.ground) Reifier.t) =
-        Std.List.prj_exn prj_exn
-      ;;
-  
-      type t1 = (int * int) Std.List.ground
-  
-      let (reify_t1 :
-            ( _
-            , (int OCanren.logic, int OCanren.logic) OCanren.Std.Pair.logic Std.List.logic
-            )
-            Reifier.t)
-        =
-        Std.List.reify (Std.Pair.reify OCanren.reify OCanren.reify)
-      ;;
-  
-      let (prj_exn_t1 : (_, (int, int) OCanren.Std.Pair.ground Std.List.ground) Reifier.t) =
-        Std.List.prj_exn (Std.Pair.prj_exn OCanren.prj_exn OCanren.prj_exn)
-      ;;
+      type nonrec moves = ground GT.list [@@deriving reify]
+      type nonrec t1 = (int * int) Std.List.ground [@@deriving reify]
     end
   end
   
