@@ -1,3 +1,10 @@
+(library
+ (name myhelpers)
+ (package OCanren-ppx)
+ (libraries base ppxlib)
+ (wrapped false)
+ (modules myhelpers))
+
 (executable
  (public_name pp_fresh)
  (package OCanren-ppx)

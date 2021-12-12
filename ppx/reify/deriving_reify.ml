@@ -16,46 +16,14 @@
  * (enclosed in the file COPYING).
  *)
 
-module PPP = Pprintast
+module Pprintast_ = Pprintast
 open Base
 open Ppxlib
 open Ppxlib.Ast_builder.Default
-open Ppxlib.Ast_helper
 module Format = Caml.Format
+open Myhelpers
 
 let failwiths fmt = Caml.Format.kasprintf failwith fmt
-
-let lident_of_list = function
-  | [] -> failwith "Bad argument: lident_of_list"
-  | s :: tl -> List.fold_left tl ~init:(Lident s) ~f:(fun acc x -> Ldot (acc, x))
-;;
-
-let extract_names =
-  List.map ~f:(fun (typ, _) ->
-      match typ.ptyp_desc with
-      | Ptyp_var s -> s
-      | _ ->
-        failwith
-          (Caml.Format.asprintf "Don't know what to do with %a" Pprintast.core_type typ))
-;;
-
-module Exp = struct
-  include Exp
-
-  let mytuple ~loc ?(attrs = []) = function
-    (* | [] -> Exp.construct (Located.mk ~loc (lident "()")) None *)
-    | [] -> failwith "Bad argument: mytuple"
-    | [ x ] -> x
-    | xs -> tuple ~loc ~attrs xs
-  ;;
-
-  let apply ~loc f = function
-    | [] -> f
-    | xs -> apply ~loc f (List.map ~f:(fun e -> Nolabel, e) xs)
-  ;;
-
-  let ident ~loc lident = pexp_ident ~loc (Located.mk ~loc lident)
-end
 
 include struct
   let make_typ_exn ?(ccompositional = false) ~loc oca_logic_ident kind typ =
@@ -101,7 +69,13 @@ include struct
         ~loc
         (Located.mk ~loc @@ lident_of_list [ "OCanren"; "Std"; "Pair"; kind ])
         (List.map ~f:helper [ l; r ])
-    | _ -> failwiths "can't generate %s type: %a" kind PPP.core_type typ
+    | _ ->
+      Location.raise_errorf
+        ~loc
+        "can't generate %s type: %a"
+        kind
+        Pprintast_.core_type
+        typ
   ;;
 
   let ltypify_exn ?(ccompositional = false) ~loc typ =
@@ -127,7 +101,7 @@ include struct
           ltypify_exn ~ccompositional:true ~loc t
         | _ -> assert false
       in
-      Format.printf "%a\n%!" PPP.core_type t2
+      Format.printf "%a\n%!" Pprintast_.core_type t2
     in
     test [%stri type t1 = (int * int) Std.List.ground];
     [%expect
@@ -143,16 +117,15 @@ let make_reifier_composition ~pat ?(typ = None) reifier_name base_reifier tdecl 
     let loc = tdecl.ptype_loc in
     let args rhs =
       List.fold_right names ~init:rhs ~f:(fun name acc ->
-          [%expr fun [%p Pat.var (Located.mk ~loc (mk_arg_reifier name))] -> [%e acc]])
+          [%expr
+            fun [%p ppat_var ~loc (Located.mk ~loc (mk_arg_reifier name))] -> [%e acc]])
     in
     args
   in
   let rec helper typ =
     let loc = typ.ptyp_loc in
-    (* Format.eprintf "%a\n%!" (PPP.payload 0) (PTyp typ); *)
     match typ with
     | { ptyp_desc = Ptyp_constr ({ txt = Ldot (Lident "GT", "list") }, xs) } ->
-      (* Exp.apply ~loc base_reifier @@ List.map xs ~f:helper *)
       Exp.apply
         ~loc
         (pexp_ident
@@ -218,9 +191,7 @@ let process1 tdecl =
   let loc = tdecl.ptype_loc in
   match tdecl.ptype_manifest with
   | Some m ->
-    [ (* pstr_type ~loc Recursive [ { tdecl with ptype_attributes = [] } ] *)
-      (* ; *)
-      make_reifier_composition
+    [ make_reifier_composition
         "reify"
         [%expr OCanren.reify]
         ~typ:
@@ -228,7 +199,7 @@ let process1 tdecl =
           then Some [%type: (_, [%t ltypify_exn ~ccompositional:true ~loc m]) Reifier.t]
           else None)
         ~pat:
-          (Pat.var
+          (ppat_var
              ~loc
              (Located.mk ~loc @@ Format.sprintf "reify_%s" tdecl.ptype_name.txt))
         tdecl
@@ -240,7 +211,7 @@ let process1 tdecl =
           then Some [%type: (_, [%t gtypify_exn ~ccompositional:true ~loc m]) Reifier.t]
           else None)
         ~pat:
-          (Pat.var
+          (ppat_var
              ~loc
              (Located.mk ~loc @@ Format.sprintf "prj_exn_%s" tdecl.ptype_name.txt))
         tdecl
@@ -250,7 +221,6 @@ let process1 tdecl =
 
 let process_composable =
   List.concat_map ~f:(fun tdecl ->
-      (* let loc = tdecl.pstr_loc in *)
       match tdecl.pstr_desc with
       | Pstr_type (flg, [ t ]) -> process1 t
       | _ -> [ tdecl ])
@@ -258,7 +228,6 @@ let process_composable =
 
 let str_type_decl : (_, _) Deriving.Generator.t =
   Deriving.Generator.make Deriving.Args.empty (fun ~loc ~path (_, info) ->
-      (* match info with  *)
       List.concat_map info ~f:process1)
 ;;
 
