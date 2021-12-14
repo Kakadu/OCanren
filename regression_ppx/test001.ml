@@ -29,7 +29,7 @@ module _ = struct
 
   let run_option n =
     run_new
-      (reify OCanren.reify)
+      [%reify: GT.int ground]
       (GT.show logic (GT.show OCanren.logic (GT.show GT.int)))
       n
   ;;
@@ -52,7 +52,7 @@ module _ = struct
 
   let run_list n =
     run_new
-      (reify OCanren.reify)
+      [%reify: GT.int ground]
       (GT.show logic (GT.show OCanren.logic (GT.show GT.int)))
       n
   ;;
@@ -76,5 +76,3 @@ module Moves = struct
   type moves = ground GT.list
   type t1 = (int * int) Std.List.ground]
 end
-
-type xxxx = int Moves.t

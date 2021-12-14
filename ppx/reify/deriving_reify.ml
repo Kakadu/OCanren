@@ -23,7 +23,7 @@ open Ppxlib.Ast_builder.Default
 module Format = Caml.Format
 open Myhelpers
 
-let failwiths fmt = Caml.Format.kasprintf failwith fmt
+let failwiths ?(loc = Location.none) fmt = Location.raise_errorf ~loc fmt
 
 include struct
   let make_typ_exn ?(ccompositional = false) ~loc oca_logic_ident kind typ =
@@ -32,7 +32,6 @@ include struct
       | t ->
         (match t.ptyp_desc with
         | Ptyp_constr ({ txt = Ldot (Lident "GT", s) }, []) ->
-          (* ptyp_constr ~loc (oca_logic_ident ~loc:t.ptyp_loc) [ t ] *)
           oca_logic_ident ~loc:t.ptyp_loc t
         | Ptyp_constr ({ txt = Ldot (Lident "GT", "list") }, xs) ->
           ptyp_constr
@@ -110,18 +109,17 @@ include struct
   ;;
 end
 
-let make_reifier_composition ~pat ?(typ = None) reifier_name base_reifier tdecl =
-  let names = extract_names @@ (name_type_params_in_td tdecl).ptype_params in
-  let mk_arg_reifier = Fn.id in
-  let add_args =
-    let loc = tdecl.ptype_loc in
-    let args rhs =
-      List.fold_right names ~init:rhs ~f:(fun name acc ->
-          [%expr
-            fun [%p ppat_var ~loc (Located.mk ~loc (mk_arg_reifier name))] -> [%e acc]])
-    in
-    args
-  in
+type kind =
+  | Reify
+  | Prj_exn
+
+let unwrap_kind ~loc = function
+  | Reify -> [%expr OCanren.reify], "reify"
+  | Prj_exn -> [%expr OCanren.prj_exn], "prj_exn"
+;;
+
+let reifier_of_core_type ~loc kind =
+  let base_reifier, reifier_name = unwrap_kind ~loc kind in
   let rec helper typ =
     let loc = typ.ptyp_loc in
     match typ with
@@ -162,21 +160,45 @@ let make_reifier_composition ~pat ?(typ = None) reifier_name base_reifier tdecl 
            ~loc
            (Located.mk ~loc (Ldot (Ldot (Lident "Std", "Pair"), reifier_name))))
         [ helper l; helper r ]
-    | _ -> [%expr reify23s]
+    | _ -> failwiths ~loc "Generation of compositional reifier is not supported yet"
+  in
+  helper
+;;
+
+let make_reifier_composition ~pat ?(typ = None) kind tdecl =
+  let names = extract_names @@ (name_type_params_in_td tdecl).ptype_params in
+  let mk_arg_reifier = Fn.id in
+  let add_args =
+    let loc = tdecl.ptype_loc in
+    let args rhs =
+      List.fold_right names ~init:rhs ~f:(fun name acc ->
+          [%expr
+            fun [%p ppat_var ~loc (Located.mk ~loc (mk_arg_reifier name))] -> [%e acc]])
+    in
+    args
+  in
+  let helper = reifier_of_core_type kind in
+  let manifest =
+    match tdecl.ptype_manifest with
+    | None -> failwiths "A type without manifest %s %d" Caml.__FILE__ Caml.__LINE__
+    | Some m -> m
   in
   let body =
-    match tdecl.ptype_manifest with
-    | None -> failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__
-    | Some m ->
-      let loc = m.ptyp_loc in
-      (match m.ptyp_desc with
-      | Ptyp_constr ({ txt }, args) -> helper m
-      | Ptyp_tuple [ l; r ] ->
-        Exp.apply
-          ~loc
-          (Exp.ident ~loc @@ lident_of_list [ "OCanren"; "Std"; "Pair"; reifier_name ])
-          [ helper l; helper r ]
-      | _ -> failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__)
+    let loc = manifest.ptyp_loc in
+    match manifest.ptyp_desc with
+    | Ptyp_constr ({ txt }, args) -> helper ~loc manifest
+    | Ptyp_tuple [ l; r ] ->
+      let base_reifier, reifier_name = unwrap_kind ~loc kind in
+      Exp.apply
+        ~loc
+        (Exp.ident ~loc @@ lident_of_list [ "OCanren"; "Std"; "Pair"; reifier_name ])
+        [ helper ~loc l; helper ~loc r ]
+    | _ ->
+      failwiths
+        ~loc
+        "This type is not expected as manifest %s %d"
+        Caml.__FILE__
+        Caml.__LINE__
   in
   let loc = tdecl.ptype_loc in
   let pat =
@@ -191,9 +213,9 @@ let process1 tdecl =
   let loc = tdecl.ptype_loc in
   match tdecl.ptype_manifest with
   | Some m ->
+    (* TODO: find a way not to pass both manifest and type declration *)
     [ make_reifier_composition
-        "reify"
-        [%expr OCanren.reify]
+        Reify
         ~typ:
           (if List.is_empty tdecl.ptype_params
           then Some [%type: (_, [%t ltypify_exn ~ccompositional:true ~loc m]) Reifier.t]
@@ -204,8 +226,7 @@ let process1 tdecl =
              (Located.mk ~loc @@ Format.sprintf "reify_%s" tdecl.ptype_name.txt))
         tdecl
     ; make_reifier_composition
-        "prj_exn"
-        [%expr OCanren.prj_exn]
+        Prj_exn
         ~typ:
           (if List.is_empty tdecl.ptype_params
           then Some [%type: (_, [%t gtypify_exn ~ccompositional:true ~loc m]) Reifier.t]
@@ -216,14 +237,7 @@ let process1 tdecl =
              (Located.mk ~loc @@ Format.sprintf "prj_exn_%s" tdecl.ptype_name.txt))
         tdecl
     ]
-  | None -> failwith "no manifest"
-;;
-
-let process_composable =
-  List.concat_map ~f:(fun tdecl ->
-      match tdecl.pstr_desc with
-      | Pstr_type (flg, [ t ]) -> process1 t
-      | _ -> [ tdecl ])
+  | None -> failwiths ~loc "no manifest"
 ;;
 
 let str_type_decl : (_, _) Deriving.Generator.t =
@@ -231,4 +245,14 @@ let str_type_decl : (_, _) Deriving.Generator.t =
       List.concat_map info ~f:process1)
 ;;
 
-let () = Deriving.add ~str_type_decl "reify" |> Deriving.ignore
+let () =
+  Deriving.add "reify" ~str_type_decl ~extension:(fun ~loc ~path:_ ->
+      reifier_of_core_type ~loc Reify)
+  |> Deriving.ignore
+;;
+
+let () =
+  Deriving.add "prj_exn" ~extension:(fun ~loc ~path:_ ->
+      reifier_of_core_type ~loc Prj_exn)
+  |> Deriving.ignore
+;;

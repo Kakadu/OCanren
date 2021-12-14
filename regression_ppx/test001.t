@@ -88,7 +88,7 @@
   
     let run_option n =
       run_new
-        (reify OCanren.reify)
+        [%reify: GT.int ground]
         (GT.show logic (GT.show OCanren.logic (GT.show GT.int)))
         n
     ;;
@@ -143,7 +143,7 @@
   
     let run_list n =
       run_new
-        (reify OCanren.reify)
+        [%reify: GT.int ground]
         (GT.show logic (GT.show OCanren.logic (GT.show GT.int)))
         n
     ;;
@@ -197,8 +197,6 @@
       type nonrec t1 = (int * int) Std.List.ground [@@deriving reify]
     end
   end
-  
-  type xxxx = int Moves.t
   $ ./test001.exe
   fun q -> q === (z ()), 1 answer {
   q=Z;

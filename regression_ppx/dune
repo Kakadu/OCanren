@@ -2,7 +2,9 @@
  (name test001)
  (modules test001)
  (flags
-  (:standard -dsource))
+  (:standard
+   ;-dsource
+   ))
  (preprocess
   (pps
    OCanren-ppx.ppx_repr
