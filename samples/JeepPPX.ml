@@ -32,11 +32,6 @@ module Move = struct
   ]
 end
 
-(* List of moves *)
-type moves = Move.ground GT.list [@@deriving reify, gt ~options:{show; fmt}]
-(* ... logically *)
-type lmoves = ocanren {GT.int Move.t GT.list} [@@deriving gt ~options:{show; fmt}]
-
 type hum_moves = GT.int Move.t GT.list [@@deriving gt ~options:{show; fmt}]
 
 (* TODO: add auto conversion from
@@ -165,7 +160,7 @@ let steps state moves state' =
   steps !!2 state moves state'
 
 let prj_moves : _ reified -> hum_moves =
-  let re = Reifier.fmap (List.to_list (GT.gmap(Move.t) Nat.to_int)) prj_exn_moves in
+  let re = Reifier.fmap (List.to_list (GT.gmap(Move.t) Nat.to_int)) [%prj_exn: Move.ground GT.list] in
   fun rr -> rr#reify re
 
 let prj_state : _ reified -> hum_state  =

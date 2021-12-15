@@ -33,13 +33,13 @@
  (preprocess
   (action
    (run
-    %{project_root}/ppx/pp_distrib_gt.exe
+    %{project_root}/ppx/pp_distrib_gt_reify.exe
     -pp
     %{project_root}/camlp5/pp5+ocanren+dump.exe
     --as-pp
     %{input-file})))
  (preprocessor_deps
-  (file %{project_root}/ppx/pp_distrib_gt.exe)
+  (file %{project_root}/ppx/pp_distrib_gt_reify.exe)
   (file %{project_root}/camlp5/pp5+ocanren+dump.exe)
   (file %{project_root}/camlp5/pp5+ocanren+o.exe)))
 
