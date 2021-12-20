@@ -2,8 +2,14 @@ open Logic
 open Term
 open Format
 
+let use_logging = true
 let use_logging = false
-let log fmt = Format.kasprintf (fun s -> if use_logging then Format.printf "%s\n%!" s) fmt
+
+let log fmt =
+  if use_logging
+  then Format.kasprintf (fun s -> Format.printf "%s\n%!" s) fmt
+  else Format.ifprintf Format.std_formatter fmt
+;;
 
 let rec fold_cps ~f ~init xs =
   match xs with
@@ -507,8 +513,12 @@ module Store = struct
     let store = extend ~clone store op a b in
     log "after extension: %a\n%!" MYSOLVER.pp store;
     match check store with
-    | false -> None
-    | true -> Some store
+    | false ->
+      log "Z3 failed";
+      None
+    | true ->
+      log "Z3 returned a model";
+      Some store
   ;;
 
   type store_rez =

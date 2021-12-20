@@ -8,6 +8,7 @@ open Format
 exception Violated
 
 let ( !!! ) = Obj.magic
+let use_logging = true
 let use_logging = false
 
 let log fmt =
@@ -32,6 +33,29 @@ module type EXTRA = sig
   val neq : (int, int logic) injected -> (int, int logic) injected -> t -> t option
   val is_interesting_var : Term.Var.t -> t -> bool
 end
+
+let rec a_la_cartesian = function
+  | [] -> [ [] ]
+  | [] :: xs ->
+    (* Important for filteering unneeded results.*)
+    (* Not a feature of cartesion product *)
+    a_la_cartesian xs
+  | x :: xs ->
+    let xs = a_la_cartesian xs in
+    List.concat_map (fun x -> List.map (fun xs -> x :: xs) xs) x
+;;
+
+let%test _ =
+  let ans = a_la_cartesian [ [ 1; 2 ]; [ 3; 4 ] ] in
+  ans = [ [ 1; 3 ]; [ 1; 4 ]; [ 2; 3 ]; [ 2; 4 ] ]
+;;
+
+let cartesian2 ~f l l' = List.concat_map (fun e -> List.map (f e) l') l
+
+let%test _ =
+  let ans = cartesian2 ~f:(sprintf "%d%d") [ 1; 2 ] [ 3; 4 ] in
+  ans = [ "13"; "14"; "23"; "24" ]
+;;
 
 module Make (FDC : EXTRA) = struct
   module Conjunct = struct
@@ -66,7 +90,12 @@ module Make (FDC : EXTRA) = struct
     val empty : t
     val is_empty : t -> bool
     val singleton : Var.t -> Obj.t -> t
-    val of_bindings : Subst.Binding.t list -> extra -> (t * extra) option
+
+    val of_bindings
+      :  Subst.Binding.t list
+      -> extra
+      -> (t * extra, [ `ToRemove | `Violated ]) Result.t
+
     val intersects_with : set:VarSet.t -> t -> bool
     val conj : t -> t -> t
 
@@ -155,7 +184,8 @@ module Make (FDC : EXTRA) = struct
     ;;
 
     let of_bindings bnds extra0 =
-      assert (not ([] = bnds));
+      assert ([] <> bnds);
+      let exception ToRemove in
       try
         Stdlib.List.fold_left
           (fun ({ wcs; conjs }, extra) bnd ->
@@ -166,7 +196,7 @@ module Make (FDC : EXTRA) = struct
               { wcs = VarSet.add var wcs; conjs }, extra
             | WcNVar var ->
               (* no domain spec., so domain is infinited => violated *)
-              raise Violated
+              raise ToRemove
             | WcNSmth term ->
               log "WcNSmth";
               { wcs; conjs }, extra
@@ -185,37 +215,10 @@ module Make (FDC : EXTRA) = struct
                 { conjs = Subst.Binding.{ var; term } :: conjs; wcs }, e))
           (empty, extra0)
           bnds
-        |> Stdlib.Option.some
+        |> Stdlib.Result.ok
       with
-      | Violated -> None
-    ;;
-
-    (*     let cartesian2 : 'a. 'a list list -> 'a list list -> 'a list list =
-     fun l l' -> List.concat (List.map (fun e -> List.map (fun e' -> e @ e') l') l)
-   ;;
-
-    let cartesian : 'a. 'a list -> 'a list list = fun xs -> cartesian2 xs xs
- *)
-    (*
-(c1 /\ c2) \/ (c3 /\ c4)
-c1 = (d1/\d2) \/ (d3/\d4)
-c2 = (d11/\d22) \/ (d33/\d44)
-*)
-
-    let rec a_la_cartesian = function
-      | [] -> [ [] ]
-      | [] :: xs ->
-        (* Important for filteering unneeded results.*)
-        (* Not a feature of cartesion product *)
-        a_la_cartesian xs
-      | x :: xs ->
-        let xs = a_la_cartesian xs in
-        List.concat_map (fun x -> List.map (fun xs -> x :: xs) xs) x
-    ;;
-
-    let%test _ =
-      let ans = a_la_cartesian [ [ 1; 2 ]; [ 3; 4 ] ] in
-      ans = [ [ 1; 3 ]; [ 1; 4 ]; [ 2; 3 ]; [ 2; 4 ] ]
+      | ToRemove -> Stdlib.Result.error `ToRemove
+      | Violated -> Stdlib.Result.error `Violated
     ;;
 
     let recheck_exn env subst _bnds extra { wcs; conjs } =
@@ -287,6 +290,12 @@ c2 = (d11/\d22) \/ (d33/\d44)
   ;;
 
   let empty : t = []
+
+  let is_empty = function
+    | [] -> true
+    | _ -> false
+  ;;
+
   let disj : t -> t -> t = Stdlib.List.append
 
   let conj : t -> t -> t =
@@ -314,15 +323,20 @@ c2 = (d11/\d22) \/ (d33/\d44)
 
   let ( >>=? ) : 'a 'b. 'a option -> ('a -> 'b option) -> 'b option = Stdlib.Option.bind
 
-  let of_bindings : Subst.Binding.t list -> extra -> t * extra =
+  let of_bindings : Subst.Binding.t list -> extra -> (t * extra) option =
    fun xs e ->
-    List.fold_left
-      (fun (acc, e) b ->
-        match Disjunct.of_bindings [ b ] e with
-        | None -> acc, e
-        | Some (d, e) -> d :: acc, e)
-      ([], e)
-      xs
+    try
+      List.fold_left
+        (fun (acc, e) b ->
+          match Disjunct.of_bindings [ b ] e with
+          | Result.Ok (d, e) -> d :: acc, e
+          | Result.Error `Violated -> raise Violated
+          | Result.Error `ToRemove -> acc, e)
+        ([], e)
+        xs
+      |> Stdlib.Option.some
+    with
+    | Violated -> None
  ;;
 
   let add env subst cstrs l r extra =
@@ -343,11 +357,25 @@ c2 = (d11/\d22) \/ (d33/\d44)
     | Some (bnds, _subst) ->
       log "%d %a" __LINE__ Subst.pp_binding_list bnds;
       (match cstrs with
-      | [] -> (Some (of_bindings bnds extra) : (t * extra) option)
+      | [] -> (of_bindings bnds extra : (t * extra) option)
       | cstrs ->
         log "%s %d" __FILE__ __LINE__;
-        let d, extra = of_bindings bnds extra in
-        let ans = disj d cstrs in
+        of_bindings bnds extra
+        >>=? fun (d, extra) ->
+        let (_ : t) = d in
+        let (_ : t) = cstrs in
+        (* let ans = Stdlib.List.map Disjunct.(conj d) cstrs in *)
+        (* let (_ : t) = a_la_cartesian [ d; cstrs ] in *)
+        (* let ans = disj d cstrs in *)
+        log "cstrs : %a\n%!" pp cstrs;
+        log "d     : %a\n%!" pp d;
+        let ans =
+          if is_empty d
+          then cstrs
+          else if is_empty cstrs
+          then d
+          else cartesian2 d cstrs ~f:Disjunct.conj
+        in
         (* Format.printf "all disjuncts: %a\n%!" pp ans; *)
         Some (ans, extra))
   ;;

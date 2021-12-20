@@ -24,23 +24,6 @@ let run_bool eta =
 let run_int eta =
   runR OCanren.reify (GT.show GT.int) (GT.show logic @@ GT.show GT.int) eta
 
-let _ = [%tester run_int (-1) (fun q -> fresh () (FD.domain q [1; 2]))]
-
-let _ =
-  [%tester run_int (-1) (fun q -> fresh () (FD.domain q [1; 2]) (q =/= !!1))]
-
-let _ =
-  [%tester
-    run_int (-1) (fun q ->
-        fresh () (FD.domain q [1; 2]) (q =/= !!1) (q =/= !!2) )]
-
-let _ = exit 0
-
-let _ =
-  [%tester
-    run_int (-1) (fun q ->
-        fresh () (FD.domain q [1; 2]) (FD.neq q !!1) (FD.neq q !!2) )]
-
 let run_option eta =
   runR
     (Option.reify OCanren.reify)
@@ -57,17 +40,29 @@ let run_pair eta =
 
 let _ =
   [%tester
-    run_option (-1) (fun q ->
-        fresh x (q =/= Option.some __) (q === Option.some x) )]
+    run_pair (-1) (fun q -> fresh x (q =/= pair __ !!1) (q === pair !!1 __))]
+
+let _ = [%tester run_int (-1) (fun q -> fresh () (FD.domain q [1; 2]))]
+
+let _ =
+  [%tester run_int (-1) (fun q -> fresh () (FD.domain q [1; 2]) (q =/= !!1))]
+
+let _ =
+  [%tester
+    run_int (-1) (fun q ->
+        fresh () (FD.domain q [1; 2]) (q =/= !!1) (q =/= !!2) )]
+
+(* let _ = exit 0 *)
+
+let _ =
+  [%tester
+    run_int (-1) (fun q ->
+        fresh () (FD.domain q [1; 2]) (FD.neq q !!1) (FD.neq q !!2) )]
 
 let _ =
   [%tester
     run_option (-1) (fun q ->
-        fresh x
-          (q =/= Option.some __)
-          (FD.domain x [1; 2; 3])
-          (x =/= !!1) (x =/= !!2)
-          (q === Option.some x) )]
+        fresh x (q =/= Option.some __) (q === Option.some x) )]
 
 let _ =
   [%tester
@@ -78,8 +73,16 @@ let _ =
           (x =/= !!1) (x =/= !!2)
           (q === Option.some x) )]
 
-let _ = print_newline ()
+let () =
+  print_endline
+    "\tTo repair the next example we should decide existance of the answer in \
+     the moment of reification "
 
 let _ =
   [%tester
-    run_pair (-1) (fun q -> fresh x (q =/= pair __ !!1) (q === pair !!1 __))]
+    run_option (-1) (fun q ->
+        fresh x
+          (q =/= Option.some __)
+          (FD.domain x [1; 2; 3])
+          (x =/= !!1) (x =/= !!2)
+          (q === Option.some x) )]
