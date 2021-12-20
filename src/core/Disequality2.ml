@@ -8,7 +8,7 @@ open Format
 exception Violated
 
 let ( !!! ) = Obj.magic
-let use_logging = true
+let use_logging = false
 
 let log fmt =
   if use_logging
@@ -76,7 +76,7 @@ module Make (FDC : EXTRA) = struct
       -> Subst.Binding.t list
       -> extra
       -> t
-      -> (t * extra) option
+      -> (t list * extra) option
 
     val extract : t -> Term.Var.t -> Obj.t list
   end = struct
@@ -190,30 +190,64 @@ module Make (FDC : EXTRA) = struct
       | Violated -> None
     ;;
 
+    (*     let cartesian2 : 'a. 'a list list -> 'a list list -> 'a list list =
+     fun l l' -> List.concat (List.map (fun e -> List.map (fun e' -> e @ e') l') l)
+   ;;
+
+    let cartesian : 'a. 'a list -> 'a list list = fun xs -> cartesian2 xs xs
+ *)
+    (*
+(c1 /\ c2) \/ (c3 /\ c4)
+c1 = (d1/\d2) \/ (d3/\d4)
+c2 = (d11/\d22) \/ (d33/\d44)
+*)
+
+    let rec a_la_cartesian = function
+      | [] -> [ [] ]
+      | [] :: xs ->
+        (* Important for filteering unneeded results.*)
+        (* Not a feature of cartesion product *)
+        a_la_cartesian xs
+      | x :: xs ->
+        let xs = a_la_cartesian xs in
+        List.concat_map (fun x -> List.map (fun xs -> x :: xs) xs) x
+    ;;
+
+    let%test _ =
+      let ans = a_la_cartesian [ [ 1; 2 ]; [ 3; 4 ] ] in
+      ans = [ [ 1; 3 ]; [ 1; 4 ]; [ 2; 3 ]; [ 2; 4 ] ]
+    ;;
+
     let recheck_exn env subst _bnds extra { wcs; conjs } =
       (* For every conjunct we should check that this conjuct is a sensible constraint.
          For every wildcard variable we should check that they could be inhabited. (but let's implement it later)
+         Some changes
       *)
       log "recheck_exn of %a" pp { wcs; conjs };
       try
         let conjs =
-          List.filter
+          List.map
             (fun { Subst.Binding.var; term } ->
               log "In current subst var is '%a'" Term.pp (Subst.reify env subst var);
               match Subst.unify env subst (Obj.repr var) (Obj.repr term) with
-              | None -> false
-              | Some ([], _) -> raise Violated
+              | None ->
+                log "%s %d" __FILE__ __LINE__;
+                []
+              | Some ([], _) ->
+                log "%s %d" __FILE__ __LINE__;
+                raise Violated
               | Some (bnds, _) ->
+                log "%s %d" __FILE__ __LINE__;
                 log "bnds = %a" Subst.pp_binding_list bnds;
                 log
                   "lefting as is: %s =/= %s"
                   (Term.show @@ Obj.repr var)
                   (Term.show @@ Obj.repr term);
                 (* TODO: what if we would rewrite a disjunct here ??? *)
-                true)
+                bnds)
             conjs
         in
-        Some ({ wcs; conjs }, extra)
+        Some (List.map (fun conjs -> { wcs; conjs }) (a_la_cartesian conjs), extra)
       with
       | Violated -> None
     ;;
@@ -280,6 +314,17 @@ module Make (FDC : EXTRA) = struct
 
   let ( >>=? ) : 'a 'b. 'a option -> ('a -> 'b option) -> 'b option = Stdlib.Option.bind
 
+  let of_bindings : Subst.Binding.t list -> extra -> t * extra =
+   fun xs e ->
+    List.fold_left
+      (fun (acc, e) b ->
+        match Disjunct.of_bindings [ b ] e with
+        | None -> acc, e
+        | Some (d, e) -> d :: acc, e)
+      ([], e)
+      xs
+ ;;
+
   let add env subst cstrs l r extra =
     log
       "add: '%a' and '%a' on  %s %d"
@@ -298,14 +343,11 @@ module Make (FDC : EXTRA) = struct
     | Some (bnds, _subst) ->
       log "%d %a" __LINE__ Subst.pp_binding_list bnds;
       (match cstrs with
-      | [] ->
-        (Disjunct.of_bindings bnds extra >>=? fun (d, extra) -> Some ([ d ], extra)
-          : (t * extra) option)
+      | [] -> (Some (of_bindings bnds extra) : (t * extra) option)
       | cstrs ->
         log "%s %d" __FILE__ __LINE__;
-        Disjunct.of_bindings bnds extra
-        >>=? fun (d, extra) ->
-        let ans = Stdlib.List.map Disjunct.(conj d) cstrs in
+        let d, extra = of_bindings bnds extra in
+        let ans = disj d cstrs in
         (* Format.printf "all disjuncts: %a\n%!" pp ans; *)
         Some (ans, extra))
   ;;
@@ -331,8 +373,8 @@ module Make (FDC : EXTRA) = struct
             helper extra acc tlc
           | Some (d, extra) ->
             (* We have an updated disjunct *)
-            log "Updated disjunct %s %d: %a" __FILE__ __LINE__ Disjunct.pp d;
-            helper extra (d :: acc) tlc)
+            (* log "Updated disjunct %s %d: %a" __FILE__ __LINE__ Disjunct.pp d; *)
+            helper extra (d @ acc) tlc)
       in
       helper extra []
     in

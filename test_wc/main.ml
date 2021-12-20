@@ -48,7 +48,7 @@ let _ =
   [%tester
     run_pair (-1) (fun q -> fresh () (q =/= pair __ !!1) (q === pair !!1 __))]
 
-let _ = exit 0
+(* ***************************** *)
 let _ = [%tester run_pair (-1) (fun q -> pair !!1 __ === pair __ !!1)]
 
 let _ =
@@ -57,7 +57,6 @@ let _ =
 let _ = [%tester run_pair (-1) (fun q -> pair !!1 __ =/= pair __ !!1)]
 let _ = [%tester run_int (-1) (fun q -> triple q !!2 __ =/= triple !!1 __ !!2)]
 let _ = [%tester run_int (-1) (fun q r -> pair q r =/= pair !!1 __)]
-let _ = [%tester run_int (-1) (fun q -> pair q !!1 =/= pair !!1 __)]
 let _ = [%tester run_int (-1) (fun q -> pair q !!1 =/= pair !!1 __)]
 
 let _ =
@@ -68,15 +67,14 @@ let _ =
 let _ =
   [%tester
     run_pair (-1) (fun q ->
-        fresh (a b) (q === pair a b) (q =/= pair !!1 __) (q =/= pair __ !!1) )]
+        fresh (a b)
+          (q =/= pair !!1 __)
+          (* (q =/= pair __ !!1)  *)
+          (q === pair a b) )]
 
 let _ =
   [%tester
     run_pair (-1) (fun q -> fresh () (q =/= pair !!1 __) (q =/= pair __ !!1))]
-
-let _ =
-  [%tester
-    run_pair (-1) (fun q -> fresh __ (q =/= pair !!1 __) (q =/= pair __ !!1))]
 
 let _ =
   [%tester
@@ -105,9 +103,11 @@ let _ = [%tester run_int (-1) (fun q -> fresh a (q === !!1) (a =/= !!1 % a))]
 
 let rec non_membero x xs =
   let open OCanren.Std in
-  fresh (h tl)
+  fresh ()
     (xs =/= List.cons x __)
-    (conde [xs === List.cons h tl &&& non_membero x tl; xs === List.nil ()])
+    (conde
+       [ fresh (h tl) (xs === List.cons h tl) (non_membero x tl)
+       ; xs === List.nil () ] )
 
 let _ =
   [%tester run_int (-1) (fun q -> non_membero !!0 (Std.list ( !! ) [1; 2; 3]))];
@@ -116,3 +116,4 @@ let _ =
   ()
 
 let _ = [%tester run_list (-1) (fun q -> q =/= __ % __ &&& (q =/= List.nil ()))]
+let _ = exit 0
