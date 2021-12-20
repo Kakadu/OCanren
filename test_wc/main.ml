@@ -40,7 +40,9 @@ let __ _ =
 
 let _ = [%tester run_int (-1) (fun q -> q === __)]
 let _ = [%tester run_int (-1) (fun q -> q =/= __)]
+let _ = [%tester run_int (-1) (fun q -> !!5 =/= __)]
 let _ = [%tester run_pair (-1) (fun q -> pair !!2 __ =/= pair __ !!2)]
+(* let _ = exit 0 *)
 
 let _ =
   [%tester
