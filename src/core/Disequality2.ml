@@ -444,6 +444,7 @@ module Make (FDC : EXTRA) = struct
       then (
         match Term.var x with
         | Some v -> Term.VarSet.add v acc
+        | None when Obj.(tag x = string_tag) -> acc
         | None ->
           let sz = Obj.size x in
           let rec inner acc i =
