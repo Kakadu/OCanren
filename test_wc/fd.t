@@ -1,4 +1,7 @@
   $ ./fd.exe
+  fun q -> fresh x (q =/= (pair __ (!! 1))) (q === (pair (!! 1) __)), all answers {
+  q=(1, _.12 [=/= 1]);
+  }
   fun q -> fresh () (FD.domain q [1; 2]), all answers {
   q=_.10;
   }
@@ -6,4 +9,19 @@
   q=_.10 [=/= 1];
   }
   fun q -> fresh () (FD.domain q [1; 2]) (q =/= (!! 1)) (q =/= (!! 2)), all answers {
+  }
+  fun q -> fresh () (FD.domain q [1; 2]) (FD.neq q (!! 1)) (FD.neq q (!! 2)), all answers {
+  }
+  fun q -> fresh x (q =/= (Option.some __)) (q === (Option.some x)), all answers {
+  q=Some (_.11 [=/= _.-42]);
+  }
+  fun q ->
+    fresh x (q =/= (Option.some __)) (FD.domain x [1; 2]) (x =/= (!! 1))
+      (x =/= (!! 2)) (q === (Option.some x)), all answers {
+  }
+  	To repair the next example we should decide existance of the answer in the moment of reification 
+  fun q ->
+    fresh x (q =/= (Option.some __)) (FD.domain x [1; 2; 3]) (x =/= (!! 1))
+      (x =/= (!! 2)) (q === (Option.some x)), all answers {
+  q=Some (_.11 [=/= _.-42; =/= 1; =/= 2]);
   }
