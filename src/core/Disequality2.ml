@@ -45,8 +45,29 @@ let rec a_la_cartesian = function
     List.concat_map (fun x -> List.map (fun xs -> x :: xs) xs) x
 ;;
 
+module SS = Streaming.Stream
+
+let rec a_la_cartesian_seq : 'a. 'a SS.t list -> 'a SS.t list = function
+  | [] -> List.cons SS.empty []
+  | e :: xs when SS.is_empty e ->
+    (* Important for filteering unneeded results.*)
+    (* Not a feature of cartesion product *)
+    a_la_cartesian_seq xs
+  | x :: xs ->
+    let xs = a_la_cartesian_seq xs in
+    SS.flat_map (fun x -> List.map (SS.prepend x) xs |> SS.of_list) x |> SS.to_list
+;;
+
 let%test _ =
   let ans = a_la_cartesian [ [ 1; 2 ]; [ 3; 4 ] ] in
+  ans = [ [ 1; 3 ]; [ 1; 4 ]; [ 2; 3 ]; [ 2; 4 ] ]
+;;
+
+let%test _ =
+  let ans =
+    a_la_cartesian_seq [ SS.of_list [ 1; 2 ]; SS.of_list [ 3; 4 ] ] |> List.map SS.to_list
+  in
+  print_endline @@ GT.show GT.list (GT.show GT.list @@ GT.show GT.int) ans;
   ans = [ [ 1; 3 ]; [ 1; 4 ]; [ 2; 3 ]; [ 2; 4 ] ]
 ;;
 
@@ -56,6 +77,81 @@ let%test _ =
   let ans = cartesian2 ~f:(sprintf "%d%d") [ 1; 2 ] [ 3; 4 ] in
   ans = [ "13"; "14"; "23"; "24" ]
 ;;
+
+module _ = struct
+  module type ttt = sig
+    type 'a t
+
+    val return : 'a -> 'a t
+    val bind : ('a -> 'b t) -> 'a t -> 'b t
+    val map : ('a -> 'b) -> 'a t -> 'b t
+    val head : 'a t -> 'a option
+    val rest : 'a t -> 'a t
+    val cons : 'a -> 'a t -> 'a t
+    val empty : 'a t
+  end
+
+  module Cartesian (CNT : ttt) = struct
+    (* let cartesian2 ~f l l' = X.bind (fun e -> X.map (f e) l') l *)
+    let rec cartesian : 'a. 'a CNT.t CNT.t -> 'a CNT.t CNT.t =
+     fun xss ->
+      match CNT.head xss with
+      | None -> CNT.cons CNT.empty CNT.empty
+      (* | [] -> List.cons SS.empty [] *)
+      | Some h when CNT.head h = None ->
+        (* Important for filteering unneeded results.*)
+        (* Not a feature of cartesion product *)
+        cartesian (CNT.rest xss)
+        (* | e :: xs when SS.is_empty e -> a_la_cartesian_seq xs *)
+      | Some x ->
+        let xs = cartesian (CNT.rest xss) in
+        CNT.bind (fun x -> CNT.map (CNT.cons x) xs) x
+   ;;
+    (*
+      | x :: xs ->
+        let xs = a_la_cartesian_seq xs in
+        SS.flat_map (fun x -> List.map (SS.prepend x) xs |> SS.of_list) x |> SS.to_list
+        *)
+  end
+
+  module ExtList = struct
+    include List
+
+    let empty = []
+    let rest = List.tl
+
+    let head = function
+      | x :: _ -> Some x
+      | _ -> None
+    ;;
+
+    let bind = concat_map
+    let return x = [ x ]
+  end
+
+  let%test _ =
+    let module M = Cartesian (ExtList) in
+    let ans = M.cartesian [ [ 1; 2 ]; [ 3; 4 ] ] in
+    ans = [ [ 1; 3 ]; [ 1; 4 ]; [ 2; 3 ]; [ 2; 4 ] ]
+  ;;
+
+  module ExtStream = struct
+    include Streaming.Stream
+
+    let cons = prepend
+    let return = yield
+    let head = first
+    let bind = flat_map
+    let ( !! ) = of_list
+  end
+
+  let%test _ =
+    let module M = Cartesian (ExtStream) in
+    let open ExtStream in
+    let ans = M.cartesian !![ !![ 1; 2 ]; !![ 3; 4 ] ] in
+    to_list (map to_list ans) = [ [ 1; 3 ]; [ 1; 4 ]; [ 2; 3 ]; [ 2; 4 ] ]
+  ;;
+end
 
 module Make (FDC : EXTRA) = struct
   module Conjunct = struct
@@ -109,17 +205,24 @@ module Make (FDC : EXTRA) = struct
 
     val extract : t -> Term.Var.t -> Obj.t list
   end = struct
+    module LLL = struct
+      include List
+
+      let empty = []
+
+      let is_empty = function
+        | [] -> true
+        | _ :: _ -> false
+      ;;
+    end
+
     type t =
-      { conjs : Conjunct.t list
+      { conjs : Conjunct.t LLL.t
       ; wcs : VarSet.t
       }
 
-    let empty = { wcs = VarSet.empty; conjs = [] }
-
-    let is_empty = function
-      | { conjs = []; wcs } when VarSet.is_empty wcs -> true
-      | _ -> false
-    ;;
+    let empty = { wcs = VarSet.empty; conjs = LLL.empty }
+    let is_empty { conjs; wcs } = LLL.is_empty conjs && VarSet.is_empty wcs
 
     let singleton : Term.Var.t -> _ -> t =
      fun var term ->
@@ -435,11 +538,13 @@ module Make (FDC : EXTRA) = struct
       Disjunct.extract d v
     ;;
 
-    let subsumed _env c1 c2 = false
+    (* let subsumed _env c1 c2 = false *)
+    let subsumed _env c1 c2 = Stdlib.compare c1 c2 = 0
   end
 
   let vars_in_term =
     let rec helper acc x =
+      (* Format.printf "%a\n%!" Term.pp (Obj.repr x); *)
       if Obj.is_block x
       then (
         match Term.var x with

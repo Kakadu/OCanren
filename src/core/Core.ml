@@ -370,36 +370,34 @@ module State = struct
 
   (* returns always non-empty list *)
   let reify x { env; subst; ctrs } =
-    let answ = Subst.reify env subst x in
+    let rec helper diseq forbidden =
+      Term.map
+        ~fval:(fun x -> Term.repr x)
+        ~fvar:(fun v ->
+          Term.repr
+            (if List.mem v.Term.Var.index forbidden
+            then v
+            else
+              { v with
+                Term.Var.constraints =
+                  Disequality.Answer.extract diseq v
+                  |> List.filter (fun dt ->
+                         match Env.var env dt with
+                         | Some u -> not (List.mem u.Term.Var.index forbidden)
+                         | None -> true)
+                  |> List.map (fun x -> helper diseq (v.Term.Var.index :: forbidden) x)
+                  (* TODO: represent [Var.constraints] as [Set];
+                   * TODO: hide all manipulations on [Var.t] inside [Var] module;
+                   *)
+                  |> List.sort Term.compare
+              }))
+    in
+    let val_in_subst = Subst.reify env subst x in
     match Disequality.reify env subst ctrs x with
-    | [] -> [ Answer.make env answ ]
+    | [] -> [ Answer.make env val_in_subst ]
     | diseqs ->
       ListLabels.map diseqs ~f:(fun diseq ->
-          let rec helper forbidden t =
-            Term.map
-              t
-              ~fval:(fun x -> Term.repr x)
-              ~fvar:(fun v ->
-                Term.repr
-                @@
-                if List.mem v.Term.Var.index forbidden
-                then v
-                else
-                  { v with
-                    Term.Var.constraints =
-                      Disequality.Answer.extract diseq v
-                      |> List.filter (fun dt ->
-                             match Env.var env dt with
-                             | Some u -> not (List.mem u.Term.Var.index forbidden)
-                             | None -> true)
-                      |> List.map (fun x -> helper (v.Term.Var.index :: forbidden) x)
-                      (* TODO: represent [Var.constraints] as [Set];
-                       * TODO: hide all manipulations on [Var.t] inside [Var] module;
-                       *)
-                      |> List.sort Term.compare
-                  })
-          in
-          Answer.make env (helper [] answ))
+          Answer.make env (helper diseq [] val_in_subst))
   ;;
 end
 
