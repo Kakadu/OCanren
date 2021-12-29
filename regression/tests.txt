@@ -12,9 +12,7 @@ test013
 test014
 test015runaway
 test016sorto
-test017tabling
 test018prjc
-test019tablingCache
 test020
 test021structural
 test022newsyntax

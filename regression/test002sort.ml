@@ -1,6 +1,6 @@
 (*
  * Sort: relational sorting.
- * Copyright (C) 2016
+ * Copyright (C) 2016-2021
  * Dmitri Boulytchev, Dmitrii Kosarev
  * St.Petersburg State University, JetBrains Research
  *
