@@ -190,6 +190,8 @@ module CartesianHacks = struct
     let ans = cartesian_seq !![ !![ 1; 2 ]; !![ 3; 4 ] ] in
     to_list (map to_list ans) = [ [ 1; 3 ]; [ 1; 4 ]; [ 2; 3 ]; [ 2; 4 ] ]
   ;;
+
+  let cartesian2_seq ~f l l' = ExtSeq.bind (fun e -> ExtSeq.map (f e) l') l
 end
 
 module Make (FDC : EXTRA) = struct
@@ -223,6 +225,7 @@ module Make (FDC : EXTRA) = struct
   module Disjunct : sig
     type t
 
+    val compare : t -> t -> int
     val pp : Format.formatter -> t -> unit
     val empty : t
     val is_empty : t -> bool
@@ -260,6 +263,11 @@ module Make (FDC : EXTRA) = struct
       { conjs : LLL.t
       ; wcs : VarSet.t
       }
+
+    let compare { wcs; conjs } { wcs = wcs2; conjs = conjs2 } =
+      let rez_conjs = LLL.compare conjs conjs2 in
+      if rez_conjs = 0 then VarSet.compare wcs wcs2 else rez_conjs
+    ;;
 
     let empty = { wcs = VarSet.empty; conjs = LLL.empty }
     let is_empty { conjs; wcs } = LLL.is_empty conjs && VarSet.is_empty wcs
@@ -417,27 +425,38 @@ module Make (FDC : EXTRA) = struct
     ;;
   end
 
-  type t = Disjunct.t list
+  module DisjSet = struct
+    include Set.Make (Disjunct)
+
+    let iteri f xs =
+      let i = ref 0 in
+      iter
+        (fun x ->
+          f !i x;
+          incr i)
+        xs
+    ;;
+
+    let fold_left f i xs = fold (fun x acc -> f acc x) xs i
+    let concat_map f xs = fold (fun x acc -> union (f x) acc) xs empty
+  end
+
+  type t = DisjSet.t
 
   let pp ppf xs =
-    printf "All disjuncts (%d)\n%!" (List.length xs);
-    Stdlib.List.iteri (fun i x -> fprintf ppf "\t%d: %a\n%!" i Disjunct.pp x) xs
+    printf "All disjuncts (%d)\n%!" (DisjSet.cardinal xs);
+    DisjSet.iteri (fun i -> fprintf ppf "\t%d: %a\n%!" i Disjunct.pp) xs
   ;;
 
-  let empty : t = []
-
-  let is_empty = function
-    | [] -> true
-    | _ -> false
-  ;;
-
-  let disj : t -> t -> t = Stdlib.List.append
+  let empty : t = DisjSet.empty
+  let is_empty = DisjSet.is_empty
+  let disj : t -> t -> t = DisjSet.union
 
   let conj : t -> t -> t =
    fun l r ->
     l
-    |> Stdlib.List.concat_map (fun (c1 : Disjunct.t) ->
-           Stdlib.List.map (fun (c2 : Disjunct.t) -> Disjunct.conj c1 c2) r)
+    |> DisjSet.concat_map (fun (c1 : Disjunct.t) ->
+           DisjSet.map (fun (c2 : Disjunct.t) -> Disjunct.conj c1 c2) r)
  ;;
 
   let disequality_of_terms l r : t =
@@ -445,15 +464,15 @@ module Make (FDC : EXTRA) = struct
       Term.fold_monoid
         l
         r
-        ~fvar:(fun v t -> [ Disjunct.singleton v (Obj.magic t) ])
-        ~fk:(fun _ v t -> [ Disjunct.singleton v (Obj.magic t) ])
-        ~empty
+        ~fvar:(fun v t -> DisjSet.singleton (Disjunct.singleton v (Obj.magic t)))
+        ~fk:(fun _ v t -> DisjSet.singleton (Disjunct.singleton v (Obj.magic t)))
+        ~empty:DisjSet.empty
         ~fval:(fun v1 v2 ->
           (* two non-boxed values that are not equal *)
-          empty)
-        ~join:Stdlib.List.append
+          DisjSet.empty)
+        ~join:DisjSet.union
     with
-    | Term.Different_shape (_, _) -> empty
+    | Term.Different_shape (_, _) -> DisjSet.empty
   ;;
 
   let ( >>=? ) : 'a 'b. 'a option -> ('a -> 'b option) -> 'b option = Stdlib.Option.bind
@@ -464,10 +483,10 @@ module Make (FDC : EXTRA) = struct
       List.fold_left
         (fun (acc, e) b ->
           match Disjunct.of_bindings [ b ] e with
-          | Result.Ok (d, e) -> d :: acc, e
+          | Result.Ok (d, e) -> DisjSet.add d acc, e
           | Result.Error `Violated -> raise Violated
           | Result.Error `ToRemove -> acc, e)
-        ([], e)
+        (DisjSet.empty, e)
         xs
       |> Stdlib.Option.some
     with
@@ -491,9 +510,9 @@ module Make (FDC : EXTRA) = struct
       None
     | Some (bnds, _subst) ->
       log "%d %a" __LINE__ Subst.pp_binding_list bnds;
-      (match cstrs with
-      | [] -> (of_bindings bnds extra : (t * extra) option)
-      | cstrs ->
+      if DisjSet.is_empty cstrs
+      then (of_bindings bnds extra : (t * extra) option)
+      else (
         log "%s %d" __FILE__ __LINE__;
         of_bindings bnds extra
         >>=? fun (d, extra) ->
@@ -509,7 +528,12 @@ module Make (FDC : EXTRA) = struct
           then cstrs
           else if is_empty cstrs
           then d
-          else cartesian2 d cstrs ~f:Disjunct.conj
+          else
+            CartesianHacks.cartesian2_seq
+              (DisjSet.to_seq d)
+              (DisjSet.to_seq cstrs)
+              ~f:Disjunct.conj
+            |> DisjSet.of_seq
         in
         (* Format.printf "all disjuncts: %a\n%!" pp ans; *)
         Some (ans, extra))
@@ -519,7 +543,8 @@ module Make (FDC : EXTRA) = struct
     log "Disequality2.recheck";
     log "bindings = %d %a" __LINE__ Subst.pp_binding_list bnds;
     log "cs = %a" pp cs;
-    (* For every disjunct we try to simplify it using [bnds]. If it simplifies to empty disjunct, then we simplify it to False.
+    (* For every disjunct we try to simplify it using [bnds].
+    If it simplifies to empty disjunct, then we simplify it to False.
     If all disjuncts has been simpifies to False, then constraint is violated *)
     let simplify =
       let rec helper extra acc = function
@@ -539,20 +564,36 @@ module Make (FDC : EXTRA) = struct
             (* log "Updated disjunct %s %d: %a" __FILE__ __LINE__ Disjunct.pp d; *)
             helper extra (d @ acc) tlc)
       in
-      helper extra []
+      fun store ->
+        DisjSet.fold_left
+          (fun (extra, acc) hc ->
+            match Disjunct.recheck_exn env subst bnds extra hc with
+            | exception Violated ->
+              log "rechecking disjunct failed %s %d" __FILE__ __LINE__;
+              extra, acc
+            | None ->
+              log "rechecking disjunct failed %s %d" __FILE__ __LINE__;
+              extra, acc
+            | Some (d, extra) ->
+              (* We have an updated disjunct *)
+              (* log "Updated disjunct %s %d: %a" __FILE__ __LINE__ Disjunct.pp d; *)
+              extra, List.fold_left (fun acc x -> DisjSet.add x acc) acc d)
+          (extra, DisjSet.empty)
+          store
+        |> snd
     in
     try
-      match cs with
-      | [] ->
+      if DisjSet.is_empty cs
+      then (
         log "%s %d" __FILE__ __LINE__;
-        Some ([], extra)
-      | _ ->
-        (match simplify cs with
-        | [] ->
+        Some (cs, extra))
+      else (
+        let newc = simplify cs in
+        if DisjSet.is_empty newc
+        then (
           log "%s %d" __FILE__ __LINE__;
-          raise Violated
-        | newc ->
-          (* log "recheck successful %s %d" __FILE__ __LINE__; *)
+          raise Violated)
+        else (* log "recheck successful %s %d" __FILE__ __LINE__; *)
           Some (newc, extra))
     with
     | Violated ->
@@ -599,9 +640,11 @@ module Make (FDC : EXTRA) = struct
     (* Format.printf "all : %a\n%!" pp cs; *)
     let t = Subst.reify env subst t in
     let vars = vars_in_term t in
-    List.filter_map
-      (fun d -> if Disjunct.intersects_with ~set:vars d then Some d else None)
-      cs
+    cs
+    |> DisjSet.to_seq
+    |> Seq.filter_map (fun d ->
+           if Disjunct.intersects_with ~set:vars d then Some d else None)
+    |> List.of_seq
   ;;
 end
 
