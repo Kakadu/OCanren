@@ -78,7 +78,7 @@ let%test _ =
   ans = [ "13"; "14"; "23"; "24" ]
 ;;
 
-module _ = struct
+module CartesianHacks = struct
   module type ttt = sig
     type 'a t
 
@@ -89,29 +89,23 @@ module _ = struct
     val rest : 'a t -> 'a t
     val cons : 'a -> 'a t -> 'a t
     val empty : 'a t
+    val ( !! ) : 'a list -> 'a t
+    val to_list : 'a t -> 'a list
   end
 
   module Cartesian (CNT : ttt) = struct
-    (* let cartesian2 ~f l l' = X.bind (fun e -> X.map (f e) l') l *)
     let rec cartesian : 'a. 'a CNT.t CNT.t -> 'a CNT.t CNT.t =
      fun xss ->
       match CNT.head xss with
       | None -> CNT.cons CNT.empty CNT.empty
-      (* | [] -> List.cons SS.empty [] *)
       | Some h when CNT.head h = None ->
         (* Important for filteering unneeded results.*)
         (* Not a feature of cartesion product *)
         cartesian (CNT.rest xss)
-        (* | e :: xs when SS.is_empty e -> a_la_cartesian_seq xs *)
       | Some x ->
         let xs = cartesian (CNT.rest xss) in
         CNT.bind (fun x -> CNT.map (CNT.cons x) xs) x
    ;;
-    (*
-      | x :: xs ->
-        let xs = a_la_cartesian_seq xs in
-        SS.flat_map (fun x -> List.map (SS.prepend x) xs |> SS.of_list) x |> SS.to_list
-        *)
   end
 
   module ExtList = struct
@@ -127,13 +121,9 @@ module _ = struct
 
     let bind = concat_map
     let return x = [ x ]
+    let ( !! ) = Fun.id
+    let to_list = Fun.id
   end
-
-  let%test _ =
-    let module M = Cartesian (ExtList) in
-    let ans = M.cartesian [ [ 1; 2 ]; [ 3; 4 ] ] in
-    ans = [ [ 1; 3 ]; [ 1; 4 ]; [ 2; 3 ]; [ 2; 4 ] ]
-  ;;
 
   module ExtStream = struct
     include Streaming.Stream
@@ -145,10 +135,59 @@ module _ = struct
     let ( !! ) = of_list
   end
 
-  let%test _ =
+  module ExtSeq : ttt with type 'a t = 'a Seq.t = struct
+    include Seq
+
+    let cons x xs () = Seq.Cons (x, xs)
+    let return = return
+
+    let head : 'a t -> 'a option =
+     fun s ->
+      match s () with
+      | Seq.Nil -> None
+      | Seq.Cons (x, _) -> Some x
+   ;;
+
+    let rest : 'a t -> 'a t =
+     fun s ->
+      match s () with
+      | Seq.Cons (_, tl) -> tl
+      | Nil -> failwith "no tail"
+   ;;
+
+    let bind = flat_map
+    let ( !! ) = List.to_seq
+    let to_list = List.of_seq
+  end
+
+  let cartesian_list =
+    let module M = Cartesian (ExtList) in
+    M.cartesian
+  ;;
+
+  let cartesian_stream =
     let module M = Cartesian (ExtStream) in
+    M.cartesian
+  ;;
+
+  module MS = Cartesian (ExtSeq)
+
+  let cartesian_seq : 'a. 'a Seq.t Seq.t -> 'a Seq.t Seq.t = fun x -> MS.cartesian x
+
+  let%test _ =
+    let ans = cartesian_list [ [ 1; 2 ]; [ 3; 4 ] ] in
+    ans = [ [ 1; 3 ]; [ 1; 4 ]; [ 2; 3 ]; [ 2; 4 ] ]
+  ;;
+
+  let%test _ =
     let open ExtStream in
-    let ans = M.cartesian !![ !![ 1; 2 ]; !![ 3; 4 ] ] in
+    let ans = cartesian_stream !![ !![ 1; 2 ]; !![ 3; 4 ] ] in
+    to_list (map to_list ans) = [ [ 1; 3 ]; [ 1; 4 ]; [ 2; 3 ]; [ 2; 4 ] ]
+  ;;
+
+  let%test _ =
+    let open ExtSeq in
+    let ans = cartesian_seq !![ !![ 1; 2 ]; !![ 3; 4 ] ] in
     to_list (map to_list ans) = [ [ 1; 3 ]; [ 1; 4 ]; [ 2; 3 ]; [ 2; 4 ] ]
   ;;
 end
@@ -160,6 +199,8 @@ module Make (FDC : EXTRA) = struct
     let pp ppf Subst.Binding.{ var; term } =
       Format.fprintf ppf "{ %d -> '%s' }" var.Term.Var.index (Term.show term)
     ;;
+
+    let compare = Subst.Binding.compare
 
     let intersects_with ~set : t -> bool =
      fun c ->
@@ -206,18 +247,17 @@ module Make (FDC : EXTRA) = struct
     val extract : t -> Term.Var.t -> Obj.t list
   end = struct
     module LLL = struct
-      include List
+      include Set.Make (Conjunct)
 
-      let empty = []
-
-      let is_empty = function
-        | [] -> true
-        | _ :: _ -> false
-      ;;
+      let append = union
+      let any = exists
+      let cons = add
+      let fold_right = fold
+      let fold_left f init set = fold (fun x acc -> f acc x) set init
     end
 
     type t =
-      { conjs : Conjunct.t LLL.t
+      { conjs : LLL.t
       ; wcs : VarSet.t
       }
 
@@ -227,15 +267,15 @@ module Make (FDC : EXTRA) = struct
     let singleton : Term.Var.t -> _ -> t =
      fun var term ->
       if is_wc_var var && is_var term
-      then { conjs = []; wcs = VarSet.(add !!!term empty) }
+      then { conjs = LLL.empty; wcs = VarSet.(add !!!term empty) }
       else if is_wc_var term && is_var var
-      then { conjs = []; wcs = VarSet.(add !!!var empty) }
-      else { conjs = [ Subst.Binding.{ var; term } ]; wcs = VarSet.empty }
+      then { conjs = LLL.empty; wcs = VarSet.(add !!!var empty) }
+      else { conjs = LLL.singleton Subst.Binding.{ var; term }; wcs = VarSet.empty }
    ;;
 
     let pp ppf { wcs; conjs } =
       Format.fprintf ppf "[ ";
-      Stdlib.List.iter (Conjunct.pp ppf) conjs;
+      LLL.iter (Conjunct.pp ppf) conjs;
       Format.fprintf ppf " ] {| ";
       VarSet.iteri
         (fun i v ->
@@ -247,15 +287,12 @@ module Make (FDC : EXTRA) = struct
     ;;
 
     let conj : t -> t -> t =
-     fun l r -> { wcs = VarSet.union l.wcs r.wcs; conjs = List.append l.conjs r.conjs }
+     fun l r -> { wcs = VarSet.union l.wcs r.wcs; conjs = LLL.append l.conjs r.conjs }
    ;;
 
     let intersects_with ~set { conjs } =
       (* TODO: should we check wildcard variables ? *)
-      let rec helper = function
-        | [] -> false
-        | c :: ctl -> if Conjunct.intersects_with ~set c then true else helper ctl
-      in
+      let helper = LLL.any (Conjunct.intersects_with ~set) in
       let ans = helper conjs in
       (* log "Disjunct.intersects_with = %b" ans; *)
       ans
@@ -315,7 +352,7 @@ module Make (FDC : EXTRA) = struct
                     (Term.show !!!var)
                     (Term.show term)
                 in
-                { conjs = Subst.Binding.{ var; term } :: conjs; wcs }, e))
+                { conjs = LLL.cons Subst.Binding.{ var; term } conjs; wcs }, e))
           (empty, extra0)
           bnds
         |> Stdlib.Result.ok
@@ -331,14 +368,14 @@ module Make (FDC : EXTRA) = struct
       *)
       log "recheck_exn of %a" pp { wcs; conjs };
       try
-        let conjs =
-          List.map
+        let conjs : LLL.elt Seq.t Seq.t =
+          Seq.map
             (fun { Subst.Binding.var; term } ->
               log "In current subst var is '%a'" Term.pp (Subst.reify env subst var);
               match Subst.unify env subst (Obj.repr var) (Obj.repr term) with
               | None ->
                 log "%s %d" __FILE__ __LINE__;
-                []
+                Seq.empty
               | Some ([], _) ->
                 log "%s %d" __FILE__ __LINE__;
                 raise Violated
@@ -350,36 +387,31 @@ module Make (FDC : EXTRA) = struct
                   (Term.show @@ Obj.repr var)
                   (Term.show @@ Obj.repr term);
                 (* TODO: what if we would rewrite a disjunct here ??? *)
-                bnds)
-            conjs
+                List.to_seq bnds)
+            (LLL.to_seq conjs)
         in
-        Some (List.map (fun conjs -> { wcs; conjs }) (a_la_cartesian conjs), extra)
+        Some
+          ( List.map
+              (fun conjs -> { wcs; conjs = LLL.of_seq conjs })
+              (CartesianHacks.cartesian_seq conjs |> List.of_seq)
+          , extra )
       with
       | Violated -> None
     ;;
 
-    (* let a = List.map (fun { Subst.Binding.var } -> var) conjs in
-      let b = List.map (fun { Subst.Binding.term } -> term) conjs in
-      (* TODO: implement unification of bindings list *)
-      match Subst.unify env subst (Obj.repr a) (Obj.repr b) with
-      | None ->
-        log "%s %d unification failed" __FILE__ __LINE__;
-        log "  conjs = %a" pp { wcs; conjs };
-        None
-      | Some ([], _) -> raise Violated
-      | Some (bnds, _) -> of_bindings bnds extra *)
-
     let extract { conjs } v =
-      let rec helper acc = function
-        | [] -> acc
-        | { Subst.Binding.var; Subst.Binding.term } :: ctl ->
-          let acc = if Term.Var.equal var v then term :: acc else acc in
-          let acc =
-            match Term.var term with
-            | Some v2 when Term.Var.equal v v2 -> Obj.repr var :: acc
-            | _ -> acc
-          in
-          helper acc ctl
+      let helper acc xs =
+        LLL.fold_left
+          (fun acc { Subst.Binding.var; Subst.Binding.term } ->
+            let acc = if Term.Var.equal var v then term :: acc else acc in
+            let acc =
+              match Term.var term with
+              | Some v2 when Term.Var.equal v v2 -> Obj.repr var :: acc
+              | _ -> acc
+            in
+            acc)
+          acc
+          xs
       in
       helper [] conjs
     ;;
