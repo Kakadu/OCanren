@@ -17,6 +17,7 @@ let log fmt =
   else Format.ifprintf Format.std_formatter fmt
 ;;
 
+(* *)
 open Term
 
 let is_wc_var v =
@@ -312,20 +313,20 @@ module Make (FDC : EXTRA) = struct
       | WcNSmth of Obj.t
 
     let classify Subst.Binding.{ var; term } =
-      let () = log "%s %d" __FILE__ __LINE__ in
+      (* let () = log "%s %d" __FILE__ __LINE__ in *)
       match Term.var term with
       | None ->
-        let () = log "%s %d" __FILE__ __LINE__ in
+        (* let () = log "%s %d" __FILE__ __LINE__ in *)
         if Term.Var.is_wildcard var
         then WcNSmth term
         else (* let () = log "%s %d" __FILE__ __LINE__ in *)
           VarNTerm (var, term)
       | Some v2 ->
-        let () = log "%s %d" __FILE__ __LINE__ in
+        (* let () = log "%s %d" __FILE__ __LINE__ in *)
         (match Term.Var.(is_wildcard var, is_wildcard v2) with
         | true, true -> failwith "We should not get two wildcards from unification"
         | false, false ->
-          log "%s %d" __FILE__ __LINE__;
+          (* log "%s %d" __FILE__ __LINE__; *)
           VarNTerm (var, term)
         | false, true -> WcNVar var
         | true, false -> WcNVar v2)
@@ -337,19 +338,19 @@ module Make (FDC : EXTRA) = struct
       try
         Stdlib.List.fold_left
           (fun ({ wcs; conjs }, extra) bnd ->
-            log "%d %a" __LINE__ Subst.pp_binding_list [ bnd ];
+            (* log "%d %a" __LINE__ Subst.pp_binding_list [ bnd ]; *)
             match classify bnd with
             | WcNVar var when FDC.is_interesting_var var extra ->
-              log "is interesting";
+              (* log "is interesting"; *)
               { wcs = VarSet.add var wcs; conjs }, extra
             | WcNVar var ->
               (* no domain spec., so domain is infinited => violated *)
               raise ToRemove
             | WcNSmth term ->
-              log "WcNSmth";
+              (* log "WcNSmth"; *)
               { wcs; conjs }, extra
             | VarNTerm (var, term) ->
-              log "VarNTerm";
+              (* log "VarNTerm"; *)
               (* need to check finite domain constraints too *)
               (match FDC.neq (Obj.magic var) (Obj.magic term) extra with
               | None -> raise Violated
@@ -546,41 +547,23 @@ module Make (FDC : EXTRA) = struct
     (* For every disjunct we try to simplify it using [bnds].
     If it simplifies to empty disjunct, then we simplify it to False.
     If all disjuncts has been simpifies to False, then constraint is violated *)
-    let simplify =
-      let rec helper extra acc = function
-        | [] -> acc
-        | hc :: tlc ->
-          let (_ : Disjunct.t) = hc in
-          log "got a disjunct: %a\n%!" Disjunct.pp hc;
-          (match Disjunct.recheck_exn env subst bnds extra hc with
+    let simplify store =
+      DisjSet.fold_left
+        (fun (extra, acc) hc ->
+          match Disjunct.recheck_exn env subst bnds extra hc with
           | exception Violated ->
             log "rechecking disjunct failed %s %d" __FILE__ __LINE__;
-            helper extra acc tlc
+            extra, acc
           | None ->
             log "rechecking disjunct failed %s %d" __FILE__ __LINE__;
-            helper extra acc tlc
+            extra, acc
           | Some (d, extra) ->
             (* We have an updated disjunct *)
             (* log "Updated disjunct %s %d: %a" __FILE__ __LINE__ Disjunct.pp d; *)
-            helper extra (d @ acc) tlc)
-      in
-      fun store ->
-        DisjSet.fold_left
-          (fun (extra, acc) hc ->
-            match Disjunct.recheck_exn env subst bnds extra hc with
-            | exception Violated ->
-              log "rechecking disjunct failed %s %d" __FILE__ __LINE__;
-              extra, acc
-            | None ->
-              log "rechecking disjunct failed %s %d" __FILE__ __LINE__;
-              extra, acc
-            | Some (d, extra) ->
-              (* We have an updated disjunct *)
-              (* log "Updated disjunct %s %d: %a" __FILE__ __LINE__ Disjunct.pp d; *)
-              extra, List.fold_left (fun acc x -> DisjSet.add x acc) acc d)
-          (extra, DisjSet.empty)
-          store
-        |> snd
+            extra, List.fold_left (fun acc x -> DisjSet.add x acc) acc d)
+        (extra, DisjSet.empty)
+        store
+      |> snd
     in
     try
       if DisjSet.is_empty cs
