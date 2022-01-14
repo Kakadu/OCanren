@@ -22,7 +22,7 @@ let log fmt =
   else Format.ifprintf Format.std_formatter fmt
 ;;
 
-let failwiths fmt = Format.kasprintf failwith fmt
+let failwiths ?(loc = Location.none) fmt = Location.raise_errorf ~loc fmt
 
 let notify fmt =
   Printf.ksprintf
@@ -365,8 +365,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
               acc2 @ acc, arg0 :: args)
         in
         acc, Exp.apply ~loc (pexp_ident ~loc (Located.mk ~loc @@ lident name)) args
-      | _ -> failwith "not supported"
-      (* [%expr reify23s] *)
+      | _ -> failwiths ~loc:typ.ptyp_loc "not supported: %a" Pprintast.core_type typ
     in
     let body, add_binds =
       match manifest.ptyp_desc with
@@ -389,10 +388,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
                 [%expr
                   let* [%p Pat.var ~loc (Located.mk ~loc ident)] = [%e rhs] in
                   [%e acc]]) )
-      | _ ->
-        (* Format.eprintf "%a\n%!" Pprintast.core_type m; *)
-        (* Format.eprintf "%a\n%!" (PPP.payload 0) (PTyp m); *)
-        failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__
+      | _ -> failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__
     in
     let pat =
       match typ with
