@@ -1,2 +1,3 @@
   $ ./main.exe
   hello
+  true

@@ -1,15 +1,16 @@
 (library
  (name lib)
  (modules lib)
+ (wrapped false)
  (inline_tests)
  (libraries OCanren OCanren.tester)
  (preprocess
-  (pps OCanren-ppx.ppx_fresh OCanren-ppx.ppx_repr ppx_inline_test)))
+  (pps OCanren-ppx.ppx_fresh OCanren-ppx.ppx_repr ppx_inline_test GT.ppx_all)))
 
 (executable
  (name main)
  (modules main)
- (libraries OCanren OCanren.tester)
+ (libraries OCanren OCanren.tester lib)
  (preprocess
   (pps OCanren-ppx.ppx_fresh OCanren-ppx.ppx_repr)))
 
