@@ -103,7 +103,9 @@ module Reifier = struct
 
   let fcomap f r env a = r env (f a)
 
-  let rec fix f = fun env -> f (fix f) env
+  let rec fix f = fun env eta -> f (fix f) env eta
+
+
 end
 
 let reify = Reifier.reify
