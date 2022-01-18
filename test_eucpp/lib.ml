@@ -56,9 +56,7 @@ module TestNestedOption = struct
   let reify_with_compose : (ilogic, logic) Reifier.t =
     let open Env.Monad.Syntax in
     Reifier.fix (fun self ->
-        (* Format.printf "%s %d\n%!" __FILE__ __LINE__; *)
         let* rself = self in
-        (* Format.printf "%s %d\n%!" __FILE__ __LINE__; *)
         Reifier.compose
           Reifier.reify
           (let rec foo = function

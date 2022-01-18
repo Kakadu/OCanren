@@ -41,26 +41,6 @@
       let s _x__001_ = OCanren.inji (S _x__001_)
     end
   
-    let reify =
-      let rec self : (injected, logic) Reifier.t Lazy.t =
-        let open Env.Monad.Syntax in
-        lazy
-          (let* r = OCanren.reify in
-           let open Env.Monad in
-           self
-           >>>= fun fr ->
-           let rec foo : injected -> logic =
-            fun x ->
-             match r x with
-             | Var (v, xs) ->
-               Var (v, Stdlib.List.map (GT.gmap OCanren.logic (GT.gmap t foo)) xs)
-             | Value x -> Value (GT.gmap t (Lazy.force fr) x)
-           in
-           Env.Monad.return foo)
-      in
-      Lazy.force self
-    ;;
-  
     let run_peano n = run_new reify (GT.show logic) n
   
     let () =
