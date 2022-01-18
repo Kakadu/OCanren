@@ -82,7 +82,6 @@ include struct
       | t ->
         (match t.ptyp_desc with
         | Ptyp_constr ({ txt = Ldot (Lident "GT", s) }, []) ->
-          (* ptyp_constr ~loc (oca_logic_ident ~loc:t.ptyp_loc) [ t ] *)
           oca_logic_ident ~loc:t.ptyp_loc t
         | Ptyp_constr ({ txt = Ldot (Lident "GT", "list") }, xs) ->
           ptyp_constr
@@ -225,7 +224,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
   let injected_typ =
     let ptype_manifest =
       match tdecl.ptype_manifest with
-      | None -> failwith ""
+      | None -> failwiths ~loc:tdecl.ptype_loc "No manifest"
       | Some ({ ptyp_desc = Ptyp_constr (id, args) } as typ) ->
         Option.some (injectify ~loc typ)
       | t -> t
@@ -276,11 +275,13 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
           | _ -> failwith "constructors with records are not implemented")
     | Ptype_record _ ->
       failwiths
+        ~loc:base_tdecl.ptype_loc
         "%s %d Record constructors are not implemented"
         Caml.__FILE__
         Caml.__LINE__
     | Ptype_open | Ptype_abstract ->
       failwiths
+        ~loc:base_tdecl.ptype_loc
         "%s %d Open and abstract types are not supported"
         Caml.__FILE__
         Caml.__LINE__
@@ -296,6 +297,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       match tdecl.ptype_manifest with
       | None ->
         failwiths
+          ~loc:tdecl.ptype_loc
           "types without manifest are not allowed %s %d"
           Caml.__FILE__
           Caml.__LINE__
@@ -343,7 +345,8 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       let rec helper acc = function
         | Lident s -> sprintf "%s_%s" acc s
         | Ldot (x, s) -> sprintf "%s_%s" (helper acc x) s
-        | Lapply (_, _) -> failwith "Not supported"
+        | Lapply (_, _) ->
+          failwiths ~loc:tdecl.ptype_loc "Functor applications are not supported"
       in
       helper ""
     in
@@ -406,6 +409,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       match tdecl.ptype_manifest with
       | None ->
         failwiths
+          ~loc:tdecl.ptype_loc
           "types without manifest are not allowed %s %d"
           Caml.__FILE__
           Caml.__LINE__
