@@ -32,6 +32,8 @@
   (run
    mkcamlp5.opt
    -package
+   ppx_inline_test.runtime-lib
+   -package
    camlp5,camlp5.pa_o,camlp5.macro,camlp5.pr_dump,GT-p5,GT.syntax.all
    %{read-lines:../config/package-doc.cfg}
    %{cmas}
@@ -40,7 +42,9 @@
 
 (rule
  (targets pp5+gt+plugins+dump.byte)
- (deps %{project_root}/config/package-doc.cfg)
+ (deps
+  ;(package GT)
+  %{project_root}/config/package-doc.cfg)
  (action
   (run
    mkcamlp5
@@ -53,7 +57,9 @@
 
 (rule
  (targets pp5+gt+plugins+dump.exe)
- (deps %{project_root}/config/package-doc.cfg)
+ (deps
+  ;(package GT)
+  %{project_root}/config/package-doc.cfg)
  (action
   (run
    mkcamlp5.opt
@@ -65,7 +71,9 @@
 
 (rule
  (targets pp5+gt+plugins+o.exe)
- (deps %{project_root}/config/package-doc.cfg)
+ (deps
+  ;(package GT)
+  %{project_root}/config/package-doc.cfg)
  (action
   (run
    mkcamlp5.opt
@@ -79,6 +87,7 @@
  (targets pp5+gt+plugins+ocanren+o.byte)
  (deps
   %{project_root}/config/package-doc.cfg
+  ;(package GT)
   (:cmas pa_ocanren.cma))
  (action
   (run
@@ -94,6 +103,7 @@
  (targets pp5+gt+plugins+ocanren+logger+dump.exe)
  (deps
   %{project_root}/config/package-doc.cfg
+  ;(package GT)
   (:cmas pa_ocanren.cmxa))
  (action
   (run
@@ -111,6 +121,7 @@
  (targets pp5+gt+plugins+ocanren+logger+o.exe)
  (deps
   %{project_root}/config/package-doc.cfg
+  ;(package GT)
   (:cmas pa_ocanren.cmxa))
  (action
   (run
