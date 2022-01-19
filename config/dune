@@ -14,19 +14,3 @@
   package-doc.cfg)
  (action
   (run ./discover.exe -all-flags)))
-
-(rule
- (targets tests.txt dune.tests)
- (alias discover-tests)
- (deps
-  tests.dune.tpl
-  (source_tree ../regression))
- (mode
-  (promote-into ../regression))
- (action
-  (run
-   ./discover.exe
-   -tests
-   -tests-dune
-   -tests-dir
-   %{project_root}/regression)))

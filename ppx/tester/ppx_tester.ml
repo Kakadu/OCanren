@@ -18,6 +18,7 @@
 
 *)
 open Base
+module Format = Caml.Format
 open Ppxlib
 
 let string_of_expression e =

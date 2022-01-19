@@ -77,9 +77,9 @@ let extract_names =
 
 let nolabel = Asttypes.Nolabel
 
-let get_param_names pcd_args =
-  let (Pcstr_tuple pcd_args) = pcd_args in
-  extract_names pcd_args
+let get_param_names = function
+  | Pcstr_tuple pcd_args -> extract_names pcd_args
+  | Pcstr_record _ -> failwith "Not supported"
 ;;
 
 let mangle_construct_name name =
@@ -386,8 +386,10 @@ let revisit_adt
       let functorized_type = Naming.fabst_name full_t.ptype_name.txt in
       let fully_abstract_typ =
         (* a type name for which we will generate `fmap` *)
-        let extra_params = FoldInfo.map mapa
-          ~f:(fun fi -> (Ast_helper.Typ.var fi.FoldInfo.param_name, (Asttypes.NoVariance, Asttypes.NoInjectivity)))
+        let extra_params =
+          FoldInfo.map mapa ~f:(fun fi ->
+              ( Ast_helper.Typ.var fi.FoldInfo.param_name
+              , (Asttypes.NoVariance, Asttypes.NoInjectivity) ))
         in
         let open Location in
         { full_t with
@@ -524,18 +526,15 @@ let decorate_with_gt tdecl =
   let loc = tdecl.ptype_loc in
   { tdecl with
     ptype_attributes =
-       (attribute
-          ~loc
-          ~name:(Located.mk ~loc "deriving")
-          ~payload:(PStr [%str gt ~options:{ gmap; show; fmt; foldl }])) :: tdecl.ptype_attributes
-
+      attribute
+        ~loc
+        ~name:(Located.mk ~loc "deriving")
+        ~payload:(PStr [%str gt ~options:{ gmap; show; fmt; foldl }])
+      :: tdecl.ptype_attributes
   }
 ;;
-let decorate_with_attributes tdecl ptype_attributes =
-  { tdecl with ptype_attributes }
-;;
 
-
+let decorate_with_attributes tdecl ptype_attributes = { tdecl with ptype_attributes }
 
 let is_super_suitable tdecl =
   (* TODO: check that type name is ground *)
@@ -622,8 +621,10 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
   List.concat
     [ [ pstr_type ~loc Nonrecursive [ base_tdecl ] ]
     ; base_generated
-    ; [ pstr_type ~loc rec_ [ decorate_with_attributes tdecl base_tdecl.ptype_attributes ] ]
-    ; [ pstr_type ~loc rec_ [ decorate_with_attributes ltyp base_tdecl.ptype_attributes  ] ]
+    ; [ pstr_type ~loc rec_ [ decorate_with_attributes tdecl base_tdecl.ptype_attributes ]
+      ]
+    ; [ pstr_type ~loc rec_ [ decorate_with_attributes ltyp base_tdecl.ptype_attributes ]
+      ]
     ; [ make_reifier rec_ tdecl ]
     ]
 ;;
