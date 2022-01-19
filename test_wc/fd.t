@@ -23,5 +23,5 @@
   fun q ->
     fresh x (q =/= (Option.some __)) (FD.domain x [1; 2; 3]) (x =/= (!! 1))
       (x =/= (!! 2)) (q === (Option.some x)), all answers {
-  q=Some (_.11 [=/= _.-42; =/= 1; =/= 2]);
+  q=Some (_.11 [=/= 1; =/= 2; =/= _.-42]);
   }
