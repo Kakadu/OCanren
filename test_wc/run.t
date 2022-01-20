@@ -74,3 +74,6 @@
   fun q -> (q =/= (__ % __)) &&& (q =/= (List.nil ())), all answers {
   q=_.10 [=/= [_.-42; _.-42]; =/= []];
   }
+  fun q -> (q =/= (Std.pair (!! true) __)) &&& (q === (Std.pair __ (!! true))), all answers {
+  q=(_.11 [=/= true], true);
+  }

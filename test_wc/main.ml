@@ -4,6 +4,8 @@ open Tester
 
 let show_int = GT.show GT.int
 let show_intl = GT.show logic (GT.show GT.int)
+let show_bool = GT.show GT.bool
+let show_booll = GT.show logic (GT.show GT.bool)
 
 let run_bool eta =
   runR OCanren.reify (GT.show GT.bool) (GT.show logic @@ GT.show GT.bool) eta
@@ -16,6 +18,13 @@ let run_pair eta =
     (Pair.reify OCanren.reify OCanren.reify)
     (GT.show Pair.ground show_int show_int)
     (GT.show Pair.logic show_intl show_intl)
+    eta
+
+let run_pair_bool eta =
+  runR
+    (Pair.reify OCanren.reify OCanren.reify)
+    (GT.show Pair.ground show_bool show_bool)
+    (GT.show Pair.logic show_booll show_booll)
     eta
 
 let run_list eta =
@@ -116,4 +125,11 @@ let _ =
   ()
 
 let _ = [%tester run_list (-1) (fun q -> q =/= __ % __ &&& (q =/= List.nil ()))]
+
+(*      fresh () (q =/= pair true_ __) (q === pair __ true_) *)
+let _ =
+  [%tester
+    run_pair_bool (-1) (fun q ->
+        q =/= Std.pair !!true __ &&& (q === Std.pair __ !!true) )]
+
 let _ = exit 0
