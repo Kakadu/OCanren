@@ -1,7 +1,8 @@
-open OCanren
-
 let ( <.> ) f g x = f (g x)
 let rec zed f x = f (zed f) x
+let fac = zed (fun self x -> if x <= 1 then 1 else self (x - 1) * x)
+
+open OCanren
 
 let rework_logic :
       'a 'b.
@@ -68,6 +69,7 @@ module TestNat = struct
     Reifier.fix (fun self -> OCanren.prj_exn <..> Env.Monad.chain (fmapt self))
   ;;
 
+  (* non-essential, testing-only stuff *)
   module _ (R : sig
     val self : (injected, logic) Reifier.t
     val chain : ('a Env.m -> 'b Env.m) -> ('a -> 'b) Env.m
@@ -526,6 +528,31 @@ module TestList = struct
         Env.Monad.return foo)
  ;;
 
+  (* new *)
+
+  let fmapt :
+        'a 'b 'c 'd.
+        ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t -> ('a, 'c) t Env.m -> ('b, 'd) t Env.m
+    =
+   fun fa fb subj -> Env.Monad.(return (GT.gmap t) <*> fa <*> fb <*> subj)
+ ;;
+
+  let prj_exn : 'a 'b. ('a, 'b) Reifier.t -> ('a injected, 'b ground) Reifier.t =
+   fun fa ->
+    let open Env.Monad in
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun self -> OCanren.prj_exn <..> Env.Monad.chain (fmapt fa self))
+ ;;
+
+  let reify : 'a 'b. ('a, 'b) Reifier.t -> ('a injected, 'b logic) Reifier.t =
+   fun fa ->
+    let open Env.Monad in
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun self ->
+        Reifier.reify <..> chain (zed (rework_logic ~fv:(fmapt fa self))))
+ ;;
+
+  (* tests *)
   let test1_reify reifier =
     let goal q = fresh x (q === inji @@ (x :: inji [])) in
     let xs = OCanren.(run q) goal (fun rr -> rr#reify reifier) in
@@ -542,8 +569,10 @@ module TestList = struct
     | _ -> false
   ;;
 
-  let%test _ = test1_reify (reify_old OCanren.reify)
-  let%test _ = test2_prj (prj_exn_old OCanren.prj_exn)
+  let%test "reify_old" = test1_reify (reify_old OCanren.reify)
+  let%test "prj_old" = test2_prj (prj_exn_old OCanren.prj_exn)
+  let%test "reify_new" = test1_reify (reify OCanren.reify)
+  let%test "prj_new" = test2_prj (prj_exn OCanren.prj_exn)
 end
 
 module _ = struct
@@ -555,6 +584,26 @@ module _ = struct
 
   type injected =
     (int ilogic Std.Option.groundi, string ilogic Std.Option.groundi) t ilogic
+
+  (* Old style reifiers *)
+  let reify_old : (injected, logic) Reifier.t =
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun _ ->
+        let* r = OCanren.reify in
+        let* roptionstring = Std.Option.reify OCanren.reify in
+        let* roptionint = Std.Option.reify OCanren.reify in
+        let rec foo x =
+          match r x with
+          | Value x -> Value (GT.gmap t roptionint roptionstring x)
+          | Var (v, xs) ->
+            Var
+              ( v
+              , Stdlib.List.map
+                  (GT.gmap OCanren.logic (GT.gmap t roptionint roptionstring))
+                  xs )
+        in
+        Env.Monad.return foo)
+  ;;
 
   let fmapt :
         'a 'b 'c 'd.
@@ -568,7 +617,7 @@ module _ = struct
     let open Env.Monad.Syntax in
     Reifier.fix (fun _ ->
         OCanren.prj_exn
-        <..> Env.Monad.chain
+        <..> chain
                (fmapt
                   (Std.Option.prj_exn OCanren.prj_exn)
                   (Std.Option.prj_exn OCanren.prj_exn)))
@@ -585,33 +634,6 @@ module _ = struct
 
   (* let%test "prj_exn_old" = test_prj prj_exn_old *)
   let%test "prj_exn_new" = test_prj prj_exn_new
-
-  let reify_old : (injected, logic) Reifier.t =
-    let open Env.Monad.Syntax in
-    Reifier.fix (fun _ ->
-        let* r = OCanren.reify in
-        let* (roptionstring :
-               string ilogic Std.Option.groundi -> string OCanren.logic Std.Option.logic)
-          =
-          Std.Option.reify OCanren.reify
-        in
-        let* (roptionint :
-               int ilogic Std.Option.groundi -> int OCanren.logic Std.Option.logic)
-          =
-          Std.Option.reify OCanren.reify
-        in
-        let rec foo x =
-          match r x with
-          | Value x -> Value (GT.gmap t roptionint roptionstring x)
-          | Var (v, xs) ->
-            Var
-              ( v
-              , Stdlib.List.map
-                  (GT.gmap OCanren.logic (GT.gmap t roptionint roptionstring))
-                  xs )
-        in
-        Env.Monad.return foo)
-  ;;
 
   let reify : (injected, logic) Reifier.t =
     let open Env.Monad in
