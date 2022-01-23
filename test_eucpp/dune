@@ -1,5 +1,6 @@
 (library
  (name lib)
+ (public_name OCanren-demos.eucpp_demo_lib)
  (modules lib)
  (wrapped false)
  (inline_tests)
