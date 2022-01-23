@@ -73,19 +73,21 @@ module Monad = struct
   let (<*>) f x env = f env (x env)
 
   let bind r k env = k (r env) env
-  let (>>=) = bind
 
   let chain : 'a 'b . ('a t -> 'b t) -> ('a -> 'b) t = fun f env x -> f (return x) env
 
   module Syntax = struct
-    let (let*) x f    = bind x f
+    let (let*) x f = bind x f
     let (let+) x f = fmap f x
   end
+
+  let (>>=) = bind
+
+
+
   let ( <..> ) g f =
     let open Syntax in
-    let* f = f in
-    let* g = g in
-    return (f <.> g)
+    return (<.>) <*> f <*> g
   ;;
 let list_mapm : f:('a t -> 'b t) -> 'a list -> 'b list t = fun ~f ->
   let rec helper = function
