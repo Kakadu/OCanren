@@ -118,7 +118,7 @@ include struct
         ~loc
         (Located.mk ~loc @@ lident_of_list [ "OCanren"; "Std"; "Pair"; kind ])
         (List.map ~f:helper [ l; r ])
-    | _ -> failwiths "can't generate %s type: %a" kind Pprintast_.core_type typ
+    | _ -> failwiths "can't generate %s type: %a" kind Ppxlib.Pprintast.core_type typ
   ;;
 
   let ltypify_exn ?(ccompositional = false) ~loc typ =
@@ -144,7 +144,7 @@ include struct
           ltypify_exn ~ccompositional:true ~loc t
         | _ -> assert false
       in
-      Format.printf "%a\n%!" Pprintast_.core_type t2
+      Format.printf "%a\n%!" Ppxlib.Pprintast.core_type t2
     in
     test [%stri type t1 = (int * int) Std.List.ground];
     [%expect
@@ -185,7 +185,7 @@ let%expect_test _ =
       | Pstr_type (_, [ { ptype_manifest = Some t } ]) -> injectify ~loc t
       | _ -> assert false
     in
-    Format.printf "%a\n%!" Pprintast_.core_type t2
+    Format.printf "%a\n%!" Ppxlib.Pprintast.core_type t2
   in
   test [%stri type nonrec x = GT.int t];
   [%expect {|    GT.int OCanren.ilogic t OCanren.ilogic |}];

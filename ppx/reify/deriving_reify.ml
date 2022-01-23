@@ -73,7 +73,7 @@ include struct
         ~loc
         "can't generate %s type: %a"
         kind
-        Pprintast_.core_type
+        Ppxlib.Pprintast.core_type
         typ
   ;;
 
@@ -100,7 +100,7 @@ include struct
           ltypify_exn ~ccompositional:true ~loc t
         | _ -> assert false
       in
-      Format.printf "%a\n%!" Pprintast_.core_type t2
+      Format.printf "%a\n%!" Ppxlib.Pprintast.core_type t2
     in
     test [%stri type t1 = (int * int) Std.List.ground];
     [%expect
