@@ -77,6 +77,11 @@ module Reifier : sig
   val fcomap : ('a -> 'b) -> ('b, 'c) t -> ('a, 'c) t
 
   val fix: ( ('a, 'b) t as 'c -> 'c) -> 'c
+
+  val rework : fv:('a Env.m -> 'b Env.m)
+      -> ('a logic Env.m -> 'b logic Env.m)
+      -> 'a logic Env.m
+      -> 'b logic Env.m
 end
 
 

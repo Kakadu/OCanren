@@ -4,25 +4,7 @@ let fac = zed (fun self x -> if x <= 1 then 1 else self (x - 1) * x)
 
 open OCanren
 
-let rework_logic :
-      'a 'b.
-      fv:('a Env.m -> 'b Env.m)
-      -> ('a logic Env.m -> 'b logic Env.m)
-      -> 'a logic Env.m
-      -> 'b logic Env.m
-  =
- fun ~fv fdeq x ->
-  let open Env.Monad in
-  let open Env.Monad.Syntax in
-  let* x = x in
-  match x with
-  | Var (v, xs) ->
-    let+ diseq = list_mapm ~f:fdeq xs in
-    Var (v, diseq)
-  | Value t ->
-    let+ inner = fv (return t) in
-    Value inner
-;;
+let rework_logic = Reifier.rework
 
 module TestNat = struct
   open Std.Nat
@@ -534,7 +516,9 @@ module TestList = struct
         'a 'b 'c 'd.
         ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t -> ('a, 'c) t Env.m -> ('b, 'd) t Env.m
     =
-   fun fa fb subj -> Env.Monad.(return (GT.gmap t) <*> fa <*> fb <*> subj)
+   fun fa fb subj ->
+    let open Env.Monad in
+    return (GT.gmap t) <*> fa <*> fb <*> subj
  ;;
 
   let prj_exn : 'a 'b. ('a, 'b) Reifier.t -> ('a injected, 'b ground) Reifier.t =

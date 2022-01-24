@@ -106,6 +106,25 @@ module Reifier = struct
   let rec fix f = fun env eta -> f (fix f) env eta
 
 
+  let rework :
+      'a 'b.
+      fv:('a Env.m -> 'b Env.m)
+      -> ('a logic Env.m -> 'b logic Env.m)
+      -> 'a logic Env.m
+      -> 'b logic Env.m
+  =
+ fun ~fv fdeq x ->
+  let open Env.Monad in
+  let open Env.Monad.Syntax in
+  let* x = x in
+  match x with
+  | Var (v, xs) ->
+    let+ diseq = list_mapm ~f:fdeq xs in
+    Var (v, diseq)
+  | Value t ->
+    let+ inner = fv (return t) in
+    Value inner
+;;
 end
 
 let reify = Reifier.reify
