@@ -216,7 +216,7 @@ module TestNat = struct
         Reifier.reify <..> chain (zed (rework_logic ~fv:(fmapt self))))
   ;;
 
-  let test () =
+  let test_reify reify =
     let goal q = fresh x (q === inji @@ S x) in
     let xs : logic Stream.t = OCanren.(run q) goal (fun rr -> rr#reify reify) in
     match Stream.take xs with
@@ -243,7 +243,9 @@ module TestNat = struct
   ;;
 
   let%test _ = test_prj_exn ()
-  let%test _ = test ()
+  let%test _ = test_reify reify
+
+  let test () = test_reify reify
 end
 
 (* example of reifiers for custom types *)
@@ -352,7 +354,6 @@ module TestNestedOption = struct
         let rec foo x =
           match r x with
           | Var (v, xs) ->
-            let (_ : _ OCanren.logic list) = xs in
             Var
               (v, Stdlib.List.map (GT.gmap OCanren.logic (GT.gmap Std.Option.t rself)) xs)
           | Value t -> Value (Option.map rself t)
@@ -394,6 +395,7 @@ module TestNat2 = struct
   type 'a logic = 'a t OCanren.logic
   type 'a injected = 'a t ilogic
 
+  (* old *)
   let reify_open : 'a 'b. ('a, 'b) Reifier.t -> ('a injected, 'b logic) Reifier.t =
    fun fa ->
     let open Env.Monad.Syntax in
@@ -419,6 +421,7 @@ module TestNat2 = struct
 
   let%test _ = test (reify_open OCanren.reify)
 
+  (* old closed reifier *)
   let reify_old_style : (('a injected as 'a), ('b logic as 'b)) Reifier.t =
     let open Env.Monad.Syntax in
     Reifier.fix (fun self ->
