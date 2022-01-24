@@ -83,12 +83,11 @@ module Monad = struct
 
   let (>>=) = bind
 
-
-
   let ( <..> ) g f =
     let open Syntax in
     return (<.>) <*> f <*> g
   ;;
+
 let list_mapm : f:('a t -> 'b t) -> 'a list -> 'b list t = fun ~f ->
   let rec helper = function
   | [] -> return []
