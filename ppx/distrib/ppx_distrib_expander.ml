@@ -23,6 +23,7 @@ let log fmt =
 ;;
 
 let failwiths ?(loc = Location.none) fmt = Location.raise_errorf ~loc fmt
+let nolabelize = List.map ~f:(fun e -> Nolabel, e)
 
 let notify fmt =
   Printf.ksprintf
@@ -303,100 +304,48 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
         Caml.__LINE__
   in
   let mk_arg_reifier s = sprintf "r%s" s in
-  let make_reifier_gen ~kind ?(typ = None) inner_func is_rec tdecl =
+  let make_reifier_gen ~kind ?(typ = None) is_rec tdecl =
     let pat, base_reifier, name =
       match kind with
       | Reify -> [%pat? reify], [%expr OCanren.reify], "reify"
       | Prj_exn -> [%pat? prj_exn], [%expr OCanren.prj_exn], "prj_exn"
     in
     let manifest = manifest_of_tdecl_exn tdecl in
-    let add_args, add_heading, add_to_gmap =
+    let add_args =
       let loc = tdecl.ptype_loc in
-      let args rhs =
+      fun rhs ->
         List.fold_right names ~init:rhs ~f:(fun name acc ->
             [%expr fun [%p Pat.var (Located.mk ~loc (mk_arg_reifier name))] -> [%e acc]])
-      in
-      let heading rhs =
-        let rhs =
-          List.fold_right
-            names
-            ~f:(fun s acc ->
-              [%expr
-                let* [%p Pat.var (Located.mk ~loc s)] =
-                  [%e Exp.lident ~loc (mk_arg_reifier s)]
-                in
-                [%e acc]])
-            ~init:rhs
-        in
-        [%expr
-          let open Env.Monad.Syntax in
-          Reifier.fix (fun rself ->
-              let* self = rself in
-              let* _shallowr = [%e base_reifier] in
-              [%e rhs])]
-      in
-      let add_to_gmap init =
-        List.fold_left ~init names ~f:(fun acc s ->
-            [%expr [%e acc] [%e Exp.lident ~loc s]])
-      in
-      args, heading, add_to_gmap
     in
-    let rname_of_lident =
-      let rec helper acc = function
-        | Lident s -> sprintf "%s_%s" acc s
-        | Ldot (x, s) -> sprintf "%s_%s" (helper acc x) s
-        | Lapply (_, _) ->
-          failwiths ~loc:tdecl.ptype_loc "Functor applications are not supported"
-      in
-      helper ""
-    in
-    let rec helper typ : (string, expression, _) Map.t * expression =
+    let rec helper typ : expression =
       match typ with
-      | { ptyp_desc = Ptyp_constr ({ txt = Lident "ground" }, _) } ->
-        Map.empty string_cmp, [%expr self]
+      | { ptyp_desc = Ptyp_constr ({ txt = Lident "ground" }, _) } -> [%expr self]
       | { ptyp_desc = Ptyp_var s } ->
-        Map.empty string_cmp, pexp_ident ~loc (Located.mk ~loc (lident s))
+        pexp_ident ~loc (Located.mk ~loc (lident (mk_arg_reifier s)))
       | [%type: GT.int] | { ptyp_desc = Ptyp_constr ({ txt = Lident "int" }, []) } ->
-        Map.empty string_cmp, [%expr _shallowr]
+        base_reifier
       | { ptyp_desc = Ptyp_constr ({ txt = Ldot (m, _) }, args) } ->
         let rhs = pexp_ident ~loc (Located.mk ~loc (Ldot (m, name))) in
-        let name = rname_of_lident (Ldot (m, name)) in
-        let acc, args =
-          List.fold_right
-            args
-            ~init:(Map.singleton string_cmp name rhs, [])
-            ~f:(fun arg (acc, args) ->
-              let acc2, arg0 = helper arg in
-              ( Map.merge_skewed acc2 acc ~combine:(fun ~key v1 v2 -> assert false)
-              , arg0 :: args ))
-        in
-        acc, Exp.apply ~loc (pexp_ident ~loc (Located.mk ~loc @@ lident name)) args
+        List.fold_left ~init:rhs args ~f:(fun acc x ->
+            pexp_apply ~loc acc [ nolabel, helper x ])
       | _ -> failwiths ~loc:typ.ptyp_loc "not supported: %a" Pprintast.core_type typ
     in
-    let body, add_binds =
+    let body =
       match manifest.ptyp_desc with
       | Ptyp_constr ({ txt }, args) ->
-        let apply_reifiers, acc, add =
-          let foo = [%expr GT.gmap t] in
-          let acc, args =
-            List.fold_right
-              ~init:(Map.empty string_cmp, [])
-              ~f:(fun s (prefixes, args) ->
-                let prefix, arg = helper s in
-                ( Map.merge_skewed prefix prefixes ~combine:(fun ~key _ _ -> assert false)
-                , (nolabel, arg) :: args ))
-              args
-          in
-          (fun f -> pexp_apply ~loc f args), acc, pexp_apply ~loc foo args
+        let fmapt =
+          pexp_apply ~loc [%expr fmapt] (List.map args ~f:(fun t -> Nolabel, helper t))
         in
-        ( inner_func add_to_gmap add
-        , fun (init : expression) ->
-            Map.fold acc ~init ~f:(fun ~key:ident ~data:rhs acc ->
-                [%expr
-                  let* [%p Pat.var ~loc (Located.sprintf ~loc "myreify_%s" ident)] =
-                    [%e rhs]
-                  in
-                  [%e acc]]) )
+        [%expr
+          let open Env.Monad in
+          let open Env.Monad.Syntax in
+          Reifier.fix (fun self ->
+              [%e base_reifier]
+              <..> chain
+                     [%e
+                       match kind with
+                       | Reify -> [%expr zed (Reifier.rework ~fv:[%e fmapt])]
+                       | Prj_exn -> fmapt])]
       | _ -> failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__
     in
     let pat =
@@ -404,10 +353,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       | None -> pat
       | Some t -> ppat_constraint ~loc pat t
     in
-    pstr_value
-      ~loc
-      Nonrecursive
-      [ value_binding ~loc ~pat ~expr:(add_args (add_heading (add_binds body))) ]
+    pstr_value ~loc Nonrecursive [ value_binding ~loc ~pat ~expr:(add_args body) ]
   in
   let make_reifier is_rec tdecl =
     let manifest = manifest_of_tdecl_exn tdecl in
@@ -418,41 +364,6 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
         (if List.is_empty tdecl.ptype_params
         then Some [%type: (_, [%t logic_typ]) Reifier.t]
         else None)
-      (fun apply_reifiers add ->
-        (* Format.eprintf
-          "apply_reifiers works as %a\n%!"
-          Pprintast.expression
-          (apply_reifiers [%expr 1]); *)
-        let reifiers_as_arguments =
-          let rs =
-            let m = manifest_of_tdecl_exn tdecl in
-            let rec helper = function
-              | { ptyp_desc = Ptyp_var v; ptyp_loc = loc } ->
-                pexp_ident ~loc (Located.mk ~loc (lident v))
-              | [%type: ground] -> [%expr self]
-              | { ptyp_desc = Ptyp_constr ({ txt = Lident "ground" }, _); ptyp_loc = loc }
-                -> [%expr self]
-              | _ -> [%expr xxxx]
-            in
-            match m.ptyp_desc with
-            | Ptyp_constr (_, args) -> List.map ~f:helper args
-            | _ -> assert false
-          in
-          fun f -> List.fold_left rs ~init:f ~f:(fun f x -> [%expr [%e f] [%e x]])
-        in
-        [%expr
-          let rec foo smth =
-            match _shallowr smth with
-            | Var (v, xs) ->
-              Var
-                ( v
-                , Stdlib.List.map
-                    (* (GT.gmap OCanren.logic [%e reifiers_as_arguments [%expr GT.gmap t]]) *)
-                    (GT.gmap OCanren.logic [%e add])
-                    xs )
-            | Value x -> Value ([%e add] x)
-          in
-          Env.Monad.return foo])
       is_rec
       tdecl
   in
@@ -465,12 +376,34 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
         then
           Some [%type: (_, [%t gtypify_exn ~ccompositional:true ~loc manifest]) Reifier.t]
         else None)
-      (fun _ add ->
-        [%expr
-          let rec foo x = [%e add] (_shallowr x) in
-          Env.Monad.return foo])
       is_rec
       tdecl
+  in
+  let make_fmapt tdecl =
+    let names = extract_names (name_type_params_in_td tdecl).ptype_params in
+    let add_funs rhs =
+      List.fold_right
+        names
+        ~f:(fun name acc ->
+          [%expr fun [%p ppat_var ~loc (Located.mk ~loc name)] -> [%e acc]])
+        ~init:rhs
+    in
+    let subj = gen_symbol ~prefix:"subj" () in
+    let expr =
+      add_funs
+        [%expr
+          fun [%p ppat_var ~loc (Located.mk ~loc subj)] ->
+            let open Env.Monad in
+            [%e
+              List.fold_left
+                ~init:[%expr Env.Monad.return (GT.gmap t)]
+                names
+                ~f:(fun acc name ->
+                  [%expr
+                    [%e acc] <*> [%e pexp_ident ~loc (Located.mk ~loc (Lident name))]])]
+            <*> [%e pexp_ident ~loc (Located.mk ~loc (lident subj))]]
+    in
+    pstr_value ~loc Nonrecursive [ value_binding ~loc ~pat:[%pat? fmapt] ~expr ]
   in
   List.concat
     [ [ pstr_type ~loc Nonrecursive [ base_tdecl ] ]
@@ -479,6 +412,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
     ; [ pstr_type ~loc rec_ [ decorate_with_attributes ltyp base_tdecl.ptype_attributes ]
       ]
     ; [ pstr_type ~loc rec_ [ injected_typ ] ]
+    ; [ make_fmapt base_tdecl ]
     ; [ make_prj_exn is_rec tdecl; make_reifier is_rec tdecl ]
     ; creators
     ]
