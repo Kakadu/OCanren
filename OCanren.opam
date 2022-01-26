@@ -31,6 +31,7 @@ depends: [
   "logger-p5" { >= "0.4.5" }
   "GT"        { >= "0.4.0" }
   "benchmark" { with-test }
+  "z3"
   "streaming"
   "ppx_expect"
   "ppx_inline_test"
