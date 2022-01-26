@@ -24,6 +24,7 @@ module Stream  = Stream
 module Runconf = Runconf
 module Timer   = Timer
 module Env = Env
+module TreeLogger = Utils.TreeLogger
 
 module Std =
   struct

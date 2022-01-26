@@ -22,10 +22,50 @@ module State : sig
   type t
 end
 
+(** StateId - unique identifier of state within one search *)
+module StateId : sig
+  type t
+
+  val hash : t -> int
+  val equal : t -> t -> bool
+  val compare : t -> t -> int
+  val show : t -> string
+end
+
 (** Goal converts a state into a lazy stream of states *)
 type 'a goal'
 
 type goal = State.t Stream.t goal'
+
+(**
+  The exception is raised when we try to extract plain term from the answer but only terms with free
+  variables are possible.
+*)
+(* exception Not_a_value *)
+
+(** Reification helper *)
+(* type helper *)
+
+(* * Reification result
+class type ['a, 'b] refined =
+  object
+    (** Returns [true] if the term has any free logic variable inside *)
+    method is_open : bool
+
+    (**
+    Get the answer as plain term. Raises exception [Not_a_value] when only terms with free variables
+    are available.
+  *)
+    method prj : 'a
+
+    (**
+    Get the answer as non-flat value. If the actual answer is a flat value it will be injected using
+    the function provided.
+   *)
+    method refine : (helper -> ('a, 'b) injected -> 'b) -> inj:('a -> 'b) -> 'b
+  end *)
+
+type ('a, 'b) printer = ('a, 'b) Logic.reified -> string
 
 (** {3 miniKanren basic combinators} *)
 
@@ -36,13 +76,26 @@ val call_fresh : (('a, 'b) injected -> goal) -> goal
 val wc : (('a, 'b) injected -> goal) -> goal
 
 (** [x === y] creates a goal, which performs a unification of [x] and [y] *)
-val ( === ) : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal
+val ( === )
+  :  ?p:('a, 'b logic) printer
+  -> ('a, 'b logic) injected
+  -> ('a, 'b logic) injected
+  -> goal
 
-(** [unify x y] is a prefix synonym for [x === y] *)
-val unify : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal
+(** [unify ~p x y] same as (x === y) but allows to pass a printer for unified terms.
+    When [p] is not omitted the string representations of terms are included to the listenable event *)
+val unify
+  :  ?p:('a, 'b logic) printer
+  -> ('a, 'b logic) injected
+  -> ('a, 'b logic) injected
+  -> goal
 
 (** [x =/= y] creates a goal, which introduces a disequality constraint for [x] and [y] *)
-val ( =/= ) : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal
+val ( =/= )
+  :  ?p:('a, 'b logic) printer
+  -> ('a, 'b logic) injected
+  -> ('a, 'b logic) injected
+  -> goal
 
 (** Call [structural var reifier checker] adds a structural constraint for future use.
  Every time substitution is updated it reifies [var] using [reifier] and checks that
@@ -59,8 +112,13 @@ val structural
   -> ('b -> bool)
   -> goal
 
-(** [diseq x y] is a prefix synonym for [x =/= y] *)
-val diseq : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal
+(** [diseq ~p x y] same as (x =/= y) but allows to pass a printer for terms.
+    When [p] is not omitted the string representations of terms are included to the listenable event *)
+val diseq
+  :  ?p:('a, 'b logic) printer
+  -> ('a, 'b logic) injected
+  -> ('a, 'b logic) injected
+  -> goal
 
 (** [conj s1 s2] creates a goal, which is a conjunction of its arguments *)
 val conj : goal -> goal -> goal
@@ -87,13 +145,17 @@ val conde : goal list -> goal
 *)
 val ( ?& ) : goal list -> goal
 
+(** [compose] is a synonym for [?&] *)
+val compose : goal list -> goal
+
 (** {2 Some predefined goals} *)
 
 (** [success] always succeeds *)
 val success : goal
 
-(** [failure] always fails *)
-val failure : goal
+(** [failure ~reason] always fails.
+    [reason] is a string parameter that describes the cause of failure *)
+val failure : reason:string -> goal
 
 (** {2 Combinators to produce fresh variables} *)
 module Fresh : sig
@@ -128,6 +190,30 @@ module Fresh : sig
     -> goal
 end
 
+(** Listener allows to inject some side-effects to run of a goal.
+    The user should provide two functions:
+      [init id] - that takes identifier of initial state and may perform some initialisation
+      [log event parent id] - logs a new state of search with given verbosity level, message and an identifier of parent state
+  *)
+module Listener : sig
+  type event =
+    | Success
+    | Failure of string
+    | Conj
+    | Disj
+    | Cont of StateId.t
+    | Unif of (string * string) option
+    | Diseq of (string * string) option
+    | Goal of string * string list
+    | Answer of string * string list
+    | Custom of string
+
+  val string_of_event : event -> string
+
+  type t =
+    < init : StateId.t -> unit ; on_event : event -> StateId.t -> StateId.t -> unit >
+end
+
 (** {2 Top-level running primitives} *)
 
 (** [run n g h] runs a goal [g] with [n] logical parameters and passes reified results to the handler [h].
@@ -142,7 +228,8 @@ end
     - [run (succ one) (fun q r -> q === !!5 ||| r === !!6) (fun qs rs -> ...)]. The same as the above.
 *)
 val run
-  :  (unit
+  :  ?listener:Listener.t
+  -> (unit
       -> ('a -> State.t -> 'b)
          * ('c -> Env.t -> 'd)
          * ('b -> 'c * State.t Stream.t)
@@ -333,6 +420,8 @@ val debug_var
   -> ('b list -> goal)
   -> goal
 
+val debug_lino : ?text:string -> string -> int -> goal
+
 (** The goal [only_head f] returns no answers when [f] returns:
   - empty stream when [f] returns empty stream;
   - hangs when [f] hangs during search for first answer;
@@ -379,4 +468,129 @@ module Unique : sig
   val noanswer : ('a, 'b) injected
   val different : ('a, 'b) injected
   val unique_answers : (('a, 'b) Logic.injected -> goal) -> ('a, 'b) injected -> goal
+end
+
+module Trace : sig
+  type ('a, 'b) refiner
+
+  (** [trace n h x y z ...] refines arguments [x y z ...] in the current substitution,
+        passes these arguments to the handler [h] obtaining some side-effect,
+        and returns success goal.
+        The number of parameters is encoded using variadic machinery {a la} Danvy
+        and represented by a number of predefined numerals and successor function (see below).
+        Examples:
+          [project one (fun q -> printf "%s" q#prj) !!5 ] --- prints injected value
+     *)
+  val trace
+    :  ((* (unit -> (('t -> goal) -> 'a) * ('h -> 'e -> Listener.entry) * (State.t -> 'd -> 'e) * ('t -> 'd * goal * State.t)) -> 'h -> 'a *)
+        unit
+        -> (('t -> goal) -> 'a)
+           * ('h -> 'e -> Listener.event)
+           * (State.t -> 'd -> 'e)
+           * ('t -> 'f * State.t)
+           * ('f -> 'd * goal))
+    -> 'h
+    -> 'a
+
+  val succ
+    :  (unit
+        -> (('a -> 'b) -> 'c)
+           * ('d -> 'e -> 'f)
+           * ('g -> 'h -> 'i)
+           * ('j -> 'k * 'l)
+           * ('x -> 'y * 'z))
+    -> unit
+    -> (((State.t -> ('m, 'n) Logic.reified) * 'a -> 'b) -> ('m, 'n) injected -> 'c)
+       * (('o -> 'd) -> 'o * 'e -> 'f)
+       * ('g -> ('g -> 'p) * 'h -> 'p * 'i)
+       * ('q * 'j -> ('q * 'k) * 'l)
+       * ('r * 'x -> ('r * 'y) * 'z)
+
+  val one
+    :  unit
+    -> ((('a, 'b) refiner * (goal * State.t) -> goal)
+        -> ('a, 'b) injected
+        -> goal
+        -> goal)
+       * (('l -> 'm) -> 'l -> 'm)
+       * (State.t -> ('a, 'b) refiner -> ('a, 'b) Logic.reified)
+       * ('s * ('t * 'u) -> ('s * 't) * 'u)
+       * ('q * 'r -> 'q * 'r)
+
+  val two
+    :  unit
+    -> ((('a, 'b) refiner * (('c, 'd) refiner * (goal * State.t)) -> goal)
+        -> ('a, 'b) injected
+        -> ('c, 'd) injected
+        -> goal
+        -> goal)
+       * (('g -> 'h -> 'i) -> 'g * 'h -> 'i)
+       * (State.t
+          -> ('a, 'b) refiner * ('c, 'd) refiner
+          -> ('a, 'b) Logic.reified * ('c, 'd) Logic.reified)
+       * ('p * ('q * ('r * 'u)) -> ('p * ('q * 'r)) * 'u)
+       * ('m * ('n * 'o) -> ('m * 'n) * 'o)
+
+  val three
+    :  unit
+    -> ((('a, 'b) refiner * (('c, 'd) refiner * (('e, 'f) refiner * (goal * State.t)))
+         -> goal)
+        -> ('a, 'b) injected
+        -> ('c, 'd) injected
+        -> ('e, 'f) injected
+        -> goal
+        -> goal)
+       * (('i -> 'j -> 'k -> 'l) -> 'i * ('j * 'k) -> 'l)
+       * (State.t
+          -> ('a, 'b) refiner * (('c, 'd) refiner * ('e, 'f) refiner)
+          -> ('a, 'b) Logic.reified * (('c, 'd) Logic.reified * ('e, 'f) Logic.reified))
+       * ('q * ('r * ('s * ('t * 'u))) -> ('q * ('r * ('s * 't))) * 'u)
+       * ('qa * ('ra * ('sa * 'ta)) -> ('qa * ('ra * 'sa)) * 'ta)
+
+  val four
+    :  unit
+    -> ((('a, 'b) refiner
+         * (('c, 'd) refiner * (('e, 'f) refiner * (('g, 'h) refiner * (goal * State.t))))
+         -> goal)
+        -> ('a, 'b) injected
+        -> ('c, 'd) injected
+        -> ('e, 'f) injected
+        -> ('g, 'h) injected
+        -> goal
+        -> goal)
+       * (('i -> 'j -> 'k -> 'l -> 'm) -> 'i * ('j * ('k * 'l)) -> 'm)
+       * (State.t
+          -> ('a, 'b) refiner * (('c, 'd) refiner * (('e, 'f) refiner * ('g, 'h) refiner))
+          -> ('a, 'b) Logic.reified
+             * (('c, 'd) Logic.reified
+               * (('e, 'f) Logic.reified * ('g, 'h) Logic.reified)))
+       * ('q * ('r * ('s * ('t * ('u * 'v)))) -> ('q * ('r * ('s * ('t * 'u)))) * 'v)
+       * ('qa * ('ra * ('sa * ('ta * 'ua))) -> ('qa * ('ra * ('sa * 'ta))) * 'ua)
+
+  (* val five
+    :  unit
+    -> ((('a, 'b) refiner
+         * (('c, 'd) refiner
+           * (('e, 'f) refiner
+             * (('g, 'h) refiner * (('i, 'j) refiner * (goal * State.t)))))
+         -> goal)
+        -> ('a, 'b) injected
+        -> ('c, 'd) injected
+        -> ('e, 'f) injected
+        -> ('g, 'h) injected
+        -> ('i, 'j) injected
+        -> goal
+        -> goal)
+       * (('k -> 'l -> 'm -> 'n -> 'o -> 'p) -> 'k * ('l * ('m * ('n * 'o))) -> 'p)
+       * (State.t
+          -> ('a, 'b) refiner
+             * (('c, 'd) refiner
+               * (('e, 'f) refiner * (('g, 'h) refiner * ('i, 'j) refiner)))
+          -> ('a, 'b) refiLogic.reifiedned
+             * (('c, 'd) refined
+               * (('e, 'f) refined * (('g, 'h) refined * ('i, 'j) refined))))
+       * ('q * ('r * ('s * ('t * ('u * ('v * 'w)))))
+          -> ('q * ('r * ('s * ('t * ('u * 'v))))) * 'w)
+       * ('qa * ('ra * ('sa * ('ta * ('ua * 'va))))
+          -> ('qa * ('ra * ('sa * ('ta * 'ua)))) * 'va) *)
 end

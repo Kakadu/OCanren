@@ -54,13 +54,13 @@ let ( unification_incr
     let c _ = () in
     c, c, c, c, c
   | Some _ ->
-    let unification_incr () = stat.unification_count <- stat.unification_count + 1 in
+    let unification_incr () = stat.unification_count <- stat.unification_count 1 in
     let unification_time_incr t =
       stat.unification_time <- Mtime.Span.add stat.unification_time (t ())
     in
-    let conj_counter_incr () = stat.conj_counter <- stat.conj_counter + 1 in
-    let disj_counter_incr () = stat.disj_counter <- stat.disj_counter + 1 in
-    let delay_counter_incr () = stat.delay_counter <- stat.delay_counter + 1 in
+    let conj_counter_incr () = stat.conj_counter <- stat.conj_counter 1 in
+    let disj_counter_incr () = stat.disj_counter <- stat.disj_counter 1 in
+    let delay_counter_incr () = stat.delay_counter <- stat.delay_counter 1 in
     ( unification_incr
     , unification_time_incr
     , conj_counter_incr
@@ -296,6 +296,57 @@ let set_skip_prunes_count n =
   assert (n>0);
   max_prunes_skipped := n
 *)
+module StateId = struct
+  type t = GT.int [@@deriving gt ~options:{ fmt }]
+
+  let hash = Hashtbl.hash
+  let equal = ( == )
+  let compare = compare
+  let show = string_of_int
+end
+
+module Listener = struct
+  open Printf
+  open GT
+
+  type event =
+    | Success
+    | Failure of string
+    | Conj
+    | Disj
+    | Cont of StateId.t
+    | Unif of (string * string) option
+    | Diseq of (string * string) option
+    | Goal of string * string list
+    | Answer of string * string list
+    | Custom of string
+  [@@deriving gt ~options:{ fmt }]
+
+  let string_of_event = function
+    | Success -> "success"
+    | Failure reason -> sprintf "failure: %s" reason
+    | Conj -> "&&&"
+    | Disj -> "conde"
+    | Cont id -> sprintf "{%s}" @@ StateId.show id
+    | Goal (name, args) -> sprintf "%s %s" name @@ String.concat " " args
+    | Answer (name, args) -> sprintf "%s %s" name @@ String.concat " " args
+    | Custom str -> str
+    | Unif args ->
+      (match args with
+      | Some (x, y) -> sprintf "%s === %s" x y
+      | None -> "===")
+    | Diseq args ->
+      (match args with
+      | Some (x, y) -> sprintf "%s =/= %s" x y
+      | None -> "=/=")
+  ;;
+
+  type t =
+    < init : StateId.t -> unit ; on_event : event -> StateId.t -> StateId.t -> unit >
+
+  (* let log_unif listener *)
+end
+
 module State = struct
   module Disequality = Disequality2.Make (struct
     type t = FM.t
@@ -311,17 +362,29 @@ module State = struct
     ; prunes : Prunes.t
     ; scope : Term.Var.scope
     ; fd : FM.t
+    ; id : StateId.t
+    ; lastId : int ref
+    ; listener : Listener.t option
     }
 
   type reified = Env.t * Term.t
 
-  let empty () =
+  let empty ?listener () =
+    let id = 0 in
+    let () =
+      match listener with
+      | Some listener -> listener#init id
+      | None -> ()
+    in
     { env = Env.empty ()
     ; subst = Subst.empty
     ; ctrs = Disequality.empty
     ; prunes = Prunes.empty
     ; scope = Term.Var.new_scope ()
     ; fd = FM.empty ()
+    ; id
+    ; lastId = ref id
+    ; listener
     }
   ;;
 
@@ -399,6 +462,26 @@ module State = struct
       ListLabels.map diseqs ~f:(fun diseq ->
           Answer.make env (helper diseq [] val_in_subst))
   ;;
+
+  let new_event ?pid e ({ id; lastId; listener } as _st) =
+    incr lastId;
+    let pid =
+      match pid with
+      | Some pid -> pid
+      | None -> id
+    in
+    let new_id = !lastId in
+    Format.printf "new event: (%d -> %d) %s\n%!" pid new_id (Listener.string_of_event e);
+    (match listener with
+    | Some listener -> listener#on_event e pid new_id
+    | None -> ());
+    new_id
+  ;;
+
+  let enter_conde ({ id; scope } as st) =
+    let new_id = new_event Listener.Disj st in
+    new_scope { st with id = new_id }
+  ;;
 end
 
 let ( !!! ) = Obj.magic
@@ -406,8 +489,15 @@ let ( !!! ) = Obj.magic
 type 'a goal' = State.t -> 'a
 type goal = State.t Stream.t goal'
 
-let success st = Stream.single st
-let failure _ = Stream.nil
+let success st =
+  let _ = State.new_event Listener.Success st in
+  Stream.single st
+;;
+
+let failure ~reason st =
+  let _ = State.new_event (Listener.Failure reason) st in
+  Stream.nil
+;;
 
 let only_head g st =
   let stream = g st in
@@ -423,108 +513,24 @@ module FD = struct
 
   let eq a b st =
     match FM.eq a b (State.fds st) with
-    | None -> failure ()
+    | None -> failure ~reason:"FD.eq" st
     | Some fd -> success { st with State.fd }
   ;;
 
   let neq a b st =
     match FM.neq a b (State.fds st) with
-    | None -> failure ()
+    | None -> failure ~reason:"FD.neq" st
     | Some fd -> success { st with State.fd }
   ;;
 
   let domain v xs st =
     match FM.domain v xs (State.fds st) with
-    | None -> failure ()
+    | None -> failure ~reason:"FD.domain" st
     | Some fd -> success { st with State.fd }
   ;;
 end
 
-let ( === ) x y st =
-  let _t =
-    let module _ = struct
-      [%%if false]
-
-      let () =
-        unification_incr ();
-        Timer.make ()
-      ;;
-
-      [%%endif]
-    end
-    in
-    ()
-  in
-  match State.unify x y st with
-  | Some st ->
-    let module _ = struct
-      [%%if false]
-
-      let () = unification_time_incr _t
-
-      [%%endif]
-    end
-    in
-    success st
-  | None ->
-    let module _ = struct
-      [%%if false]
-
-      let () = unification_time_incr _t
-
-      [%%endif]
-    end
-    in
-    failure st
-;;
-
-let unify = ( === )
-
-let ( =/= ) x y st =
-  match State.diseq x y st with
-  | Some st ->
-    let module _ = struct
-      [%%if false]
-
-      let () = delay_counter_incr ()
-
-      [%%endif]
-    end
-    in
-    success st
-  | None -> failure st
-;;
-
-let diseq = ( =/= )
-let delay g st = Stream.from_fun (fun () -> g () st)
-
-let conj f g st =
-  let module _ = struct
-    [%%if false]
-
-    let () = conj_counter_incr ()
-
-    [%%endif]
-  end
-  in
-  Stream.bind (f st) g
-;;
-
-let debug_var v reifier call st =
-  let xs =
-    List.map
-      (fun answ -> reifier (Answer.env answ) (Obj.magic @@ Answer.ctr_term answ))
-      (State.reify v st)
-  in
-  call xs st
-;;
-
-let structural term rr k st =
-  let new_constraints = Prunes.extend (State.prunes st) (Obj.magic term) rr k in
-  match Prunes.check_last new_constraints (State.env st) (State.subst st) with
-  | Prunes.Violated -> failure st
-  | NonViolated -> success { st with State.prunes = new_constraints }
-;;
+(* ********************************************************************* *)
 
 (*
 include (
@@ -587,75 +593,43 @@ include (
     end)
 *)
 
-let ( &&& ) = conj
-let ( ?& ) gs = List.fold_right ( &&& ) gs success
-let disj_base f g st = Stream.mplus (f st) (Stream.from_fun (fun () -> g st))
-
-let disj f g st =
-  let module _ = struct
-    [%%if false]
-
-    let () = disj_counter_incr ()
-
-    [%%endif]
-  end
-  in
-  let st = State.new_scope st in
-  disj_base f g |> fun g -> Stream.from_fun (fun () -> g st)
-;;
-
-let ( ||| ) = disj
-
-let ( ?| ) gs st =
-  let st = State.new_scope st in
-  let rec inner = function
-    | [ g ] -> g
-    | g :: gs -> disj_base g (inner gs)
-    | [] -> failwith "Wrong argument of (?!)"
-  in
-  inner gs |> fun g -> Stream.from_fun (fun () -> g st)
-;;
-
-let conde = ( ?| )
-
+(* ******************************************************************************* *)
 let call_fresh f st =
   let x = State.fresh st in
   f x st
 ;;
 
-let wc f st =
-  let x = State.wc st in
-  f x st
-;;
-
-(* let __ = Term.Var.make_wc () *)
-
-module Fresh = struct
-  let succ prev f = call_fresh (fun x -> prev (f x))
-  let zero f = f
-  let one f = succ zero f
-  let two f = succ one f
-
-  (* N.B. Manual inlining of numerals will speed-up OCanren a bit (mainly because of less memory consumption) *)
-  (* let two   g = fun st ->
-      let scope = State.scope st in
-      let env = State.env st in
-      let q = Env.fresh ~scope env in
-      let r = Env.fresh ~scope env in
-      g q r st *)
-
-  let three f = succ two f
-  let four f = succ three f
-  let five f = succ four f
-  let q = one
-  let qr = two
-  let qrs = three
-  let qrst = four
-  let pqrst = five
-end
-
-(* ******************************************************************************* *)
 (* ************************** Reification stuff ********************************** *)
+module Refiner : sig
+  val zero : (goal * State.t -> goal) -> goal -> goal
+
+  val one
+    :  ((State.t -> ('a, 'b) reified) * (goal * State.t) -> goal)
+    -> ('a, 'b) injected
+    -> goal
+    -> goal
+
+  val two
+    :  ((State.t -> ('a, 'b) reified) * ((State.t -> ('c, 'd) reified) * (goal * State.t))
+        -> goal)
+    -> ('a, 'b) injected
+    -> ('c, 'd) injected
+    -> goal
+    -> goal
+
+  val succ
+    :  (('a -> 'b) -> 'c)
+    -> ((State.t -> ('d, 'e) reified) * 'a -> 'b)
+    -> ('d, 'e) injected
+    -> 'c
+end = struct
+  type ('a, 'b) refiner = State.t -> ('a, 'b) Logic.reified
+
+  let succ prev k x = prev (fun y -> k ((fun st -> make_rr (State.env st) x), y))
+  let zero : (goal * State.t -> goal) -> goal -> goal = fun k g st -> k (g, st) st
+  let one eta = succ zero eta
+  let two eta = succ (succ zero) eta
+end
 
 module ExtractDeepest = struct
   let ext2 x = x
@@ -664,6 +638,8 @@ module ExtractDeepest = struct
     let foo, base = prev z in
     (a, foo), base
   ;;
+
+  let three eta = succ ext2 eta
 end
 
 module Curry = struct
@@ -674,6 +650,59 @@ end
 module Uncurry = struct
   let one = ( @@ )
   let succ k f (x, y) = k (f x) y
+end
+
+module ApplyState = struct
+  let one st r = r st
+  let succ prev st (r, y) = r st, prev st y
+end
+
+module Trace = struct
+  type ('a, 'b) refiner = State.t -> ('a, 'b) Logic.reified
+
+  let succ n () =
+    let refiner, uncurrier, app, ext1, ext2 = n () in
+    ( Refiner.succ refiner
+    , Uncurry.succ uncurrier
+    , ApplyState.succ app
+    , ExtractDeepest.succ ext1
+    , ExtractDeepest.succ ext2 )
+  ;;
+
+  let one () =
+    ( Refiner.(succ zero)
+    , ( @@ )
+    , ApplyState.one
+    , ExtractDeepest.(succ ext2)
+    , ExtractDeepest.ext2 )
+  ;;
+
+  let two () = succ one ()
+  let three () = succ two ()
+  let four () = succ three ()
+  let five () = succ four ()
+
+  let trace n callback =
+    let refiner, uncurrier, app, ext1, ext2 = n () in
+    let f g tup st =
+      State.(
+        let e = (uncurrier @@ callback) tup in
+        g { st with id = State.new_event e st })
+    in
+    refiner (fun tup ->
+        let x, st = ext1 tup in
+        let y, g = ext2 x in
+        f g (app st y))
+  ;;
+
+  let print_pair ?p x y =
+    match p with
+    | Some p -> Some (p x, p y)
+    | None -> None
+  ;;
+
+  let unif ?p x y = Listener.Unif (print_pair ?p x y)
+  let diseq ?p x y = Listener.Diseq (print_pair ?p x y)
 end
 
 module LogicAdder : sig
@@ -710,13 +739,193 @@ let qrs = three
 let qrst = four
 let qrstu = five
 
-let run n g h =
+let run ?listener n g h =
   let adder, reifier, ext, uncurr = n () in
-  let args, stream = ext @@ adder g @@ State.empty () in
+  let args, stream = ext @@ adder g @@ State.empty ?listener () in
   Stream.bind stream (fun st -> Stream.of_list @@ State.reify args st)
   |> Stream.map (fun answ ->
          uncurr h @@ reifier (Obj.magic @@ Answer.ctr_term answ) (Answer.env answ))
 ;;
+
+(* **************************************************************************************** *)
+
+let wc f st =
+  let x = State.wc st in
+  f x st
+;;
+
+module Fresh = struct
+  let succ prev f = call_fresh (fun x -> prev (f x))
+  let zero f = f
+  let one f = succ zero f
+  let two f = succ one f
+
+  (* N.B. Manual inlining of numerals will speed-up OCanren a bit (mainly because of less memory consumption) *)
+  (* let two   g = fun st ->
+      let scope = State.scope st in
+      let env = State.env st in
+      let q = Env.fresh ~scope env in
+      let r = Env.fresh ~scope env in
+      g q r st *)
+
+  let three f = succ two f
+  let four f = succ three f
+  let five f = succ four f
+  let q = one
+  let qr = two
+  let qrs = three
+  let qrst = four
+  let pqrst = five
+end
+
+type ('a, 'b) printer = ('a, 'b) Logic.reified -> string
+
+let make_cont g pid =
+  let open State in
+  fun ({ id } as st) ->
+    let cont_id = new_event ~pid (Listener.Cont id) st in
+    g { st with id = cont_id }
+;;
+
+let unify ?p x y =
+  Trace.(trace two @@ unif ?p) x y (fun st ->
+      let _t =
+        let module _ = struct
+          [%%if false]
+
+          let () =
+            unification_incr ();
+            Timer.make ()
+          ;;
+
+          [%%endif]
+        end
+        in
+        ()
+      in
+      match State.unify x y st with
+      | Some st ->
+        let module _ = struct
+          [%%if false]
+
+          let () = unification_time_incr _t
+
+          [%%endif]
+        end
+        in
+        success st
+      | None ->
+        let module _ = struct
+          [%%if false]
+
+          let () = unification_time_incr _t
+
+          [%%endif]
+        end
+        in
+        failure ~reason:"===" st)
+;;
+
+let ( === ) = unify
+
+let ( =/= ) ?p x y =
+  Trace.(trace two @@ diseq ?p)
+    x
+    y
+    (let open State in
+    fun ({ env; subst; ctrs; scope } as st) ->
+      match State.diseq x y st with
+      | Some st ->
+        let module _ = struct
+          [%%if false]
+
+          let () = delay_counter_incr ()
+
+          [%%endif]
+        end
+        in
+        success st
+      | None -> failure ~reason:"=/=" st)
+;;
+
+let diseq = ( =/= )
+let delay g st = Stream.from_fun (fun () -> g () st)
+
+let conj f g st =
+  let module _ = struct
+    [%%if false]
+
+    let () = conj_counter_incr ()
+
+    [%%endif]
+  end
+  in
+  Stream.bind (f st) g
+;;
+
+let debug_var v reifier call st =
+  let xs =
+    List.map
+      (fun answ -> reifier (Answer.env answ) (Obj.magic @@ Answer.ctr_term answ))
+      (State.reify v st)
+  in
+  call xs st
+;;
+
+let debug_lino ?(text = "") file col st =
+  Format.printf "%s %s %d\n%!" text file col;
+  success st
+;;
+
+let structural term rr k st =
+  let new_constraints = Prunes.extend (State.prunes st) (Obj.magic term) rr k in
+  match Prunes.check_last new_constraints (State.env st) (State.subst st) with
+  | Prunes.Violated -> failure ~reason:"structural" st
+  | NonViolated -> success { st with State.prunes = new_constraints }
+;;
+
+let ( &&& ) = conj
+
+let ( ?& ) gs st =
+  let id = State.new_event Listener.Conj st in
+  List.fold_right
+    (fun g acc st -> Stream.bind (acc { st with State.id }) (make_cont g id))
+    gs
+    success
+    st
+;;
+
+let compose = ( ?& )
+let disj_base f g st = Stream.mplus (f st) (Stream.from_fun (fun () -> g st))
+
+let disj f g st =
+  let module _ = struct
+    [%%if false]
+
+    let () = disj_counter_incr ()
+
+    [%%endif]
+  end
+  in
+  let st = State.new_scope st in
+  let st = { st with id = State.new_event Listener.Disj st } in
+  disj_base f g |> fun g -> Stream.from_fun (fun () -> g st)
+;;
+
+let ( ||| ) = disj
+
+let ( ?| ) gs st =
+  let st = State.enter_conde st in
+  let st = State.new_scope st in
+  let rec inner = function
+    | [ g ] -> g
+    | g :: gs -> disj_base g (inner gs)
+    | [] -> failwith "Wrong argument of (?!)"
+  in
+  inner gs |> fun g -> Stream.from_fun (fun () -> g st)
+;;
+
+let conde = ( ?| )
 
 let unif_hack x y rez st =
   match State.unify (Obj.magic x) (Obj.magic y) st with

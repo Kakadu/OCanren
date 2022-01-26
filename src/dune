@@ -19,6 +19,7 @@
     FM
     ;Tabling
     ;
+    Utils
     Pair
     Option
     Nat
