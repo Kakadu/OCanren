@@ -471,7 +471,7 @@ module State = struct
       | None -> id
     in
     let new_id = !lastId in
-    Format.printf "new event: (%d -> %d) %s\n%!" pid new_id (Listener.string_of_event e);
+    (* Format.printf "new event: (%d -> %d) %s\n%!" pid new_id (Listener.string_of_event e); *)
     (match listener with
     | Some listener -> listener#on_event e pid new_id
     | None -> ());
@@ -886,6 +886,24 @@ let structural term rr k st =
 
 let ( &&& ) = conj
 
+let list_fold_left1 ~f ~initer xs =
+  match xs with
+  | [] -> failwith "bad argument"
+  | x :: xs -> ListLabels.fold_left ~init:(initer x) ~f xs
+;;
+
+let ( ?& ) =
+  let open State in
+  fun xs st ->
+    let id = new_event Listener.Conj st in
+    list_fold_left1
+      ~initer:(fun x -> x)
+      xs
+      ~f:(fun acc g st -> Stream.bind (acc { st with id }) (fun st -> g { st with id }))
+    |> fun g -> Stream.from_fun (fun () -> g st)
+;;
+
+(*
 let ( ?& ) gs st =
   let id = State.new_event Listener.Conj st in
   List.fold_right
@@ -894,9 +912,23 @@ let ( ?& ) gs st =
     success
     st
 ;;
-
+ *)
 let compose = ( ?& )
 let disj_base f g st = Stream.mplus (f st) (Stream.from_fun (fun () -> g st))
+
+let list_fold_left1 ~f ~initer xs =
+  match xs with
+  | [] -> failwith "bad argument"
+  | x :: xs -> ListLabels.fold_left ~init:(initer x) ~f xs
+;;
+
+let list_fold_right1 ~f ~initer xs =
+  let rec helper = function
+    | [] -> failwith "bad_argument"
+    | xs -> list_fold_left1 ~initer ~f xs
+  in
+  helper (List.rev xs)
+;;
 
 let disj f g st =
   let module _ = struct
@@ -914,7 +946,17 @@ let disj f g st =
 
 let ( ||| ) = disj
 
-let ( ?| ) gs st =
+(* "mplus*" *)
+let rec ( ?| ) xs st =
+  let st = State.enter_conde st in
+  list_fold_right1
+    ~initer:(fun x -> x)
+    xs
+    ~f:(fun acc g st -> Stream.mplus (g st) @@ Stream.from_fun (fun () -> acc st))
+  |> fun g -> Stream.from_fun (fun () -> g st)
+;;
+
+(* let ( ?| ) gs st =
   let st = State.enter_conde st in
   let st = State.new_scope st in
   let rec inner = function
@@ -923,7 +965,7 @@ let ( ?| ) gs st =
     | [] -> failwith "Wrong argument of (?!)"
   in
   inner gs |> fun g -> Stream.from_fun (fun () -> g st)
-;;
+;; *)
 
 let conde = ( ?| )
 

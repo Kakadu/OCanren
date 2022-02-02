@@ -162,7 +162,11 @@ let rec decorate_type ctyp =
   | _                        -> ctyp
 
 
-
+let expr_list loc l =
+  List.fold_right
+  (fun head tail -> <:expr< [ $head$ :: $tail$ ] >>)
+  l
+  <:expr< [] >>
 
 EXTEND
   GLOBAL: expr ctyp str_item;
@@ -185,11 +189,15 @@ EXTEND
   expr: LEVEL "expr1" [
     [ "fresh"; "("; vars=LIST0 LIDENT; ")"; clauses=LIST1 expr LEVEL "." ->
       let body =
+        let clauses = expr_list loc clauses in
+        <:expr< OCanren.compose $clauses$ >>
+(*
         let conjunctions = fold_left1
           (fun acc x -> <:expr< conj ($acc$) ($x$) >>)
           clauses
         in
         <:expr< delay (fun () -> $conjunctions$) >>
+*)
       in
       let ans =
         let rec loop = function
