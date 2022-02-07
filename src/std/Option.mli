@@ -44,7 +44,7 @@ val inj : ('a -> 'b) -> 'a ground -> 'b logic
 type 'a groundi = 'a ground ilogic
 
 (** Make injected [option] from ground one with injected value *)
-(* val option : 'a ilogic ground -> 'a groundi *)
+val option : 'a ilogic ground -> 'a ilogic groundi
 
 (** Reifier *)
 val reify : ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t

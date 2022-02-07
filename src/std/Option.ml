@@ -64,11 +64,8 @@ let rec reify : 'a 'b . ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t =
     Env.Monad.return foo
   )
 
-let prj_exn : 'a 'b. ('a, 'b) Reifier.t ->
-  (* (int -> 'b) ->  *)
-  ('a groundi, 'b ground) Reifier.t
-    =
-  fun ra (* onvar *) ->
+let prj_exn : 'a 'b. ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t =
+  fun ra ->
     let open Env.Monad.Syntax in
     let* r = Reifier.prj_exn in
     let* fa = ra in
@@ -77,4 +74,4 @@ let prj_exn : 'a 'b. ('a, 'b) Reifier.t ->
 let some x  = Logic.inji (Some x)
 let none () = Logic.inji None
 
-(* let option : 'a . 'a ilogic ground -> 'a groundi = function None -> none () | Some x -> Logic.inji (Some (x)) *)
+let option = function None -> none () | Some x -> Logic.inji (Some (x))
