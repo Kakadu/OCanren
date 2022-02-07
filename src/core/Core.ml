@@ -783,7 +783,22 @@ module Unique = struct
         |> List.map (fun st0 -> Subst.reify (State.env st0) (State.subst st0) v)
       in
       let first = List.hd xs in
-      if Stdlib.List.for_all
+      let ( >>=? ) = Stdlib.Option.bind in
+      let result =
+        List.fold_left
+          (fun stacc v ->
+            stacc
+            >>=? fun st ->
+            Format.printf "v=%a, first = %a\n%!" Term.pp v Term.pp first;
+            State.unify (Obj.magic v) (Obj.magic first) st)
+          (Some st)
+          (List.tl xs)
+      in
+      (* Format.printf "%s %d\n%!" __FILE__ __LINE__; *)
+      match result with
+      | None -> ( === ) rez (Obj.magic DifferentAnswers) st
+      | Some st -> ( === ) rez (Obj.magic (Unique first)) st
+      (* if Stdlib.List.for_all
            (fun el ->
              (* let __ _ = Format.printf "  el = '%s'\n%!" (my_to_string el) in *)
              el = first)
@@ -793,6 +808,17 @@ module Unique = struct
         ( === ) rez (Obj.magic (Unique first)) st
       else
         (* let __ _ = List.iter (fun x -> Format.printf "%s\n%!" (my_to_string !!!x)) xs in *)
-        ( === ) rez (Obj.magic DifferentAnswers) st)
+        ( === ) rez (Obj.magic DifferentAnswers) st
+ *))
+  ;;
+
+  let%test _ =
+    let goal x = Fresh.two (fun u v -> conde [ x === u; x === v ]) in
+    not
+    @@ Stream.is_empty
+    @@ run
+         q
+         (fun q -> Fresh.one (fun rez -> unique_answers goal rez))
+         (fun rr -> rr#reify Logic.reify)
   ;;
 end
