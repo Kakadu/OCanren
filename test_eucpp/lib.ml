@@ -1,13 +1,293 @@
 open OCanren
 
+let ( <.> ) f g x = f (g x)
+let rec zed f x = f (zed f) x
+
+let rework_logic :
+      'a 'b.
+      fv:('a Env.m -> 'b Env.m)
+      -> ('a logic Env.m -> 'b logic Env.m)
+      -> 'a logic Env.m
+      -> 'b logic Env.m
+  =
+ fun ~fv fdeq x ->
+  let open Env.Monad in
+  let open Env.Monad.Syntax in
+  let* x = x in
+  match x with
+  | Var (v, xs) ->
+    let+ diseq = list_mapm ~f:fdeq xs in
+    Var (v, diseq)
+  | Value t ->
+    let+ inner = fv (return t) in
+    Value inner
+;;
+
+module TestNat = struct
+  open Std.Nat
+
+  type ground = Std.Nat.ground
+  type logic = Std.Nat.logic
+  type injected = Std.Nat.groundi
+
+  let fmap eta = GT.gmap t eta
+
+  let reify_with_compose : (groundi, Std.Nat.logic) Reifier.t =
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun self ->
+        Reifier.compose
+          Reifier.reify
+          (let* fr = self in
+           let rec foo = function
+             | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
+             | Value x -> Value (GT.gmap t fr x)
+           in
+           Env.Monad.return foo))
+  ;;
+
+  let reify : (groundi, Std.Nat.logic) Reifier.t =
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun self ->
+        let* rself = self in
+        let* r = OCanren.reify in
+        let rec foo x =
+          match r x with
+          | Value x -> Value (GT.gmap t rself x)
+          | Var (v, xs) -> Var (v, Stdlib.List.map (GT.gmap logic' (GT.gmap t foo)) xs)
+        in
+        Env.Monad.return foo)
+  ;;
+
+  let fmapt : 'a 'b. ('a, 'b) Reifier.t -> 'a t Env.Monad.t -> 'b t Env.Monad.t =
+   fun fa subj -> Env.Monad.(return (GT.gmap t) <*> fa <*> subj)
+ ;;
+
+  let (_prj_exn : (injected, ground) Reifier.t) =
+    let open Env.Monad in
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun self -> OCanren.prj_exn <..> Env.Monad.chain (fmapt self))
+  ;;
+
+  module _ (R : sig
+    val self : (injected, logic) Reifier.t
+    val chain : ('a Env.m -> 'b Env.m) -> ('a -> 'b) Env.m
+  end) =
+  struct
+    open R
+
+    let ( <..> ) = Env.Monad.( <..> )
+    let (_ : (injected t, logic t) Reifier.t) = Env.Monad.chain (fmapt self)
+    (* let (_ : int) = Reifier.fcomap OCanren.reify *)
+
+    let (_ : ('a OCanren.logic, 'b) Reifier.t -> ('a ilogic, 'b) Reifier.t) =
+      Reifier.compose OCanren.reify
+    ;;
+
+    let (_ : ('a, 'b ilogic) Reifier.t -> ('a, 'b OCanren.logic) Reifier.t) =
+     fun f -> Reifier.compose f OCanren.reify
+   ;;
+
+    let (_ : ('a, 'b ilogic) Reifier.t -> ('a, 'b OCanren.logic) Reifier.t) =
+     fun f -> Reifier.compose f OCanren.reify
+   ;;
+
+    let (_ : (logic t, 'a) Reifier.t -> (injected t, 'a) Reifier.t) =
+     fun x -> Reifier.compose (Env.Monad.chain (fmapt self)) x
+   ;;
+
+    let (_ :
+          (int -> 'a logic' list -> _) -> ('a OCanren.logic -> _) -> 'a ilogic -> 'b Env.m)
+      =
+     fun onvar onvalue x ->
+      Reifier.fix (fun self ->
+          let open Env.Monad.Syntax in
+          let* rsh = Reifier.reify in
+          Env.Monad.return
+            (match rsh x with
+            | Var (n, xs) -> onvar n xs
+            | Value _ as x -> onvalue x))
+   ;;
+
+    let (_ : (injected t ilogic -> logic t) Env.m) =
+      OCanren.prj_exn <..> chain (fmapt self)
+    ;;
+
+    let (_ : ('a, 'b) Reifier.t -> ('a t ilogic, 'b t) Reifier.t) =
+     fun self ->
+      (OCanren.prj_exn : ('d ilogic, 'd) Reifier.t)
+      <..> (chain (fmapt self) : ('a t, 'b t) Reifier.t)
+   ;;
+
+    let remove_monad : 'a Env.m -> 'a = fun _ -> assert false
+
+    type 'a m = 'a Env.m
+
+    let list_mapm : f:('a m -> 'b m) -> 'a list -> 'b list m = fun ~f x -> assert false
+    let return = Env.Monad.return
+
+    type ('a, 'b) arr = 'a -> 'b
+
+    let (_ : ('a, 'b) arr -> 'a t -> 'b t) = fmap
+    let (_ : ('a, 'b) arr m -> 'a t m -> 'b t m) = fmapt
+
+    let rework_logic :
+          'a 'b. fv:('a -> 'b) -> fdeq:('a logic' -> 'b logic') -> 'a logic' -> 'b logic'
+      =
+     fun ~fv ~fdeq -> function
+      | Var (v, xs) -> Var (v, Stdlib.List.map fdeq xs)
+      | Value t -> Value (fv t)
+   ;;
+
+    let __ : 'a 'b. ('a -> 'b) m -> ('a t logic' -> 'b t logic') m =
+     fun fa ->
+      let open Env.Monad.Syntax in
+      let* rf = fa in
+      let rec foo x = rework_logic ~fdeq:foo ~fv:(fmap rf) x in
+      return foo
+   ;;
+
+    let rework_logic2 :
+          'a 'b.
+          fv:('a m -> 'b m)
+          -> fdeq:('a logic' m -> 'b logic' m)
+          -> 'a logic' m
+          -> 'b logic' m
+      =
+     fun ~fv ~fdeq x ->
+      let open Env.Monad.Syntax in
+      let* x = x in
+      match x with
+      | Var (v, xs) -> return @@ Var (v, remove_monad @@ list_mapm ~f:fdeq xs)
+      | Value t -> return @@ Value (remove_monad (fv (Env.Monad.return t)))
+   ;;
+
+    let __ : 'a 'b. ('a -> 'b) m -> 'a t logic' m -> 'b t logic' m =
+     fun fa ->
+      let open Env.Monad.Syntax in
+      let rec foo x = rework_logic2 ~fdeq:foo ~fv:(fmapt fa) x in
+      foo
+   ;;
+
+    let __ : 'a 'b. ('a -> 'b) m -> ('a t logic' -> 'b t logic') m =
+     fun fa ->
+      let open Env.Monad.Syntax in
+      let rec foo x = rework_logic2 ~fdeq:foo ~fv:(fmapt fa) x in
+      chain foo
+   ;;
+
+    let reify : ('a, 'b) Reifier.t -> ('a t ilogic, 'b t OCanren.logic) Reifier.t =
+     fun fa ->
+      let open Env.Monad.Syntax in
+      Reifier.fix (fun self ->
+          Reifier.reify
+          <..>
+          let rec foo x = rework_logic2 ~fdeq:foo ~fv:(fmapt fa) x in
+          chain foo)
+   ;;
+
+    let rework_logic3 :
+          'a 'b.
+          fv:('a m -> 'b m)
+          -> fdeq:('a logic' m -> 'b logic' m)
+          -> 'a logic' m
+          -> 'b logic' m
+      =
+     fun ~fv ~fdeq x ->
+      let open Env.Monad.Syntax in
+      let* x = x in
+      match x with
+      | Var (v, xs) ->
+        let* diseq = list_mapm ~f:fdeq xs in
+        return @@ Var (v, diseq)
+      | Value t ->
+        let* inner = fv (Env.Monad.return t) in
+        return @@ Value inner
+   ;;
+
+    let reify : ('a, 'b) Reifier.t -> ('a t ilogic, 'b t OCanren.logic) Reifier.t =
+     fun fa ->
+      let open Env.Monad.Syntax in
+      Reifier.fix (fun self ->
+          Reifier.reify
+          <..>
+          let rec foo x = rework_logic2 ~fdeq:foo ~fv:(fmapt fa) x in
+          chain foo)
+   ;;
+  end
+
+  let (reify : (injected, logic) Reifier.t) =
+    let open Env.Monad in
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun self ->
+        Reifier.reify
+        <..> chain
+               (let rec foo x = rework_logic ~fv:(fmapt self) foo x in
+                foo))
+  ;;
+
+  let (reify : (injected, logic) Reifier.t) =
+    let open Env.Monad in
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun self ->
+        Reifier.reify <..> chain (zed (rework_logic ~fv:(fmapt self))))
+  ;;
+
+  let test () =
+    let goal q = fresh x (q === inji @@ S x) in
+    let xs : logic Stream.t = OCanren.(run q) goal (fun rr -> rr#reify reify) in
+    match Stream.take xs with
+    | [ Value (S (Var (_, _))) ] -> true
+    | _ -> false
+  ;;
+
+  (* ************************************* *)
+  let prj_exn : (groundi, Std.Nat.ground) Reifier.t =
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun self ->
+        let* rself = self in
+        let* r = OCanren.prj_exn in
+        let foo x = GT.gmap t rself (r x) in
+        Env.Monad.return foo)
+  ;;
+
+  let test_prj_exn () =
+    let goal q = fresh x (q === inji @@ S (inji O)) in
+    let xs : ground Stream.t = OCanren.(run q) goal (fun rr -> rr#reify prj_exn) in
+    match Stream.take xs with
+    | [ S O ] -> true
+    | _ -> false
+  ;;
+
+  let%test _ = test_prj_exn ()
+  let%test _ = test ()
+end
+
 (* example of reifiers for custom types *)
 module TestOption = struct
-  open OCanren.Std
+  type 'a t = 'a option =
+    | None
+    | Some of 'a
+  [@@deriving gt ~options:{ gmap }]
+
+  type 'a ground = 'a t
+  type 'a logic = 'a t OCanren.logic [@@deriving gt ~options:{ gmap }]
+  type 'a injected = 'a t OCanren.ilogic
+
+  let fmapt : 'a 'b. ('a, 'b) Reifier.t -> 'a t Env.Monad.t -> 'b t Env.Monad.t =
+   fun fa subj -> Env.Monad.(return (GT.gmap t) <*> fa <*> subj)
+ ;;
+
+  let prj_exn : 'a 'b. ('a, 'b) Reifier.t -> ('a injected, 'b ground) Reifier.t =
+   fun fa ->
+    let open Env.Monad in
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun _ -> OCanren.prj_exn <..> Env.Monad.chain (fmapt fa))
+ ;;
 
   (* test projection *)
   let%test _ =
     let goal q = q === inji @@ Some (inji 42) in
-    let xs : int option Stream.t =
+    let xs : int ground Stream.t =
       OCanren.(run q) goal (fun rr -> rr#reify (Std.Option.prj_exn Reifier.prj_exn))
     in
     match Stream.take xs with
@@ -15,11 +295,18 @@ module TestOption = struct
     | _ -> false
   ;;
 
+  let reify : 'a 'b. ('a, 'b) Reifier.t -> ('a injected, 'b logic) Reifier.t =
+   fun fa ->
+    let open Env.Monad in
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun _ -> Reifier.reify <..> chain (zed (rework_logic ~fv:(fmapt fa))))
+ ;;
+
   (* test reification *)
   let%test _ =
     let goal q = q === inji @@ Some (inji 42) in
-    let xs : int logic Option.logic Stream.t =
-      OCanren.(run q) goal (fun rr -> rr#reify (Option.reify Reifier.reify))
+    let xs : int OCanren.logic logic Stream.t =
+      OCanren.(run q) goal (fun rr -> rr#reify (reify Reifier.reify))
     in
     match Stream.take xs with
     | [ Value (Some (Value 42)) ] -> true
@@ -28,8 +315,8 @@ module TestOption = struct
 
   let%test _ =
     let goal q = success in
-    let xs : int logic Option.logic Stream.t =
-      OCanren.(run q) goal (fun rr -> rr#reify (Option.reify Reifier.reify))
+    let xs : int OCanren.logic logic Stream.t =
+      OCanren.(run q) goal (fun rr -> rr#reify (reify Reifier.reify))
     in
     match Stream.take xs with
     | [ Var (_, _) ] -> true
@@ -38,8 +325,8 @@ module TestOption = struct
 
   let%test _ =
     let goal q = fresh x (q === inji @@ Some x) in
-    let xs : int logic Option.logic Stream.t =
-      OCanren.(run q) goal (fun rr -> rr#reify (Option.reify Reifier.reify))
+    let xs : int OCanren.logic logic Stream.t =
+      OCanren.(run q) goal (fun rr -> rr#reify (reify Reifier.reify))
     in
     match Stream.take xs with
     | [ Value (Some (Var (_, _))) ] -> true
@@ -66,23 +353,32 @@ module TestNestedOption = struct
            Env.Monad.return foo))
   ;;
 
-  let reify : (ilogic, logic) Reifier.t =
+  let _reify_old : (ilogic, logic) Reifier.t =
     let open Env.Monad.Syntax in
     Reifier.fix (fun self ->
-        (* Format.printf "%s %d\n%!" __FILE__ __LINE__; *)
         let* rself = self in
-        (* Format.printf "%s %d\n%!" __FILE__ __LINE__; *)
         let* r = Reifier.reify in
         let rec foo x =
           match r x with
           | Var (v, xs) ->
-            let (_ : 'a OCanren.logic list) = xs in
+            let (_ : _ OCanren.logic list) = xs in
             Var
               (v, Stdlib.List.map (GT.gmap OCanren.logic (GT.gmap Std.Option.t rself)) xs)
-            (* Var (v, []) *)
           | Value t -> Value (Option.map rself t)
         in
         Env.Monad.return foo)
+  ;;
+
+  (* TODO: avoid open recursion *)
+  let fmapt : 'a 'b. ('a, 'b) Reifier.t -> 'a t Env.m -> 'b t Env.m =
+   fun fa subj -> Env.Monad.(return Option.map <*> fa <*> subj)
+ ;;
+
+  let reify : (ilogic, logic) Reifier.t =
+    let open Env.Monad in
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun self ->
+        Reifier.reify <..> chain (zed (rework_logic ~fv:(fmapt self))))
   ;;
 
   let test reifier =
@@ -95,49 +391,6 @@ module TestNestedOption = struct
 
   let%test _ = test reify_with_compose
   let%test _ = test reify
-end
-
-module TestNat = struct
-  open Std.Nat
-
-  let reify_with_compose : (groundi, Std.Nat.logic) Reifier.t =
-    let open Env.Monad.Syntax in
-    Reifier.fix (fun self ->
-        Reifier.compose
-          Reifier.reify
-          (let* fr = self in
-           let rec foo = function
-             | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
-             | Value x -> Value (GT.gmap t fr x)
-           in
-           Env.Monad.return foo))
-  ;;
-
-  (* works, but we can't move let* fr = self in higher *)
-  let reify : (groundi, Std.Nat.logic) Reifier.t =
-    let open Env.Monad.Syntax in
-    Reifier.fix (fun self ->
-        let* fr = self in
-        let* r = OCanren.reify in
-        let rec foo x =
-          match r x with
-          | Value x -> Value (GT.gmap t fr x)
-          | Var (v, xs) ->
-            let (_ : 'a logic' list) = xs in
-            Var (v, Stdlib.List.map (GT.gmap logic' (GT.gmap t foo)) xs)
-        in
-        Env.Monad.return foo)
-  ;;
-
-  let test () =
-    let goal q = fresh x (q === inji @@ S x) in
-    let xs : logic Stream.t = OCanren.(run q) goal (fun rr -> rr#reify reify) in
-    match Stream.take xs with
-    | [ Value (S (Var (_, _))) ] -> true
-    | _ -> false
-  ;;
-
-  let%test _ = test ()
 end
 
 (* Natural numbers not being tied-in-the-knot *)
@@ -166,19 +419,17 @@ module TestNat2 = struct
         Env.Monad.return foo)
  ;;
 
-  let test () =
+  let test reifier =
     let goal q = fresh x (q === inji @@ S x) in
-    let xs : _ Stream.t =
-      OCanren.(run q) goal (fun rr -> rr#reify (reify_open OCanren.reify))
-    in
+    let xs : _ Stream.t = OCanren.(run q) goal (fun rr -> rr#reify reifier) in
     match Stream.take xs with
     | [ Value (S (Var (_, _))) ] -> true
     | _ -> false
   ;;
 
-  let%test _ = test ()
+  let%test _ = test (reify_open OCanren.reify)
 
-  let reify : (('a injected as 'a), ('b logic as 'b)) Reifier.t =
+  let reify_old_style : (('a injected as 'a), ('b logic as 'b)) Reifier.t =
     let open Env.Monad.Syntax in
     Reifier.fix (fun self ->
         let* r = OCanren.reify in
@@ -192,13 +443,131 @@ module TestNat2 = struct
         Env.Monad.return foo)
   ;;
 
+  let%test _ = test reify_old_style
+
+  let fmapt : 'a 'b. ('a, 'b) Reifier.t -> 'a t Env.m -> 'b t Env.m =
+   fun fa subj -> Env.Monad.(return (GT.gmap t) <*> fa <*> subj)
+ ;;
+
+  (* WRONG *)
+  let reify_open_new : ('a, 'b) Reifier.t -> ('a ilogic, 'b logic) Reifier.t =
+   fun fa ->
+    let open Env.Monad in
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun _ -> Reifier.reify <..> chain (zed (rework_logic ~fv:(fmapt fa))))
+ ;;
+end
+
+module TestList = struct
+  type nonrec ('a, 'b) t =
+    | [] [@name "nil"]
+    | ( :: ) of 'a * 'b [@name "cons"]
+  [@@deriving gt ~options:{ gmap }]
+
+  type 'a ground = ('a, 'a ground) t
+  type 'a logic = ('a, 'a logic) t OCanren.logic
+  type 'a injected = ('a, 'a injected) t ilogic
+
+  let reify : 'a 'b. ('a, 'b) Reifier.t -> ('a injected, 'b logic) Reifier.t =
+   fun fa ->
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun self ->
+        let* (ra : 'a -> 'b) = fa in
+        let* rself = self in
+        let* r = OCanren.reify in
+        let rec foo x =
+          match r x with
+          | Value x -> Value (GT.gmap t ra rself x)
+          | Var (v, xs) ->
+            let (_ : ('a, 'a injected) t OCanren.logic list) = xs in
+            Var (v, Stdlib.List.map (GT.gmap OCanren.logic (GT.gmap t ra rself)) xs)
+        in
+        Env.Monad.return foo)
+ ;;
+
+  let prj_exn : 'a 'b. ('a, 'b) Reifier.t -> ('a injected, 'b ground) Reifier.t =
+   fun fa ->
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun self ->
+        let* (ra : 'a -> 'b) = fa in
+        let* rself = self in
+        let* r = OCanren.prj_exn in
+        let rec foo x =
+          match r x with
+          | x -> GT.gmap t ra rself x
+        in
+        Env.Monad.return foo)
+ ;;
+
   let test () =
-    let goal q = fresh x (q === inji @@ S x) in
-    let xs : _ Stream.t = OCanren.(run q) goal (fun rr -> rr#reify reify) in
+    let goal q = fresh x (q === inji @@ (x :: inji [])) in
+    let xs : _ Stream.t =
+      OCanren.(run q) goal (fun rr -> rr#reify (reify OCanren.reify))
+    in
     match Stream.take xs with
-    | [ Value (S (Var (_, _))) ] -> true
+    | [ Value (Var (_, _) :: Value []) ] -> true
+    | _ -> false
+  ;;
+
+  let test2 () =
+    let goal q = fresh x (q === inji @@ (inji 42 :: inji [])) in
+    let xs : _ Stream.t =
+      OCanren.(run q) goal (fun rr -> rr#reify (prj_exn OCanren.prj_exn))
+    in
+    match Stream.take xs with
+    | [ [ 42 ] ] -> true
     | _ -> false
   ;;
 
   let%test _ = test ()
+  let%test _ = test2 ()
+end
+
+module _ = struct
+  type ('a, 'b) t = ('a, 'b) Std.Pair.t [@@deriving gt ~options:{ gmap }]
+  type ground = (int Std.Option.t, string Std.Option.t) Std.Pair.t
+  type nonrec logic = (int logic Std.Option.logic, string Std.Option.logic) Std.Pair.logic
+
+  type injected =
+    (int ilogic Std.Option.groundi, string ilogic Std.Option.groundi) t ilogic
+
+  let fmapt :
+        'a 'b 'c 'd.
+        ('a, 'b) Reifier.t
+        -> ('c, 'd) Reifier.t
+        -> ('a, 'c) t Env.Monad.t
+        -> ('b, 'd) t Env.Monad.t
+    =
+   fun fa fb subj -> Env.Monad.(return (GT.gmap t) <*> fa <*> fb <*> subj)
+ ;;
+
+  let prj_exn : (injected, ground) Reifier.t =
+    let open Env.Monad in
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun _ ->
+        OCanren.prj_exn
+        <..> Env.Monad.chain
+               (fmapt
+                  (Std.Option.prj_exn OCanren.prj_exn)
+                  (Std.Option.prj_exn OCanren.prj_exn)))
+  ;;
+
+  (* test projection *)
+  let%test _ =
+    let goal q = q === inji (Std.Option.some (inji 42), Std.Option.some (inji "42")) in
+    let xs : ground Stream.t = OCanren.(run q) goal (fun rr -> rr#reify prj_exn) in
+    match Stream.take xs with
+    | [ (Some 42, Some "42") ] -> true
+    | _ -> false
+  ;;
+  (*
+  let reify : (injected, logic) Reifier.t =
+    let open Env.Monad in
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun _ ->
+        (* OCanren.reify
+        <..>  *)
+        Env.Monad.chain
+          (fmapt (Std.Option.reify OCanren.reify) (Std.Option.reify OCanren.reify)))
+  ;; *)
 end
