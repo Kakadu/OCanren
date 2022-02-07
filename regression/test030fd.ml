@@ -32,3 +32,12 @@ let _freeVars =
   runL   1  qrst  qrsth (REPR (rel3 [1;2;3]));
   runL   1  qrst  qrsth (REPR (rel3 [1;2;3;4]));
   ()
+
+let _ =
+  runL   1  qrs  qrsh (REPR (fun q r s ->
+    (FD.domain q [2;3])
+    &&& (FD.neq q r) &&& (FD.neq r s) &&& (FD.neq s q)
+    &&& (FD.domain r [2;3])
+    &&& (FD.domain s [2;3])
+    (* Hypothesis: adding domain doesn't recheck constraint *)
+    ))
