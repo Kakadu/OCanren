@@ -61,6 +61,7 @@ let is_open env x =
 
 let equal {anchor=a1} {anchor=a2} = (a1 = a2)
 
+let ( <.> ) f g x = f (g x)
 
 module Monad = struct
   type nonrec 'a t = t -> 'a
@@ -69,9 +70,30 @@ module Monad = struct
 
   let fmap f r env = f (r env)
 
+  let (<*>) f x env = f env (x env)
+
   let bind r k env = k (r env) env
+  let (>>=) = bind
+
+  let chain : 'a 'b . ('a t -> 'b t) -> ('a -> 'b) t = fun f env x -> f (return x) env
 
   module Syntax = struct
     let (let*) x f    = bind x f
+    let (let+) x f = fmap f x
   end
+  let ( <..> ) g f =
+    let open Syntax in
+    let* f = f in
+    let* g = g in
+    return (f <.> g)
+  ;;
+let list_mapm : f:('a t -> 'b t) -> 'a list -> 'b list t = fun ~f ->
+  let rec helper = function
+  | [] -> return []
+  | h :: tl -> f (return h) >>= fun h ->
+    helper tl >>= fun tl -> return (h::tl)
+  in
+  helper
 end
+
+type 'a m = 'a Monad.t

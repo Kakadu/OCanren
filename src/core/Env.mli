@@ -43,16 +43,23 @@ module Monad : sig
   (* `'a Env.t` --- essentially a reader monad *)
   type nonrec 'a t = t -> 'a
 
-  (* Usual boring monadic stuff *)
-
   val return : 'a -> 'a t
 
   val fmap : ('a -> 'b) -> 'a t -> 'b t
 
   val bind : 'a t -> ('a -> 'b t) -> 'b t
 
+  val (<*>):  ('a -> 'b) t -> 'a t -> 'b t
+
+  val chain :  ('a t -> 'b t) -> ('a -> 'b) t
+
+  val (<..>): ('a -> 'b) t -> ('b -> 'c) t -> ('a -> 'c) t
+  val list_mapm : f:('a t -> 'b t) -> 'a list -> 'b list t
   module Syntax : sig
     (* Monad *)
     val ( let* ) : 'a t -> ('a -> 'b t ) -> 'b t
+    val ( let+ ) : 'a t -> ('a -> 'b) -> 'b t
   end
 end
+
+type 'a m = 'a Monad.t
