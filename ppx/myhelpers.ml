@@ -25,6 +25,7 @@ module Located = struct
 
   (* let mknoloc txt = { txt; loc = Location.none } *)
   let map_loc ~f l = { l with txt = f l.txt }
+  let sprintf ~loc fmt = Caml.Format.kasprintf (mk ~loc) fmt
 end
 
 module Exp = struct

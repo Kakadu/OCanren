@@ -194,9 +194,25 @@ let%expect_test _ =
   ()
 ;;
 
+let string_cmp : (string, _) Base.Map.comparator =
+  (module struct
+    type t = string
+
+    let comparator = Base.String.comparator
+
+    type comparator_witness = Base.String.comparator_witness
+  end)
+;;
+
 type kind =
   | Reify
   | Prj_exn
+
+let manifest_of_tdecl_exn tdecl =
+  match tdecl.ptype_manifest with
+  | None -> failwiths ~loc:tdecl.ptype_loc "types without manifest are not allowed"
+  | Some m -> m
+;;
 
 let process_main ~loc base_tdecl (rec_, tdecl) =
   let is_rec =
@@ -293,16 +309,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       | Reify -> [%pat? reify], [%expr OCanren.reify], "reify"
       | Prj_exn -> [%pat? prj_exn], [%expr OCanren.prj_exn], "prj_exn"
     in
-    let manifest =
-      match tdecl.ptype_manifest with
-      | None ->
-        failwiths
-          ~loc:tdecl.ptype_loc
-          "types without manifest are not allowed %s %d"
-          Caml.__FILE__
-          Caml.__LINE__
-      | Some m -> m
-    in
+    let manifest = manifest_of_tdecl_exn tdecl in
     let add_args, add_heading, add_to_gmap =
       let loc = tdecl.ptype_loc in
       let args rhs =
@@ -323,17 +330,10 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
         in
         [%expr
           let open Env.Monad.Syntax in
-          let* _shallowr = [%e base_reifier] in
-          [%e
-            if is_rec
-            then
-              [%expr
-                Reifier.fix (fun rself ->
-                    Reifier.compose
-                      [%e base_reifier]
-                      (let* self = rself in
-                       [%e rhs]))]
-            else [%expr Reifier.compose [%e base_reifier] [%e rhs]]]]
+          Reifier.fix (fun rself ->
+              let* self = rself in
+              let* _shallowr = [%e base_reifier] in
+              [%e rhs])]
       in
       let add_to_gmap init =
         List.fold_left ~init names ~f:(fun acc s ->
@@ -350,22 +350,25 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       in
       helper ""
     in
-    let rec helper typ : _ list * expression =
+    let rec helper typ : (string, expression, _) Map.t * expression =
       match typ with
-      | { ptyp_desc = Ptyp_constr ({ txt = Lident "ground" }, _) } -> [], [%expr self]
-      | { ptyp_desc = Ptyp_var s } -> [], pexp_ident ~loc (Located.mk ~loc (lident s))
+      | { ptyp_desc = Ptyp_constr ({ txt = Lident "ground" }, _) } ->
+        Map.empty string_cmp, [%expr self]
+      | { ptyp_desc = Ptyp_var s } ->
+        Map.empty string_cmp, pexp_ident ~loc (Located.mk ~loc (lident s))
       | [%type: GT.int] | { ptyp_desc = Ptyp_constr ({ txt = Lident "int" }, []) } ->
-        [], [%expr _shallowr]
+        Map.empty string_cmp, [%expr _shallowr]
       | { ptyp_desc = Ptyp_constr ({ txt = Ldot (m, _) }, args) } ->
         let rhs = pexp_ident ~loc (Located.mk ~loc (Ldot (m, name))) in
         let name = rname_of_lident (Ldot (m, name)) in
         let acc, args =
           List.fold_right
             args
-            ~init:([ name, rhs ], [])
+            ~init:(Map.singleton string_cmp name rhs, [])
             ~f:(fun arg (acc, args) ->
               let acc2, arg0 = helper arg in
-              acc2 @ acc, arg0 :: args)
+              ( Map.merge_skewed acc2 acc ~combine:(fun ~key v1 v2 -> assert false)
+              , arg0 :: args ))
         in
         acc, Exp.apply ~loc (pexp_ident ~loc (Located.mk ~loc @@ lident name)) args
       | _ -> failwiths ~loc:typ.ptyp_loc "not supported: %a" Pprintast.core_type typ
@@ -373,23 +376,26 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
     let body, add_binds =
       match manifest.ptyp_desc with
       | Ptyp_constr ({ txt }, args) ->
-        let acc, add =
+        let apply_reifiers, acc, add =
           let foo = [%expr GT.gmap t] in
           let acc, args =
             List.fold_right
-              ~init:([], [])
+              ~init:(Map.empty string_cmp, [])
               ~f:(fun s (prefixes, args) ->
                 let prefix, arg = helper s in
-                prefix @ prefixes, (nolabel, arg) :: args)
+                ( Map.merge_skewed prefix prefixes ~combine:(fun ~key _ _ -> assert false)
+                , (nolabel, arg) :: args ))
               args
           in
-          acc, pexp_apply ~loc foo args
+          (fun f -> pexp_apply ~loc f args), acc, pexp_apply ~loc foo args
         in
-        ( inner_func add
+        ( inner_func add_to_gmap add
         , fun (init : expression) ->
-            List.fold_left acc ~init ~f:(fun acc (ident, rhs) ->
+            Map.fold acc ~init ~f:(fun ~key:ident ~data:rhs acc ->
                 [%expr
-                  let* [%p Pat.var ~loc (Located.mk ~loc ident)] = [%e rhs] in
+                  let* [%p Pat.var ~loc (Located.sprintf ~loc "myreify_%s" ident)] =
+                    [%e rhs]
+                  in
                   [%e acc]]) )
       | _ -> failwiths "should not happen %s %d" Caml.__FILE__ Caml.__LINE__
     in
@@ -401,31 +407,49 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
     pstr_value
       ~loc
       Nonrecursive
-      [ value_binding ~loc ~pat ~expr:[%expr [%e add_args (add_heading (add_binds body))]]
-      ]
+      [ value_binding ~loc ~pat ~expr:(add_args (add_heading (add_binds body))) ]
   in
   let make_reifier is_rec tdecl =
-    let manifest =
-      match tdecl.ptype_manifest with
-      | None ->
-        failwiths
-          ~loc:tdecl.ptype_loc
-          "types without manifest are not allowed %s %d"
-          Caml.__FILE__
-          Caml.__LINE__
-      | Some m -> m
-    in
+    let manifest = manifest_of_tdecl_exn tdecl in
+    let logic_typ = ltypify_exn ~ccompositional:true ~loc manifest in
     make_reifier_gen
       ~kind:Reify
       ~typ:
         (if List.is_empty tdecl.ptype_params
-        then
-          Some [%type: (_, [%t ltypify_exn ~ccompositional:true ~loc manifest]) Reifier.t]
+        then Some [%type: (_, [%t logic_typ]) Reifier.t]
         else None)
-      (fun add ->
+      (fun apply_reifiers add ->
+        (* Format.eprintf
+          "apply_reifiers works as %a\n%!"
+          Pprintast.expression
+          (apply_reifiers [%expr 1]); *)
+        let reifiers_as_arguments =
+          let rs =
+            let m = manifest_of_tdecl_exn tdecl in
+            let rec helper = function
+              | { ptyp_desc = Ptyp_var v; ptyp_loc = loc } ->
+                pexp_ident ~loc (Located.mk ~loc (lident v))
+              | [%type: ground] -> [%expr self]
+              | { ptyp_desc = Ptyp_constr ({ txt = Lident "ground" }, _); ptyp_loc = loc }
+                -> [%expr self]
+              | _ -> [%expr xxxx]
+            in
+            match m.ptyp_desc with
+            | Ptyp_constr (_, args) -> List.map ~f:helper args
+            | _ -> assert false
+          in
+          fun f -> List.fold_left rs ~init:f ~f:(fun f x -> [%expr [%e f] [%e x]])
+        in
         [%expr
-          let rec foo = function
-            | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
+          let rec foo smth =
+            match _shallowr smth with
+            | Var (v, xs) ->
+              Var
+                ( v
+                , Stdlib.List.map
+                    (* (GT.gmap OCanren.logic [%e reifiers_as_arguments [%expr GT.gmap t]]) *)
+                    (GT.gmap OCanren.logic [%e add])
+                    xs )
             | Value x -> Value ([%e add] x)
           in
           Env.Monad.return foo])
@@ -433,15 +457,7 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       tdecl
   in
   let make_prj_exn is_rec tdecl =
-    let manifest =
-      match tdecl.ptype_manifest with
-      | None ->
-        failwiths
-          "types without manifest are not allowed %s %d"
-          Caml.__FILE__
-          Caml.__LINE__
-      | Some m -> m
-    in
+    let manifest = manifest_of_tdecl_exn tdecl in
     make_reifier_gen
       ~kind:Prj_exn
       ~typ:
@@ -449,7 +465,10 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
         then
           Some [%type: (_, [%t gtypify_exn ~ccompositional:true ~loc manifest]) Reifier.t]
         else None)
-      (fun add -> [%expr Env.Monad.return [%e add]])
+      (fun _ add ->
+        [%expr
+          let rec foo x = [%e add] (_shallowr x) in
+          Env.Monad.return foo])
       is_rec
       tdecl
   in
