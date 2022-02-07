@@ -436,7 +436,9 @@ module FD = struct
   let domain v xs st =
     match FM.domain v xs (State.fds st) with
     | None -> failure ()
-    | Some fd -> success { st with State.fd }
+    | Some fd ->
+      Format.printf "== Domain added to %s\n%!" (Term.show (Obj.repr v));
+      success { st with State.fd }
   ;;
 end
 
@@ -822,3 +824,8 @@ module Unique = struct
          (fun rr -> rr#reify Logic.reify)
   ;;
 end
+
+let trace_domain_constraints st =
+  let () = FM.trace (State.fds st) in
+  success st
+;;

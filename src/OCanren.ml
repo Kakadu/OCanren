@@ -71,4 +71,6 @@ module Std =
     let only_head = Core.only_head
 
     let wc = Core.wc
+
+    let trace_domain_constraints = Core.trace_domain_constraints
   end

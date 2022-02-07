@@ -2,6 +2,7 @@ open Logic
 open Term
 open Format
 
+let pp_print_comma ppf () = Format.fprintf ppf ", "
 let use_logging = true
 let use_logging = false
 
@@ -27,24 +28,24 @@ let list_fold_lefti ~init ~f =
 
 let ( !!! ) = Obj.magic
 
-type var_idx = GT.int [@@deriving gt ~options:{ fmt }]
+type var_idx = GT.int [@@deriving gt ~options:{ fmt; compare }]
 
 type term0 =
   | Var of var_idx
   | Const of GT.int
-[@@deriving gt ~options:{ fmt }]
+[@@deriving gt ~options:{ fmt; compare }]
 
 type op =
   (* | LT *)
   (* | LE *)
   | EQ
   | NEQ
-[@@deriving gt ~options:{ fmt }]
+[@@deriving gt ~options:{ fmt; compare }]
 
 type phormula0 =
   | FMDom of var_idx * GT.int GT.list
   | FMBinop of op * term0 * term0
-[@@deriving gt ~options:{ fmt }]
+[@@deriving gt ~options:{ fmt; compare }]
 
 let pp_term ppf = function
   | Const n -> Format.pp_print_int ppf n
@@ -275,16 +276,65 @@ module MYZ3 = struct
    ;;
   end)
 
+  module PhSet = Stdlib.Set.Make (struct
+    type t = phormula0
+
+    let compare a b = GT.cmp_to_int @@ GT.compare phormula0 a b
+  end)
+
   type state =
     { solver : Z3.Solver.solver
     ; vars : (Z3.Expr.expr * int list option) IntMap.t
     ; sorts : Z3.Sort.sort IntListMap.t
-    ; phs : phormula0 list
+    ; phs : PhSet.t
     }
+
+  let trace { vars; phs } =
+    Format.printf "\027[%dm" 33;
+    let classify map =
+      let add_many k v map =
+        try
+          let vs = IntListMap.find k map in
+          IntListMap.add k (v :: vs) map
+        with
+        | Not_found -> IntListMap.add k [ v ] map
+      in
+      IntMap.fold
+        (fun k (_, v) acc ->
+          match v with
+          | Some d -> add_many d k acc
+          | None -> acc)
+        map
+        IntListMap.empty
+    in
+    let () =
+      let dom_to_vars = classify vars in
+      Format.printf "{| ";
+      dom_to_vars
+      |> IntListMap.iter (fun d vars ->
+             let open Format in
+             printf
+               "{%a} ∈ {%a}"
+               (pp_print_list ~pp_sep:pp_print_comma pp_print_int)
+               vars
+               (pp_print_list ~pp_sep:pp_print_comma pp_print_int)
+               d);
+      Format.printf " |}.\n%!"
+    in
+    Format.printf "%a\n%!" (GT.fmt GT.list pp_phormula)
+    @@ List.of_seq
+    @@ PhSet.to_seq
+    @@ PhSet.filter
+         (function
+           | FMDom _ -> false
+           | _ -> true)
+         phs;
+    Format.printf "\027[0m"
+  ;;
 
   let pp ppf { phs } =
     Format.fprintf ppf "{| ";
-    List.iter (Format.fprintf ppf "%a; " pp_phormula) phs;
+    PhSet.iter (Format.fprintf ppf "%a; " pp_phormula) phs;
     Format.fprintf ppf "|}"
   ;;
 
@@ -302,7 +352,9 @@ module MYZ3 = struct
       (match Z3.Solver.get_model solver with
       | None -> true
       | Some m ->
-        let __ _ =
+        let _ =
+          Format.printf "\027[%dm" 36;
+          Format.printf "model =";
           IntMap.iter
             (fun k (ve, _) ->
               Format.printf
@@ -310,6 +362,7 @@ module MYZ3 = struct
                 (Z3.Expr.to_string ve)
                 (Z3.Model.eval m ve false |> Stdlib.Option.get |> Z3.Expr.to_string))
             vars;
+          Format.printf "\027[0m";
           Format.printf "\n%!"
         in
         true)
@@ -317,7 +370,9 @@ module MYZ3 = struct
     | Z3.Solver.UNKNOWN -> assert false
   ;;
 
-  let make () = mk (Z3.Solver.mk_simple_solver ctx) IntMap.empty IntListMap.empty []
+  let make () =
+    mk (Z3.Solver.mk_simple_solver ctx) IntMap.empty IntListMap.empty PhSet.empty
+  ;;
 
   let clone { solver; vars; sorts; phs } =
     (* TODO: maybe we neeed a new context here *)
@@ -398,7 +453,7 @@ module MYZ3 = struct
             solver
             (IntMap.add vidx (v, Some ints) vars)
             (IntListMap.add ints sort sorts)
-            (ph0 :: phs))
+            (PhSet.add ph0 phs))
       | FMBinop (op, Var v1, Var v2) as ph ->
         let () =
           match IntMap.find_opt v1 vars, IntMap.find_opt v2 vars with
@@ -414,7 +469,7 @@ module MYZ3 = struct
           | None, _ | _, None ->
             Format.eprintf "Can't add to Z3 phormula %a\n%!" (GT.fmt phormula0) ph
         in
-        { s with phs = ph0 :: s.phs }
+        { s with phs = PhSet.add ph0 s.phs }
       | FMBinop (op, Const v1, Const _) -> assert false
       | FMBinop (op, Const n, Var v) | FMBinop (op, Var v, Const n) ->
         let vexpr, ints =
@@ -425,7 +480,7 @@ module MYZ3 = struct
         let vsort = Expr.get_sort vexpr in
         let rhs = Enumeration.get_const vsort (list_find_index n ints) in
         Solver.add solver [ makef op ctx vexpr rhs ];
-        { s with phs = ph0 :: s.phs }
+        { s with phs = PhSet.add ph0 s.phs }
     in
     on_phormula s ph0
   ;;
@@ -453,12 +508,14 @@ module type STORE = sig
   val extend : (term0 -> term0 -> phormula0) -> 'a -> 'b -> unit
   val extend_and_check : (term0 -> term0 -> phormula0) -> 'a -> 'b -> t -> t option
   val add_domain : Term.Var.t -> int list -> t -> t option
+  val trace : t -> unit
 end
 
 module Store = struct
   type t = MYSOLVER.state
 
   let empty () = MYSOLVER.make ()
+  let trace = MYSOLVER.trace
 
   let check store =
     match MYSOLVER.check store with
@@ -571,6 +628,7 @@ end
 
 type t = Store.t
 
+let trace = Store.trace
 let empty () = Store.empty ()
 
 let recheck_helper op (store : Store.t) (_prefix : Subst.Binding.t list) =

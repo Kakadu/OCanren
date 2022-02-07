@@ -380,3 +380,5 @@ module Unique : sig
   val different : ('a, 'b) injected
   val unique_answers : (('a, 'b) Logic.injected -> goal) -> ('a, 'b) injected -> goal
 end
+
+val trace_domain_constraints : goal
