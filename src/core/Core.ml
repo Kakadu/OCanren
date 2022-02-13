@@ -437,7 +437,7 @@ module FD = struct
     match FM.domain v xs (State.fds st) with
     | None -> failure ()
     | Some fd ->
-      Format.printf "== Domain added to %s\n%!" (Term.show (Obj.repr v));
+      (* Format.printf "%s: Domain added successfully to %s\n%!" __FILE__ (Term.show (Obj.repr v)); *)
       success { st with State.fd }
   ;;
 end

@@ -1,0 +1,7 @@
+(library
+ (name test_z3)
+ (modules test_z3)
+ (libraries z3)
+ (inline_tests)
+ (preprocess
+  (pps ppx_inline_test ppx_expect)))

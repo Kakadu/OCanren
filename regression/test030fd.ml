@@ -34,10 +34,13 @@ let _freeVars =
   ()
 
 let _ =
-  runL   1  qrs  qrsh (REPR (fun q r s ->
+  runL   1  qrs  qrsh (REPR (fun q r s -> fresh ()
+    (* One of domains should be known beforehand*)
     (FD.domain q [2;3])
-    &&& (FD.neq q r) &&& (FD.neq r s) &&& (FD.neq s q)
-    &&& (FD.domain r [2;3])
-    &&& (FD.domain s [2;3])
-    (* Hypothesis: adding domain doesn't recheck constraint *)
-    ))
+    (FD.neq q r)
+    (FD.neq r s)
+    (FD.neq q s)
+    (FD.domain r [2;3])
+    (FD.domain s [2;3])
+
+  ))

@@ -346,11 +346,35 @@ module MYZ3 = struct
 
   let mk solver vars sorts phs = { solver; vars; sorts; phs }
 
+  module Layer = struct
+    let mk_sort ctx name ints =
+      (* printf "\t\tEnumeration.mk_sort '%s' <domain>\n%!" name; *)
+      Enumeration.mk_sort
+        ctx
+        (Symbol.mk_string ctx name)
+        (Caml.List.map (Symbol.mk_int ctx) ints)
+    ;;
+
+    let mk_fresh_const ctx name sort =
+      (* printf "\t\tExpr.mk_fresh_const '%s' of '%s'\n%!" name (Sort.to_string sort); *)
+      Expr.mk_fresh_const ctx name sort
+    ;;
+
+    let add1 solver ph =
+      (* printf "\t\tadd '%s'\n%!" (Expr.to_string ph); *)
+      Solver.add solver [ ph ]
+    ;;
+
+    let check solver = Z3.Solver.check solver []
+  end
+
   let check { vars; solver } =
-    match Z3.Solver.check solver [] with
+    match Layer.check solver with
     | Z3.Solver.SATISFIABLE ->
       (match Z3.Solver.get_model solver with
-      | None -> true
+      | None ->
+        Format.printf "SAT but can't get a model\n%!";
+        true
       | Some m ->
         let _ =
           Format.printf "\027[%dm" 36;
@@ -366,7 +390,9 @@ module MYZ3 = struct
           Format.printf "\n%!"
         in
         true)
-    | Z3.Solver.UNSATISFIABLE -> false
+    | Z3.Solver.UNSATISFIABLE ->
+      (* Format.printf "UNSAT\n%!"; *)
+      false
     | Z3.Solver.UNKNOWN -> assert false
   ;;
 
@@ -404,15 +430,12 @@ module MYZ3 = struct
     in
     let on_phormula _s = function
       | FMDom (vidx, ints) ->
+        (* printf "\tTrying to add domain\n%!"; *)
         (match IntMap.find vidx vars with
         | vexpr, None ->
           let sort =
             try IntListMap.find ints sorts with
-            | Not_found ->
-              Enumeration.mk_sort
-                ctx
-                (Symbol.mk_string ctx @@ Printf.sprintf "sort_%d" vidx)
-                (Caml.List.map (Symbol.mk_int ctx) ints)
+            | Not_found -> Layer.mk_sort ctx (Printf.sprintf "sort_%d" vidx) ints
           in
           mk
             solver
@@ -434,13 +457,9 @@ module MYZ3 = struct
         | exception Not_found ->
           let sort =
             try IntListMap.find ints sorts with
-            | Not_found ->
-              Enumeration.mk_sort
-                ctx
-                (Symbol.mk_string ctx @@ Printf.sprintf "sort_%d" vidx)
-                (Caml.List.map (Symbol.mk_int ctx) ints)
+            | Not_found -> Layer.mk_sort ctx (Printf.sprintf "sort_%d" vidx) ints
           in
-          let v = Expr.mk_fresh_const ctx (sprintf "v%d" vidx) sort in
+          let v = Layer.mk_fresh_const ctx (sprintf "v%d" vidx) sort in
           let __ () =
             Format.(
               printf
@@ -455,21 +474,36 @@ module MYZ3 = struct
             (IntListMap.add ints sort sorts)
             (PhSet.add ph0 phs))
       | FMBinop (op, Var v1, Var v2) as ph ->
-        let () =
+        let new_vars =
           match IntMap.find_opt v1 vars, IntMap.find_opt v2 vars with
-          | Some (e1, dom1), Some (e2, dom2) -> Solver.add solver [ makef op ctx e1 e2 ]
+          | Some (e1, dom1), Some (e2, dom2) ->
+            (* printf
+              "== Adding binop between two known variables: '%s' and '%s'\n%!"
+              (Expr.to_string e1)
+              (Expr.to_string e2); *)
+            Layer.add1 solver (makef op ctx e1 e2);
+            vars
           | Some (e1, Some dom1), None ->
             let sort = IntListMap.find dom1 sorts in
-            let e2 = Expr.mk_fresh_const ctx (sprintf "v%d" v2) sort in
-            Solver.add solver [ makef op ctx e1 e2 ]
+            let e2 = Layer.mk_fresh_const ctx (sprintf "v%d" v2) sort in
+            (* printf
+              "== Left var is known, right is new: '%s' and '%s'\n%!"
+              (Expr.to_string e1)
+              (Expr.to_string e2); *)
+            Layer.add1 solver (makef op ctx e1 e2);
+            IntMap.add v2 (e2, Some dom1) vars
+            (* Solver.add solver [ makef op ctx e1 e2 ] *)
           | None, Some (e2, Some dom2) ->
             let sort = IntListMap.find dom2 sorts in
             let e1 = Expr.mk_fresh_const ctx (sprintf "v%d" v1) sort in
-            Solver.add solver [ makef op ctx e1 e2 ]
+            Layer.add1 solver (makef op ctx e1 e2);
+            vars
+            (* Solver.add solver [ makef op ctx e1 e2 ] *)
           | None, _ | _, None ->
-            Format.eprintf "Can't add to Z3 phormula %a\n%!" (GT.fmt phormula0) ph
+            Format.eprintf "Can't add to Z3 phormula %a\n%!" (GT.fmt phormula0) ph;
+            vars
         in
-        { s with phs = PhSet.add ph0 s.phs }
+        mk s.solver new_vars s.sorts (PhSet.add ph0 s.phs)
       | FMBinop (op, Const v1, Const _) -> assert false
       | FMBinop (op, Const n, Var v) | FMBinop (op, Var v, Const n) ->
         let vexpr, ints =
@@ -524,12 +558,15 @@ module Store = struct
   ;;
 
   let add_domain var dom state =
+    (* printf "%s %d\n%!" __FILE__ __LINE__; *)
     (* TODO: if the same domain is already assigned, maybe we can skip cloning *)
     let state = MYSOLVER.clone state in
     let state = MYSOLVER.extend state (FMDom (var.Term.Var.index, dom)) in
     match MYSOLVER.check state with
     | false -> None
-    | true -> Some state
+    | true ->
+      (* Format.printf "YES, add_domain said true\n%!"; *)
+      Some state
   ;;
 
   let clone = MYSOLVER.clone
