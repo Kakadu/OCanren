@@ -376,7 +376,7 @@ module MYZ3 = struct
         Format.printf "SAT but can't get a model\n%!";
         true
       | Some m ->
-        let _ =
+        let __ () =
           Format.printf "\027[%dm" 36;
           Format.printf "model =";
           IntMap.iter
