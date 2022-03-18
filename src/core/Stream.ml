@@ -105,6 +105,15 @@ let force x =
   | xs -> xs
 ;;
 
+let rec force_all x =
+  match x with
+  | Thunk zz -> force_all (zz ())
+  | Nil -> Nil
+  | Cons (h, t) -> Cons (h, force_all t)
+  | _ -> assert false 
+;;
+
+
 let rec mplus xs ys =
   let module _ = struct
     [%%if false]

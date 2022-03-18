@@ -82,6 +82,8 @@ val ( ?| ) : goal list -> goal
 (** [conde] is a synonym for [?|] *)
 val conde : goal list -> goal
 
+val conde_no_int : goal list -> goal
+
 (** [?& [s1; s2; ...; sk]] calculates [s1 &&& (s2 && ... &&& sk)...)] for a non-empty list of goals
     (note the {i right} association)
 *)

@@ -620,6 +620,18 @@ let ( ?| ) gs st =
 
 let conde = ( ?| )
 
+(* conde without interleaving *)
+let conde_no_int gs st =
+  let disj_base f g st = Stream.mplus (Stream.force_all (g st)) (Stream.from_fun (fun () -> f st)) in
+  let st = State.new_scope st in
+  let rec inner = function
+    | [ g ] -> g
+    | g :: gs -> disj_base g (inner gs)
+    | [] -> failwith "Wrong argument of (?!)"
+  in
+  inner gs |> fun g -> Stream.from_fun (fun () -> g st)
+;;
+
 let call_fresh f st =
   let x = State.fresh st in
   f x st
