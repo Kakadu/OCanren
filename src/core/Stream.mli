@@ -74,7 +74,9 @@ val mplus : 'a t -> 'a t -> 'a t
   *   maps function [f] over values of the stream [s],
   *    obtaining a stream of streams ['b t t], and then flattens this stream
   *)
-val bind : 'a t -> ('a -> 'b t) -> 'b t
+val bind : 'a t -> ('a -> 'a t) -> 'a t
+
+val old_bind : 'a t -> ('a -> 'b t) -> 'b t
 
 (** [retrieve ~n:n s] returns the list of [n]-first elements of [s] and the rest of the stream *)
 val retrieve : ?n:int -> 'a t -> 'a list * 'a t

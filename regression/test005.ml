@@ -89,7 +89,7 @@ let run_lam eta = run_r GLam.prj_exn GLam.show_rlam eta
 let run_string eta = run_r OCanren.prj_exn (GT.show GT.string) eta
 let run_typ eta = run_r GTyp.prj_exn GTyp.show_rtyp eta
 
-let () =
+let __ () =
   run_lam    1 q qh (REPR (fun q -> lookupo varX (inj_list_p [])  q                                   ));
   run_lam    1 q qh (REPR (fun q -> lookupo varX (inj_list_p [(varX, v varX)]) q                    ));
   run_lam    1 q qh (REPR (fun q -> lookupo varX (inj_list_p [(varY, v varY); (varX, v varX)]) q    ));
@@ -112,8 +112,8 @@ let runT n = run_r GTyp.reify GTyp.show_ltyp n
 let runL n = run_r GLam.reify GLam.show_llam n
 
 let () =
-  runEnv   1   q   qh (REPR (fun q -> lookupo varX q (v varY)                                       ));
+  (* runEnv   1   q   qh (REPR (fun q -> lookupo varX q (v varY)                                       ));
   runT     1   q   qh (REPR (fun q -> infero (abs varX (v varX)) q                                  ));
   runT     1   q   qh (REPR (fun q -> infero (abs varF (abs varX (app (v varF) (v varX)))) q        ));
-  runT     1   q   qh (REPR (fun q -> infero (abs varX (abs varF (app (v varF) (v varX)))) q        ));
+  runT     1   q   qh (REPR (fun q -> infero (abs varX (abs varF (app (v varF) (v varX)))) q        )); *)
   runL     1   q   qh (REPR (fun q -> infero q (arr (p varX) (p varX))                              ))

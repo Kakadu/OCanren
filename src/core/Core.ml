@@ -624,7 +624,7 @@ let qrstu = five
 let run n g h =
   let adder, reifier, ext, uncurr = n () in
   let args, stream = ext @@ adder g @@ State.empty () in
-  Stream.bind stream (fun st -> Stream.of_list @@ State.reify args st)
+  Stream.old_bind stream (fun st -> Stream.of_list @@ State.reify args st)
   |> Stream.map (fun answ ->
     uncurr h @@ reifier (Obj.magic @@ Answer.ctr_term answ) (Answer.env answ)
   )
