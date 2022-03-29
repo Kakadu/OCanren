@@ -622,7 +622,9 @@ let conde = ( ?| )
 
 (* conde without interleaving *)
 let conde_no_int gs st =
-  let disj_base f g st = Stream.mplus (Stream.force_all (g st)) (Stream.from_fun (fun () -> f st)) in
+  let disj_base f g st =
+    Stream.mplus (Stream.force_all (g st)) (Stream.from_fun (fun () -> f st))
+  in
   let st = State.new_scope st in
   let rec inner = function
     | [ g ] -> g
@@ -808,22 +810,9 @@ module Unique = struct
           (Some st)
           (List.tl xs)
       in
-      (* Format.printf "%s %d\n%!" __FILE__ __LINE__; *)
       match result with
       | None -> ( === ) rez (Obj.magic DifferentAnswers) st
-      | Some st -> ( === ) rez (Obj.magic (Unique first)) st
-      (* if Stdlib.List.for_all
-           (fun el ->
-             (* let __ _ = Format.printf "  el = '%s'\n%!" (my_to_string el) in *)
-             el = first)
-           xs
-      then
-        (* let __ _ = Format.printf "first = '%s'\n%!" (my_to_string first) in *)
-        ( === ) rez (Obj.magic (Unique first)) st
-      else
-        (* let __ _ = List.iter (fun x -> Format.printf "%s\n%!" (my_to_string !!!x)) xs in *)
-        ( === ) rez (Obj.magic DifferentAnswers) st
- *))
+      | Some st -> ( === ) rez (Obj.magic (Unique first)) st)
   ;;
 
   let%test _ =
@@ -840,4 +829,11 @@ end
 let trace_domain_constraints st =
   let () = FM.trace (State.fds st) in
   success st
+;;
+
+let is_free var gthen gelse st =
+  match State.reify (Obj.magic !!!var) st with
+  | [ v ] when Term.is_var (Obj.magic v) -> gthen st
+  | [] -> failure st
+  | _ -> gelse st
 ;;
