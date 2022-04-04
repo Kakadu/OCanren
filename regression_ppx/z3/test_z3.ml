@@ -26,6 +26,6 @@ let%expect_test "?" =
   in
   [%expect {xxx|
 
-      	3: [ { 2 -> 'int<2>' }{ 4 -> 'int<4>' } ] {| |}
+      	unsat
     |xxx}]
 ;;
