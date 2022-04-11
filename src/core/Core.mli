@@ -33,6 +33,7 @@ type goal = State.t Stream.t goal'
     parameter *)
 val call_fresh : (('a, 'b) injected -> goal) -> goal
 
+val named_fresh : string -> (('a, 'b) injected -> goal) -> goal
 val wc : (('a, 'b) injected -> goal) -> goal
 
 (** [x === y] creates a goal, which performs a unification of [x] and [y] *)

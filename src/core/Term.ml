@@ -1,6 +1,6 @@
 (*
  * OCanren.
- * Copyright (C) 2015-2017
+ * Copyright (C) 2015-2012
  * Dmitri Boulytchev, Dmitry Kosarev, Alexey Syomin, Evgeny Moiseenko
  * St.Petersburg State University, JetBrains Research
  *
@@ -53,11 +53,12 @@ module Var = struct
     ; index : int
     ; mutable subst : Obj.t option
     ; scope : scope
+    ; name : string option
     ; constraints : Obj.t list
     }
 
-  let make ~env ~scope index =
-    { env; anchor = global_anchor; subst = None; constraints = []; index; scope }
+  let make ?(name = None) ~env ~scope index =
+    { env; anchor = global_anchor; subst = None; constraints = []; index; scope; name }
   ;;
 
   let is_wildcard { index } = index = -42

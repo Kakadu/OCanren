@@ -31,8 +31,8 @@ let empty () =
 
 let create ~anchor = { anchor; next = first_var }
 
-let fresh ~scope e =
-  let v = Obj.magic (Term.Var.make ~env:e.anchor ~scope e.next) in
+let fresh ?(name = None) ~scope e =
+  let v = Obj.magic (Term.Var.make ~name ~env:e.anchor ~scope e.next) in
   e.next <- 1 + e.next;
   Obj.magic v
 ;;

@@ -30,6 +30,7 @@ module Var : sig
     ; index : int
     ; mutable subst : Obj.t option
     ; scope : scope
+    ; name : string option
     ; constraints : Obj.t list
     }
 
@@ -38,7 +39,7 @@ module Var : sig
   val new_scope : unit -> scope
   val valid_anchor : anchor -> bool
   val dummy : t
-  val make : env:env -> scope:scope -> int -> t
+  val make : ?name:string option -> env:env -> scope:scope -> int -> t
   val reify : ('a -> 'b) -> t -> int * 'b list
   val equal : t -> t -> bool
   val compare : t -> t -> int

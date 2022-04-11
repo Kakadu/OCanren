@@ -333,6 +333,7 @@ module State = struct
   let prunes { prunes } = prunes
   let fds { fd } = fd
   let fresh { env; scope } = Env.fresh ~scope env
+  let named_fresh name { env; scope } = Env.fresh ~name:(Some name) ~scope env
   let wc { env; scope } = Env.wc ~scope env
   let new_scope st = { st with scope = Term.Var.new_scope () }
 
@@ -647,6 +648,10 @@ let conde_no_int gs st =
 
 let call_fresh f st =
   let x = State.fresh st in
+  f x st
+;;
+let named_fresh n f st =
+  let x = State.named_fresh n st in
   f x st
 ;;
 
