@@ -29,6 +29,7 @@ module Std =
   struct
 
     module Pair    = Pair
+    module Triple  = Triple
     module Option  = Option
     module Bool    = Bool
     module Nat     = Nat
