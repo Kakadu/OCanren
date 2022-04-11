@@ -37,3 +37,11 @@
     fresh _11 (FD.domain _11 [1; 2]) (q =/= (pair _11 __))
       (q === (pair (!! 1) (!! 1))) (_11 =/= (!! 2)), all answers {
   }
+  fun q ->
+    fresh () (q =/= (!! 1)) (FD.domain q [1; 2]) trace_domain_constraints
+      (q =/= (!! 2)) success, all answers {
+  {| {10} ∈ {1, 2} |}.
+  []
+  }
+  fun q -> fresh () (q =/= (!! 1)) (q =/= (!! 2)) (FD.domain q [1; 2]) success, all answers {
+  }

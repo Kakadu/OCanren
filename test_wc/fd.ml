@@ -141,3 +141,21 @@ let _ =
           (q === pair !!1 !!1)
           (_11 =/= !!2))]
 ;;
+
+let _ =
+  [%tester
+    run_int (-1) (fun q ->
+        fresh
+          ()
+          (q =/= !!1)
+          (FD.domain q [ 1; 2 ])
+          trace_domain_constraints
+          (q =/= !!2)
+          success)]
+;;
+
+let _ =
+  [%tester
+    run_int (-1) (fun q ->
+        fresh () (q =/= !!1) (q =/= !!2) (FD.domain q [ 1; 2 ]) success)]
+;;

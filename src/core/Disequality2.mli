@@ -10,4 +10,6 @@ end
 
 module Make : functor (E : EXTRA) -> sig
   include DISEQ_SIG.S with type extra = E.t
+
+  val pp : Format.formatter -> t -> unit
 end

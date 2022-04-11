@@ -384,4 +384,5 @@ module Unique : sig
 end
 
 val trace_domain_constraints : goal
+val trace_diseq_constraints : goal
 val is_free : ('a, 'b) injected -> goal -> goal -> goal

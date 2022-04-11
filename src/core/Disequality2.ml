@@ -251,7 +251,9 @@ module Make (FDC : EXTRA) = struct
     (** returns true if not violated *)
     val shallow_recheck : extra -> t -> bool
 
+    val shallow_recheck_gen : extra -> t -> extra option
     val extract : t -> Term.Var.t -> Obj.t list
+    val propagate_to_fdc : t -> extra -> extra option
   end = struct
     module LLL = struct
       include Set.Make (Conjunct)
@@ -373,26 +375,27 @@ module Make (FDC : EXTRA) = struct
       | Violated -> Stdlib.Result.error `Violated
     ;;
 
-    let shallow_recheck extra { conjs; _ } =
-      let next_extra =
-        LLL.fold
-          (fun conj acc ->
-            (* printf "conj = %a\n" Conjunct.pp conj; *)
-            match acc with
-            | None -> None
-            | Some extra ->
-              if FDC.is_interesting_var Subst.Binding.(conj.var) extra
-              then
-                (* let () = printf "conj = %a is interesting\n " Conjunct.pp conj in *)
-                FDC.neq
-                  (Obj.magic Subst.Binding.(conj.var))
-                  (Obj.magic Subst.Binding.(conj.term))
-                  extra
-              else acc)
-          conjs
-          (Some extra)
-      in
-      match next_extra with
+    let shallow_recheck_gen extra { conjs; _ } =
+      LLL.fold
+        (fun conj acc ->
+          (* printf "conj = %a\n" Conjunct.pp conj; *)
+          match acc with
+          | None -> None
+          | Some extra ->
+            if FDC.is_interesting_var Subst.Binding.(conj.var) extra
+            then
+              (* let () = printf "conj = %a is interesting\n " Conjunct.pp conj in *)
+              FDC.neq
+                (Obj.magic Subst.Binding.(conj.var))
+                (Obj.magic Subst.Binding.(conj.term))
+                extra
+            else acc)
+        conjs
+        (Some extra)
+    ;;
+
+    let shallow_recheck extra t =
+      match shallow_recheck_gen extra t with
       | None -> false
       | Some _ -> true
     ;;
@@ -436,6 +439,8 @@ module Make (FDC : EXTRA) = struct
       with
       | Violated -> None
     ;;
+
+    let propagate_to_fdc cstr extra = shallow_recheck_gen extra cstr
 
     let extract { conjs } v =
       let helper acc xs =
@@ -617,6 +622,20 @@ module Make (FDC : EXTRA) = struct
           let __ () =
             log "New FDC constraints:";
             FDC.trace extra
+          in
+          let extra =
+            if DisjSet.cardinal newc = 1
+            then (
+              let disjunct = DisjSet.min_elt newc in
+              match Disjunct.shallow_recheck_gen extra disjunct with
+              | None -> raise Violated
+              | Some extra -> extra)
+            else (
+              let __ () =
+                print_endline "shallow_recheck_gen is not applicable ";
+                Format.printf "%a\n%!" pp newc
+              in
+              extra)
           in
           Some (newc, extra)))
     with

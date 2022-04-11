@@ -336,12 +336,18 @@ module State = struct
   let wc { env; scope } = Env.wc ~scope env
   let new_scope st = { st with scope = Term.Var.new_scope () }
 
+  let ( >>=? ) x f =
+    match x with
+    | Some a -> f a
+    | None -> None
+  ;;
+
+  let check_diseqs st =
+    Disequality.recheck (env st) (subst st) (constraints st) [] (fds st)
+    >>=? fun (ctrs, fd) -> Some { st with ctrs; fd }
+  ;;
+
   let unify x y ({ env; subst; ctrs; scope; fd } as st) =
-    let ( >>=? ) x f =
-      match x with
-      | Some a -> f a
-      | None -> None
-    in
     Subst.unify ~scope env subst x y
     >>=? fun (prefix, subst) ->
     Disequality.recheck env subst ctrs prefix fd
@@ -439,7 +445,11 @@ module FD = struct
     | None -> failure ()
     | Some fd ->
       (* Format.printf "%s: Domain added successfully to %s\n%!" __FILE__ (Term.show (Obj.repr v)); *)
-      success { st with State.fd }
+      let st = { st with State.fd } in
+      (match State.check_diseqs st with
+      | None -> failure
+      | Some st -> success)
+        st
   ;;
 end
 
@@ -829,6 +839,11 @@ end
 
 let trace_domain_constraints st =
   let () = FM.trace (State.fds st) in
+  success st
+;;
+
+let trace_diseq_constraints st =
+  let () = Format.printf "%a\n%!" State.Disequality.pp (State.constraints st) in
   success st
 ;;
 
