@@ -33,3 +33,7 @@
     fresh _11 (FD.domain _11 [1; 2]) (_11 =/= (!! 2)) (q === (pair _11 __))
       (q =/= (pair (!! 1) __)), all answers {
   }
+  fun q ->
+    fresh _11 (FD.domain _11 [1; 2]) (q =/= (pair _11 __))
+      (q === (pair (!! 1) (!! 1))) (_11 =/= (!! 2)), all answers {
+  }
