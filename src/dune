@@ -20,6 +20,7 @@
     ;Tabling
     ;
     Pair
+    Triple
     Option
     Nat
     Listo

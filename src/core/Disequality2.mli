@@ -5,6 +5,7 @@ module type EXTRA = sig
 
   val neq : (int, int logic) injected -> (int, int logic) injected -> t -> t option
   val is_interesting_var : Term.Var.t -> t -> bool
+  val trace : t -> unit
 end
 
 module Make : functor (E : EXTRA) -> sig

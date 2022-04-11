@@ -48,6 +48,14 @@ let run_pair eta =
     eta
 ;;
 
+let run_triple eta =
+  runR
+    (Triple.reify OCanren.reify OCanren.reify OCanren.reify)
+    (GT.show Triple.ground (GT.show GT.int) (GT.show GT.int) (GT.show GT.int))
+    (GT.show Triple.logic show_intl show_intl show_intl)
+    eta
+;;
+
 let _ = [%tester run_pair (-1) (fun q -> fresh x (q =/= pair __ !!1) (q === pair !!1 __))]
 let _ = [%tester run_int (-1) (fun q -> fresh () (FD.domain q [ 1; 2 ]))]
 let _ = [%tester run_int (-1) (fun q -> fresh () (FD.domain q [ 1; 2 ]) (q =/= !!1))]
@@ -121,4 +129,15 @@ let _ =
           (* trace_domain_constraints *)
           (q === pair _11 __)
           (q =/= pair !!1 __))]
+;;
+
+let _ =
+  [%tester
+    run_pair (-1) (fun q ->
+        fresh
+          _11
+          (FD.domain _11 [ 1; 2 ])
+          (q =/= pair _11 __)
+          (q === pair !!1 !!1)
+          (_11 =/= !!2))]
 ;;

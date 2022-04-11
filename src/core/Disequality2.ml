@@ -17,7 +17,6 @@ let log fmt =
   else Format.ifprintf Format.std_formatter fmt
 ;;
 
-(* *)
 open Term
 
 let is_wc_var v =
@@ -33,6 +32,7 @@ module type EXTRA = sig
 
   val neq : (int, int logic) injected -> (int, int logic) injected -> t -> t option
   val is_interesting_var : Term.Var.t -> t -> bool
+  val trace : t -> unit
 end
 
 let rec a_la_cartesian = function
@@ -248,6 +248,9 @@ module Make (FDC : EXTRA) = struct
       -> t
       -> (t list * extra) option
 
+    (** returns true if not violated *)
+    val shallow_recheck : extra -> t -> bool
+
     val extract : t -> Term.Var.t -> Obj.t list
   end = struct
     module LLL = struct
@@ -370,6 +373,30 @@ module Make (FDC : EXTRA) = struct
       | Violated -> Stdlib.Result.error `Violated
     ;;
 
+    let shallow_recheck extra { conjs; _ } =
+      let next_extra =
+        LLL.fold
+          (fun conj acc ->
+            (* printf "conj = %a\n" Conjunct.pp conj; *)
+            match acc with
+            | None -> None
+            | Some extra ->
+              if FDC.is_interesting_var Subst.Binding.(conj.var) extra
+              then
+                (* let () = printf "conj = %a is interesting\n " Conjunct.pp conj in *)
+                FDC.neq
+                  (Obj.magic Subst.Binding.(conj.var))
+                  (Obj.magic Subst.Binding.(conj.term))
+                  extra
+              else acc)
+          conjs
+          (Some extra)
+      in
+      match next_extra with
+      | None -> false
+      | Some _ -> true
+    ;;
+
     let recheck_exn env subst _bnds extra { wcs; conjs } =
       (* For every conjunct we should check that this conjuct is a sensible constraint.
          For every wildcard variable we should check that they could be inhabited. (but let's implement it later)
@@ -403,27 +430,7 @@ module Make (FDC : EXTRA) = struct
           ( List.filter_map
               (fun conjs ->
                 let conjs = LLL.of_seq conjs in
-                let next_extra =
-                  LLL.fold
-                    (fun conj acc ->
-                      (* log "conj = %a\n" Conjunct.pp conj; *)
-                      match acc with
-                      | None -> None
-                      | Some extra ->
-                        if FDC.is_interesting_var Subst.Binding.(conj.var) extra
-                        then
-                          (* let () = log "conj = %a is interesting\n " Conjunct.pp conj in *)
-                          FDC.neq
-                            (Obj.magic Subst.Binding.(conj.var))
-                            (Obj.magic Subst.Binding.(conj.term))
-                            extra
-                        else acc)
-                    conjs
-                    (Some extra)
-                in
-                match next_extra with
-                | None -> None
-                | Some _ -> Some { wcs; conjs })
+                if shallow_recheck extra { wcs; conjs } then Some { wcs; conjs } else None)
               (CartesianHacks.cartesian_seq conjs |> List.of_seq)
           , extra )
       with
@@ -544,22 +551,28 @@ module Make (FDC : EXTRA) = struct
         (* let ans = Stdlib.List.map Disjunct.(conj d) cstrs in *)
         (* let (_ : t) = a_la_cartesian [ d; cstrs ] in *)
         (* let ans = disj d cstrs in *)
-        log "cstrs : %a\n%!" pp cstrs;
-        log "d     : %a\n%!" pp d;
-        let ans =
-          if is_empty d
-          then cstrs
-          else if is_empty cstrs
-          then d
-          else
+        log "cstrs : %a" pp cstrs;
+        log "d     : %a" pp d;
+        if is_empty d
+        then Some (cstrs, extra)
+        else if is_empty cstrs
+        then Some (d, extra)
+        else (
+          let whole_set =
             CartesianHacks.cartesian2_seq
               (DisjSet.to_seq d)
               (DisjSet.to_seq cstrs)
               ~f:Disjunct.conj
             |> DisjSet.of_seq
-        in
-        (* Format.printf "all disjuncts: %a\n%!" pp ans; *)
-        Some (ans, extra))
+          in
+          assert (DisjSet.cardinal whole_set <> 0);
+          (* if all constraints are violated, it is bad *)
+          let filtered_set = DisjSet.filter (Disjunct.shallow_recheck extra) whole_set in
+          if DisjSet.cardinal filtered_set = 0
+          then None
+          else (
+            let () = log "all disjuncts: %a" pp filtered_set in
+            Some (filtered_set, extra))))
   ;;
 
   let recheck env subst cs bnds extra =
@@ -581,8 +594,9 @@ module Make (FDC : EXTRA) = struct
             extra, acc
           | Some (d, extra) ->
             (* We have an updated disjunct *)
-            (* log "Updated disjunct %s %d: %a" __FILE__ __LINE__ Disjunct.pp d; *)
-            extra, List.fold_left (fun acc x -> DisjSet.add x acc) acc d)
+            let dset = List.fold_left (fun acc x -> DisjSet.add x acc) acc d in
+            log "Updated disjunct %s %d: %a" __FILE__ __LINE__ pp dset;
+            extra, dset)
         (extra, DisjSet.empty)
         store
       |> snd
@@ -598,8 +612,13 @@ module Make (FDC : EXTRA) = struct
         then (
           log "%s %d" __FILE__ __LINE__;
           raise Violated)
-        else (* log "recheck successful %s %d" __FILE__ __LINE__; *)
-          Some (newc, extra))
+        else (
+          let () = log "recheck successful %s %d" __FILE__ __LINE__ in
+          let __ () =
+            log "New FDC constraints:";
+            FDC.trace extra
+          in
+          Some (newc, extra)))
     with
     | Violated ->
       log "got exception Violated %s %d" __FILE__ __LINE__;
@@ -660,6 +679,7 @@ module _ = struct
 
     let neq _ _ _ = assert false
     let is_interesting_var _ _ = assert false
+    let trace _ = ()
   end)
 
   let make_var i = Obj.magic (Term.Var.make ~env:0 ~scope:Term.Var.non_local_scope i)

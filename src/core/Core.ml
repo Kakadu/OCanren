@@ -302,6 +302,7 @@ module State = struct
 
     let neq = FM.neq
     let is_interesting_var = FM.is_interesting_var
+    let trace = FM.trace
   end)
 
   type t =
