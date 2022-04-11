@@ -5,12 +5,16 @@ open Format
 let pp_print_comma ppf () = Format.fprintf ppf ", "
 let use_logging = true
 let use_logging = false
+let trace_models = true
+let trace_models = false
 
 let log fmt =
   if use_logging
   then Format.kasprintf (fun s -> Format.printf "%s\n%!" s) fmt
   else Format.ifprintf Format.std_formatter fmt
 ;;
+
+let trace_a_model m f = f m
 
 let rec fold_cps ~f ~init xs =
   match xs with
@@ -376,18 +380,22 @@ module MYZ3 = struct
         Format.printf "SAT but can't get a model\n%!";
         true
       | Some m ->
-        let __ () =
-          Format.printf "\027[%dm" 36;
-          Format.printf "model =";
-          IntMap.iter
-            (fun k (ve, _) ->
-              Format.printf
-                "%s -> %s "
-                (Z3.Expr.to_string ve)
-                (Z3.Model.eval m ve false |> Stdlib.Option.get |> Z3.Expr.to_string))
-            vars;
-          Format.printf "\027[0m";
-          Format.printf "\n%!"
+        let () =
+          if trace_models
+          then
+            trace_a_model m (fun m ->
+                Format.printf "\027[%dm" 36;
+                Format.printf "model =";
+                IntMap.iter
+                  (fun k (ve, _) ->
+                    Format.printf
+                      "%s -> %s "
+                      (Z3.Expr.to_string ve)
+                      (Z3.Model.eval m ve false |> Stdlib.Option.get |> Z3.Expr.to_string))
+                  vars;
+                Format.printf "\027[0m";
+                Format.printf "\n%!")
+          else ()
         in
         true)
     | Z3.Solver.UNSATISFIABLE ->

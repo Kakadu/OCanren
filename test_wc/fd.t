@@ -25,3 +25,11 @@
       (x =/= (!! 2)) (q === (Option.some x)), all answers {
   q=Some (_.11 [=/= 1; =/= 2; =/= _.-42]);
   }
+  fun q ->
+    fresh _11 (FD.domain _11 [1; 2]) (_11 =/= (!! 2)) (q =/= (pair _11 __))
+      (q === (pair (!! 1) (!! 1))), all answers {
+  }
+  fun q ->
+    fresh _11 (FD.domain _11 [1; 2]) (_11 =/= (!! 2)) (q === (pair _11 __))
+      (q =/= (pair (!! 1) __)), all answers {
+  }

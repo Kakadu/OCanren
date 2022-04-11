@@ -57,18 +57,6 @@ let _ =
     run_int (-1) (fun q -> fresh () (FD.domain q [ 1; 2 ]) (q =/= !!1) (q =/= !!2))]
 ;;
 
-let _ =
-  [%tester
-    run_pair (-1) (fun q ->
-        fresh
-          _25
-          (FD.domain _25 [ 1; 2 ])
-          (q =/= pair _25 __)
-          (* (_25 =/= !!1) *)
-          (q === pair !!1 !!1)
-          trace_domain_constraints)]
-;;
-
 (* let _ = exit 0 *)
 
 let _ =
@@ -109,4 +97,28 @@ let _ =
           (x =/= !!1)
           (x =/= !!2)
           (q === Option.some x))]
+;;
+
+let _ =
+  [%tester
+    run_pair (-1) (fun q ->
+        fresh
+          _11
+          (FD.domain _11 [ 1; 2 ])
+          (_11 =/= !!2)
+          (* trace_domain_constraints *)
+          (q =/= pair _11 __)
+          (q === pair !!1 !!1))]
+;;
+
+let _ =
+  [%tester
+    run_pair (-1) (fun q ->
+        fresh
+          _11
+          (FD.domain _11 [ 1; 2 ])
+          (_11 =/= !!2)
+          (* trace_domain_constraints *)
+          (q === pair _11 __)
+          (q =/= pair !!1 __))]
 ;;

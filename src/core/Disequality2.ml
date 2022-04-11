@@ -400,8 +400,30 @@ module Make (FDC : EXTRA) = struct
             (LLL.to_seq conjs)
         in
         Some
-          ( List.map
-              (fun conjs -> { wcs; conjs = LLL.of_seq conjs })
+          ( List.filter_map
+              (fun conjs ->
+                let conjs = LLL.of_seq conjs in
+                let next_extra =
+                  LLL.fold
+                    (fun conj acc ->
+                      (* log "conj = %a\n" Conjunct.pp conj; *)
+                      match acc with
+                      | None -> None
+                      | Some extra ->
+                        if FDC.is_interesting_var Subst.Binding.(conj.var) extra
+                        then
+                          (* let () = log "conj = %a is interesting\n " Conjunct.pp conj in *)
+                          FDC.neq
+                            (Obj.magic Subst.Binding.(conj.var))
+                            (Obj.magic Subst.Binding.(conj.term))
+                            extra
+                        else acc)
+                    conjs
+                    (Some extra)
+                in
+                match next_extra with
+                | None -> None
+                | Some _ -> Some { wcs; conjs })
               (CartesianHacks.cartesian_seq conjs |> List.of_seq)
           , extra )
       with
