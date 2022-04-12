@@ -214,35 +214,58 @@ let rec iter ~fvar ~fval x =
     fval x)
 ;;
 
-let rec show x =
-  (* if Obj.is_block x
-  then ( *)
-  let tx = Obj.tag x in
-  if is_box tx
-  then (
-    let sx = Obj.size x in
-    if has_var_structure tx sx x
-    then (
-      let v = Obj.magic x in
-      match v.Var.constraints with
-      | [] -> Printf.sprintf "_.%d" v.Var.index
-      | cs ->
-        Printf.sprintf "_.%d{=/= %s}" v.Var.index (String.concat "; " @@ List.map show cs))
-    else (
-      let rec inner i = if i < sx then (show @@ Obj.field x i) :: inner (i + 1) else [] in
-      Printf.sprintf "boxed %d <%s>" tx (String.concat ", " @@ inner 0)))
-  else (
-    is_valid_tag_exn tx;
-    if tx = Obj.int_tag
-    then Printf.sprintf "int<%d>" @@ Obj.magic x
-    else if tx = Obj.string_tag
-    then Printf.sprintf "string<%s>" @@ Obj.magic x
-    else if tx = Obj.double_tag
-    then Printf.sprintf "double<%e>" @@ Obj.magic x
-    else assert false)
+let describe_var ppf Var.{ index; name } =
+  Format.fprintf ppf "_.%d" index;
+  match name with
+  | None -> ()
+  | Some s -> Format.fprintf ppf "「%s」" s
 ;;
 
-let pp ppf x = Format.fprintf ppf "%s" (show x)
+let pp =
+  let open Format in
+  let rec helper ppf x =
+    let tx = Obj.tag x in
+    if is_box tx
+    then (
+      let sx = Obj.size x in
+      if has_var_structure tx sx x
+      then (
+        let v = Obj.magic x in
+        match v.Var.constraints with
+        | [] -> describe_var ppf v
+        | cs ->
+          fprintf
+            ppf
+            "%a{=/= %a}"
+            describe_var
+            v
+            (pp_print_list ~pp_sep:(fun ppf () -> fprintf ppf "; ") helper)
+            cs)
+      else (
+        let rec inner i : unit =
+          if i < sx
+          then (
+            if i > 0 then fprintf ppf ", ";
+            helper ppf (Obj.field x i);
+            inner (i + 1))
+        in
+        fprintf ppf "boxed %d <" tx;
+        inner 0;
+        fprintf ppf ">"))
+    else (
+      is_valid_tag_exn tx;
+      if tx = Obj.int_tag
+      then fprintf ppf "int<%d>" @@ Obj.magic x
+      else if tx = Obj.string_tag
+      then fprintf ppf "string<%s>" @@ Obj.magic x
+      else if tx = Obj.double_tag
+      then fprintf ppf "double<%e>" @@ Obj.magic x
+      else failwith "Dynamic pretty printing of some special tags is not supported")
+  in
+  helper
+;;
+
+let show x = Format.asprintf "%a" pp x
 
 let rec fold ~fvar ~fval ~init x =
   let tx = Obj.tag x in
