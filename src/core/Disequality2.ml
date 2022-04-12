@@ -200,7 +200,7 @@ module Make (FDC : EXTRA) = struct
     type t = Subst.Binding.t
 
     let pp ppf Subst.Binding.{ var; term } =
-      Format.fprintf ppf "{ %d -> '%s' }" var.Term.Var.index (Term.show term)
+      Format.fprintf ppf "{ %a <> '%s' }" Term.describe_var var (Term.show term)
     ;;
 
     let compare = Subst.Binding.compare

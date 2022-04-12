@@ -113,6 +113,7 @@ val fold2
   -> 'a
 
 val show : t -> string
+val describe_var : Format.formatter -> Var.t -> unit
 val pp : Format.formatter -> t -> unit
 val equal : t -> t -> bool
 val compare : t -> t -> int
