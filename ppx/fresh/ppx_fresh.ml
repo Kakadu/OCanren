@@ -139,24 +139,24 @@ exception Not_an_ident
 
 let reconstruct_args e =
   let open Longident in
-  let are_all_idents (xs : (_ * expression) list) =
+  let extract_idents (xs : (_ * expression) list) =
     try
       Some
         (List.map xs ~f:(fun (_, e) ->
              match e.pexp_desc with
-             | Pexp_ident { txt = Longident.Lident i; _ } -> i
+             | Pexp_ident { txt = Longident.Lident i; loc } -> i, loc
              | _ -> raise Not_an_ident))
     with
     | Not_an_ident -> None
   in
   match e.pexp_desc with
-  | Pexp_apply ({ pexp_desc = Pexp_ident { txt = Longident.Lident arg1; _ } }, ys) ->
+  | Pexp_apply ({ pexp_desc = Pexp_ident { txt = Longident.Lident arg1; loc } }, ys) ->
     (* fresh (var1 var2 var3) body *)
-    option_map (are_all_idents ys) ~f:(fun xs -> arg1 :: xs)
+    option_map (extract_idents ys) ~f:(fun xs -> (arg1, loc) :: xs)
   (* no fresh variables: just for geting rid of &&&  *)
   | Pexp_construct ({ txt = Lident "()" }, None) -> Some []
   (* [fresh arg0 body] -- single fresh variable  *)
-  | Pexp_ident { txt = Lident arg1; _ } -> Some [ arg1 ]
+  | Pexp_ident { txt = Lident arg1; loc } -> Some [ arg1, loc ]
   | _ -> None
 ;;
 
@@ -226,13 +226,13 @@ let mapper =
           match classify_fresh e1 with
           | `Other -> failwith "Should not happen"
           | `NormalFresh ->
-            fun ident rhs ->
+            fun (ident, loc) rhs ->
               [%expr
                 Fresh.one
                   (fun [%p Pat.var ~loc (Ast_builder.Default.Located.mk ident ~loc)] ->
                     [%e rhs])]
           | `NamedFresh ->
-            fun ident rhs ->
+            fun (ident, loc) rhs ->
               [%expr
                 OCanren.named_fresh
                   [%e pexp_constant ~loc (Pconst_string (ident, loc, None))]
@@ -240,7 +240,7 @@ let mapper =
                     [%e rhs])]
         in
         (match reconstruct_args args with
-        | Some (xs : string list) ->
+        | Some xs ->
           let ans =
             List.fold_right
               xs
