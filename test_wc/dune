@@ -1,5 +1,5 @@
 (executables
- (names main unique debug_var fd)
+ (names main unique debug_var fd cut_off)
  (preprocess
   (pps
    OCanren-ppx.ppx_wildcard
@@ -9,4 +9,4 @@
  (libraries OCanren OCanren.tester))
 
 (cram
- (deps ./main.exe ./unique.exe ./debug_var.exe ./fd.exe))
+ (deps ./main.exe ./unique.exe ./debug_var.exe ./fd.exe ./cut_off.exe))

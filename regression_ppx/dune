@@ -3,7 +3,7 @@
  (modules test006fresh_)
  (libraries OCanren OCanren.tester)
  (preprocess
-  (pps OCanren-ppx.ppx_fresh OCanren-ppx.ppx_repr)))
+  (pps OCanren-ppx.ppx_fresh OCanren-ppx.ppx_repr OCanren-ppx.ppx_wildcard)))
 
 (cram
  (deps ./test006fresh_.exe))
