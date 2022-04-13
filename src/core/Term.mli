@@ -45,7 +45,7 @@ module Var : sig
   val compare : t -> t -> int
   val hash : t -> int
   val is_wildcard : t -> bool
-  val make_wc : env:env -> scope:scope -> t
+  val make_wc : ?name:string option -> env:env -> scope:scope -> t
 end
 
 module VarSet : sig

@@ -1,6 +1,6 @@
 (*
  * OCanren.
- * Copyright (C) 2015-2012
+ * Copyright (C) 2015-2022
  * Dmitri Boulytchev, Dmitry Kosarev, Alexey Syomin, Evgeny Moiseenko
  * St.Petersburg State University, JetBrains Research
  *
@@ -62,7 +62,7 @@ module Var = struct
   ;;
 
   let is_wildcard { index } = index = -42
-  let make_wc ~env ~scope = make ~env ~scope (-42)
+  let make_wc ?(name = None) ~env ~scope = make ~name ~env ~scope (-42)
 
   let dummy =
     let env = 0 in

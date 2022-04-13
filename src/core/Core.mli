@@ -35,6 +35,7 @@ val call_fresh : (('a, 'b) injected -> goal) -> goal
 
 val named_fresh : string -> (('a, 'b) injected -> goal) -> goal
 val wc : (('a, 'b) injected -> goal) -> goal
+val named_wc : string -> (('a, 'b) injected -> goal) -> goal
 
 (** [x === y] creates a goal, which performs a unification of [x] and [y] *)
 val ( === ) : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal
@@ -387,3 +388,4 @@ end
 val trace_domain_constraints : goal
 val trace_diseq_constraints : goal
 val is_free : ('a, 'b) injected -> goal -> goal -> goal
+val cut_off_wc_diseq_without_domain : goal

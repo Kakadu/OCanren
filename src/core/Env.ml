@@ -37,7 +37,7 @@ let fresh ?(name = None) ~scope e =
   Obj.magic v
 ;;
 
-let wc ~scope e = Obj.magic (Term.Var.make_wc ~env:e.anchor ~scope)
+let wc ?(name = None) ~scope e = Obj.magic (Term.Var.make_wc ~name ~env:e.anchor ~scope)
 let check env v = v.Term.Var.env = env.anchor
 
 let check_exn env v =

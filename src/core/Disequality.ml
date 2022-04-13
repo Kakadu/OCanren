@@ -542,6 +542,8 @@ let reify env subst cstore x =
   Conjunct.reify env subst (combine env subst cstore) x
 ;;
 
+let cut_off_wc_without_domain = Stdlib.Option.some
+
 let%expect_test "addition" =
   Printf.printf "%d" (1 + 2);
   [%expect {| 3 |}]

@@ -335,6 +335,7 @@ module State = struct
   let fresh { env; scope } = Env.fresh ~scope env
   let named_fresh name { env; scope } = Env.fresh ~name:(Some name) ~scope env
   let wc { env; scope } = Env.wc ~scope env
+  let named_wc name { env; scope } = Env.wc ~name:(Some name) ~scope env
   let new_scope st = { st with scope = Term.Var.new_scope () }
 
   let ( >>=? ) x f =
@@ -406,6 +407,12 @@ module State = struct
     | diseqs ->
       ListLabels.map diseqs ~f:(fun diseq ->
           Answer.make env (helper diseq [] val_in_subst))
+  ;;
+
+  let cut_off_wc_diseq_without_domain st =
+    match Disequality.cut_off_wc_without_domain st.ctrs with
+    | None -> None
+    | Some new_ctrs -> Some { st with ctrs = new_ctrs }
   ;;
 end
 
@@ -650,8 +657,9 @@ let call_fresh f st =
   let x = State.fresh st in
   f x st
 ;;
-let named_fresh n f st =
-  let x = State.named_fresh n st in
+
+let named_fresh name f st =
+  let x = State.named_fresh name st in
   f x st
 ;;
 
@@ -660,7 +668,10 @@ let wc f st =
   f x st
 ;;
 
-(* let __ = Term.Var.make_wc () *)
+let named_wc name f st =
+  let x = State.named_wc name st in
+  f x st
+;;
 
 module Fresh = struct
   let succ prev f = call_fresh (fun x -> prev (f x))
@@ -857,4 +868,10 @@ let is_free var gthen gelse st =
   | [ v ] when Term.is_var (Obj.magic v) -> gthen st
   | [] -> failure st
   | _ -> gelse st
+;;
+
+let cut_off_wc_diseq_without_domain st =
+  match State.cut_off_wc_diseq_without_domain st with
+  | Some st -> success st
+  | None -> failure st
 ;;

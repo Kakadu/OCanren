@@ -254,6 +254,7 @@ module Make (FDC : EXTRA) = struct
     val shallow_recheck_gen : extra -> t -> extra option
     val extract : t -> Term.Var.t -> Obj.t list
     val propagate_to_fdc : t -> extra -> extra option
+    val is_violated_rigorously : t -> bool
   end = struct
     module LLL = struct
       include Set.Make (Conjunct)
@@ -286,6 +287,11 @@ module Make (FDC : EXTRA) = struct
       then { conjs = LLL.empty; wcs = VarSet.(add !!!var empty) }
       else { conjs = LLL.singleton Subst.Binding.{ var; term }; wcs = VarSet.empty }
    ;;
+
+    let is_violated_rigorously { wcs } =
+      (* TODO: assert that wildcard variables didn't get into conjs *)
+      not (VarSet.is_empty wcs)
+    ;;
 
     let pp ppf { wcs; conjs } =
       Format.fprintf ppf "[ ";
@@ -644,6 +650,18 @@ module Make (FDC : EXTRA) = struct
       None
   ;;
 
+  let cut_off_wc_without_domain : t -> t option =
+   fun store ->
+    (* TODO *)
+    if DisjSet.is_empty store
+    then Some store
+    else (
+      let new_store =
+        DisjSet.filter (fun d -> not (Disjunct.is_violated_rigorously d)) store
+      in
+      if DisjSet.is_empty new_store then None else Stdlib.Option.some store)
+ ;;
+
   let merge_disjoint _ = failwith "merge_disjoint is not implemented"
 
   module Answer = struct
@@ -699,6 +717,7 @@ module _ = struct
     let neq _ _ _ = assert false
     let is_interesting_var _ _ = assert false
     let trace _ = ()
+    (* let cut_off_wc_without_domain t = Option.some t *)
   end)
 
   let make_var i = Obj.magic (Term.Var.make ~env:0 ~scope:Term.Var.non_local_scope i)
