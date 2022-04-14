@@ -57,4 +57,4 @@ let run_triple eta =
 ;;
 
 let _ = [%tester run_int (-1) (fun q -> q =/= __ &&& trace_diseq_constraints)]
-(* let _ = [%tester run_int (-1) (fun q -> q =/= __ &&& cut_off_wc_diseq_without_domain)] *)
+let _ = [%tester run_int (-1) (fun q -> q =/= __ &&& cut_off_wc_diseq_without_domain)]

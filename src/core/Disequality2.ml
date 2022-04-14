@@ -354,9 +354,7 @@ module Make (FDC : EXTRA) = struct
             | WcNVar var when FDC.is_interesting_var var extra ->
               (* log "is interesting"; *)
               { wcs = VarSet.add var wcs; conjs }, extra
-            | WcNVar var ->
-              (* no domain spec., so domain is infinited => violated *)
-              raise ToRemove
+            | WcNVar var -> { conjs; wcs = VarSet.add var wcs }, extra
             | WcNSmth term ->
               (* log "WcNSmth"; *)
               { wcs; conjs }, extra
@@ -727,7 +725,7 @@ module _ = struct
     Format.printf "%a" pp (disequality_of_terms v1 v1);
     [%expect {xxx|
       All disjuncts (1)
-      	0: [ { 1 -> '_.1' } ] {| |}
+      	0: [ { _.1 <> '_.1' } ] {| |}
     |xxx}]
   ;;
 
@@ -738,8 +736,8 @@ module _ = struct
     [%expect
       {xxx|
       All disjuncts (2)
-      	0: [ { 1 -> 'int<1>' } ] {| |}
-      	1: [ { 2 -> 'int<2>' } ] {| |}
+      	0: [ { _.1 <> 'int<1>' } ] {| |}
+      	1: [ { _.2 <> 'int<2>' } ] {| |}
     |xxx}]
   ;;
 
@@ -749,7 +747,7 @@ module _ = struct
     Format.printf "%a" pp (disequality_of_terms !!!(1, v1) !!!(2, v2));
     [%expect {xxx|
       All disjuncts (1)
-      	0: [ { 1 -> '_.2' } ] {| |}
+      	0: [ { _.1 <> '_.2' } ] {| |}
     |xxx}]
   ;;
 
@@ -759,7 +757,7 @@ module _ = struct
     Format.printf "%a" pp (disequality_of_terms !!!(1, v1) !!!(2, v2));
     [%expect {xxx|
       All disjuncts (1)
-      	0: [ { 1 -> '_.2' } ] {| |}
+      	0: [ { _.1 <> '_.2' } ] {| |}
     |xxx}]
   ;;
 
@@ -777,18 +775,18 @@ module _ = struct
     [%expect
       {xxx|
       All disjuncts (2)
-      	0: [ { 1 -> 'int<1>' } ] {| |}
-      	1: [ { 2 -> 'int<2>' } ] {| |}
+      	0: [ { _.1 <> 'int<1>' } ] {| |}
+      	1: [ { _.2 <> 'int<2>' } ] {| |}
 
       All disjuncts (2)
-      	0: [ { 3 -> 'int<3>' } ] {| |}
-      	1: [ { 4 -> 'int<4>' } ] {| |}
+      	0: [ { _.3 <> 'int<3>' } ] {| |}
+      	1: [ { _.4 <> 'int<4>' } ] {| |}
 
       All disjuncts (4)
-      	0: [ { 1 -> 'int<1>' }{ 3 -> 'int<3>' } ] {| |}
-      	1: [ { 1 -> 'int<1>' }{ 4 -> 'int<4>' } ] {| |}
-      	2: [ { 2 -> 'int<2>' }{ 3 -> 'int<3>' } ] {| |}
-      	3: [ { 2 -> 'int<2>' }{ 4 -> 'int<4>' } ] {| |}
+      	0: [ { _.1 <> 'int<1>' }{ _.3 <> 'int<3>' } ] {| |}
+      	1: [ { _.1 <> 'int<1>' }{ _.4 <> 'int<4>' } ] {| |}
+      	2: [ { _.2 <> 'int<2>' }{ _.3 <> 'int<3>' } ] {| |}
+      	3: [ { _.2 <> 'int<2>' }{ _.4 <> 'int<4>' } ] {| |}
     |xxx}]
   ;;
 end
