@@ -279,15 +279,6 @@ module Make (FDC : EXTRA) = struct
     let empty = { wcs = VarSet.empty; conjs = LLL.empty }
     let is_empty { conjs; wcs } = LLL.is_empty conjs && VarSet.is_empty wcs
 
-    let singleton : Term.Var.t -> _ -> t =
-     fun var term ->
-      if is_wc_var var && is_var term
-      then { conjs = LLL.empty; wcs = VarSet.(add !!!term empty) }
-      else if is_wc_var term && is_var var
-      then { conjs = LLL.empty; wcs = VarSet.(add !!!var empty) }
-      else { conjs = LLL.singleton Subst.Binding.{ var; term }; wcs = VarSet.empty }
-   ;;
-
     let is_violated_rigorously { wcs } =
       (* TODO: assert that wildcard variables didn't get into conjs *)
       not (VarSet.is_empty wcs)
@@ -342,6 +333,22 @@ module Make (FDC : EXTRA) = struct
         | false, true -> WcNVar var
         | true, false -> WcNVar v2)
     ;;
+
+    let singleton : Term.Var.t -> _ -> t =
+     fun var term ->
+      let b = Subst.Binding.{ var; term } in
+      match classify b with
+      | WcNVar var -> { empty with wcs = VarSet.singleton var }
+      | WcNSmth term -> failwith "weird stuff"
+      (* { empty with conjs = LLL.singleton } *)
+      | VarNTerm (var, term) -> { empty with conjs = LLL.singleton b }
+   ;;
+
+    (* if is_wc_var var && is_var term
+      then { conjs = LLL.empty; wcs = VarSet.(add !!!term empty) }
+      else if is_wc_var term && is_var var
+      then { conjs = LLL.empty; wcs = VarSet.(add !!!var empty) }
+      else { conjs = LLL.singleton Subst.Binding.{ var; term }; wcs = VarSet.empty } *)
 
     let of_bindings bnds extra0 =
       assert ([] <> bnds);
