@@ -351,7 +351,7 @@ module Make (FDC : EXTRA) = struct
       else { conjs = LLL.singleton Subst.Binding.{ var; term }; wcs = VarSet.empty } *)
 
     let of_bindings bnds extra0 =
-      assert ([] <> bnds);
+      (* assert ([] <> bnds); *)
       let exception ToRemove in
       try
         Stdlib.List.fold_left
@@ -443,8 +443,13 @@ module Make (FDC : EXTRA) = struct
         Some
           ( List.filter_map
               (fun conjs ->
-                let conjs = LLL.of_seq conjs in
-                if shallow_recheck extra { wcs; conjs } then Some { wcs; conjs } else None)
+                match of_bindings (List.of_seq conjs) extra with
+                | Result.Error _ -> None
+                | Ok (sub_disjunct, extra) ->
+                  let sub_disjunct =
+                    { sub_disjunct with wcs = VarSet.union wcs sub_disjunct.wcs }
+                  in
+                  if shallow_recheck extra sub_disjunct then Some sub_disjunct else None)
               (CartesianHacks.cartesian_seq conjs |> List.of_seq)
           , extra )
       with

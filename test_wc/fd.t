@@ -13,7 +13,11 @@
   fun q -> fresh () (FD.domain q [1; 2]) (FD.neq q (!! 1)) (FD.neq q (!! 2)), all answers {
   }
   fun q -> fresh x (q =/= (Option.some __)) (q === (Option.some x)), all answers {
-  q=Some (_.11 [=/= _.-42]);
+  q=Some (_.11);
+  }
+  fun q ->
+    fresh x (q =/= (Option.some __)) (q === (Option.some x))
+      cut_off_wc_diseq_without_domain, all answers {
   }
   fun q ->
     fresh x (q =/= (Option.some __)) (FD.domain x [1; 2]) (x =/= (!! 1))
@@ -23,7 +27,7 @@
   fun q ->
     fresh x (q =/= (Option.some __)) (FD.domain x [1; 2; 3]) (x =/= (!! 1))
       (x =/= (!! 2)) (q === (Option.some x)), all answers {
-  q=Some (_.11 [=/= 1; =/= 2; =/= _.-42]);
+  q=Some (_.11 [=/= 1; =/= 2]);
   }
   fun q ->
     fresh _11 (FD.domain _11 [1; 2]) (_11 =/= (!! 2)) (q =/= (pair _11 __))

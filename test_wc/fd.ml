@@ -83,6 +83,16 @@ let _ =
         fresh
           x
           (q =/= Option.some __)
+          (q === Option.some x)
+          cut_off_wc_diseq_without_domain)]
+;;
+
+let _ =
+  [%tester
+    run_option (-1) (fun q ->
+        fresh
+          x
+          (q =/= Option.some __)
           (FD.domain x [ 1; 2 ])
           (x =/= !!1)
           (x =/= !!2)

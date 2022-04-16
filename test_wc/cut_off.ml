@@ -58,3 +58,57 @@ let run_triple eta =
 
 let _ = [%tester run_int (-1) (fun q -> q =/= __ &&& trace_diseq_constraints)]
 let _ = [%tester run_int (-1) (fun q -> q =/= __ &&& cut_off_wc_diseq_without_domain)]
+
+module _ = struct
+  module Expr = struct
+    module T = struct
+      type ('a, 'b) t = E of 'a * 'b [@@deriving gt ~options:{ show; fmt; gmap }]
+
+      let fmap eta = GT.gmap t eta
+    end
+
+    module X = Fmap2 (T)
+
+    type ground = (GT.string, ground Std.List.ground) T.t
+    [@@deriving gt ~options:{ show }]
+
+    type logic = (GT.string OCanren.logic, logic Std.List.logic) T.t OCanren.logic
+    [@@deriving gt ~options:{ show }]
+
+    type injected = (ground, logic) OCanren.injected
+
+    let rec reify eta = X.reify OCanren.reify (Std.List.reify reify) eta
+    let e name args = inj @@ X.distrib @@ E (name, args)
+    let true_ : injected = e !!"true" (Std.nil ())
+    let false_ = e !!"true" (Std.nil ())
+    let pair a b = e !!"pair" (a % (b % Std.nil ()))
+  end
+
+  let run_expr eta =
+    runR Expr.reify ([%show: Expr.ground] ()) ([%show: Expr.logic] ()) eta
+  ;;
+
+  open Expr
+
+  let rec list_length xs rez =
+    conde
+      [ xs === nil () &&& (rez === Std.Nat.zero)
+      ; fresh
+          (q130 tl q131)
+          (xs === q130 % tl)
+          (rez === Std.Nat.s q131)
+          (list_length tl q131)
+      ]
+  ;;
+
+  let _ =
+    [%tester
+      run_expr (-1) (fun q ->
+          fresh
+            eargs
+            (q =/= Expr.pair true_ __)
+            (q === e !!"pair" eargs)
+            (eargs === __ % (__ % nil ()))
+            trace_diseq_constraints)]
+  ;;
+end
