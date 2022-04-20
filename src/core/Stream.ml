@@ -56,9 +56,9 @@ module List = Stdlib.List
 
 type 'a t =
   | Nil     : 'a t
-  | Cons    : 'a * ('a t) -> 'a t
+  | Cons    : 'a * 'a t -> 'a t
   | Thunk   : 'a thunk -> 'a t
-  | Bind    : 'a t * ('a -> 'a t) -> 'a t
+  | Bind    : 'a t * ('a -> 'a t) * ('a -> 'a t) list -> 'a t
   | Waiting : 'a suspended list -> 'a t
 and 'a thunk =
   unit -> 'a t
@@ -71,7 +71,7 @@ let rec pp ppf = function
   | Thunk f ->
       (* Format.fprintf ppf "(Thunk %d)" (Obj.magic f) *)
       Format.fprintf ppf "(Thunk _)"
-  | Bind (xs, f) ->Format.fprintf ppf "(Bind (%a, _))" pp xs
+  | Bind (xs, f, fs) -> Format.fprintf ppf "(Bind (%a, [_]))" pp xs
   | Waiting _ -> assert false
 
 let nil         = Nil
@@ -93,9 +93,9 @@ let force x =
   | Thunk zz  -> zz ()
   | xs        -> xs
 
-let bind: 'a t -> ('a -> 'b t) -> 'b t = fun x f -> Bind (x, f)
+let bind: 'a t -> ('a -> 'b t) -> 'b t = fun x f -> Bind (x, f, [])
 
-let rec mplus: 'a t -> 'a t -> 'a t = fun xs ys ->
+let rec mplus: 'a  .  'a t -> 'a t -> 'a t = fun xs ys ->
   let () = IFDEF STATS THEN mplus_counter_incr () ELSE () END in
   (* Format.printf "mplus: `%a` and `%a`\n%!" pp xs pp ys; *)
   match xs with
@@ -103,8 +103,8 @@ let rec mplus: 'a t -> 'a t -> 'a t = fun xs ys ->
   | Cons (x, xs)  -> cons x (from_fun @@ fun () -> mplus (force ys) xs)
   | Thunk   _     ->
       from_fun (fun () -> mplus (force ys) xs)
-  | Bind (st, f)  ->
-      mplus ys (bind_impl st f)
+  | Bind (st, fh, ftl)  ->
+      mplus ys (bind_impl st fh ftl)
   | Waiting ss    ->
     let ys = force ys in
     (* handling waiting streams is tricky *)
@@ -130,40 +130,54 @@ and unwrap_suspended ss =
     | Some s, [] -> s
     | Some s, ss -> mplus (force s) @@ Waiting ss
     | None , ss  -> Waiting ss
-and bind_impl: 'a t -> ('a -> 'b t) -> 'b t = fun s f ->
+and bind_impl: 'a . 'a t -> ('a -> 'a t) -> ('a -> 'a t) list -> 'a t = fun s fh ftl ->
   (* Format.fprintf Format.std_formatter "bind_impl: `%a`\n%!" pp s; *)
   match s with
   | Nil           -> Nil
-  | Cons (x, s)   -> mplus (f x) (from_fun (fun () -> bind (force s) f))
+  | Cons (x, s)   -> (
+      match ftl with
+      | [] -> mplus (fh x) (from_fun (fun () -> Bind (force s, fh, [])))
+      | gh::gtl -> mplus (bind_impl (fh x) gh gtl) (from_fun (fun () -> Bind (force s, fh, [])))
+    )
   | Thunk zz      ->
       (*  hangs!!! *)
       (* from_fun (fun () -> bind (zz ()) f) *)
       (* Works but wrong order *)
-      from_fun (fun () -> bind_impl (zz ()) f)
+      from_fun (fun () -> bind_impl (zz ()) fh ftl)
       (* Totally hangs *)
       (* bind (zz ()) f *)
-  | Bind (st, g) ->
-      bind (bind_impl st g) f
+  | Bind (st, h1, tl1) ->
+      Bind (st, h1, tl1 @ (fh::ftl))
   | Waiting ss    ->
     match unwrap_suspended ss with
     | Waiting ss ->
-      let helper {zz} as s = {s with zz = fun () -> bind (zz ()) f} in
+      let helper {zz} as s = {s with zz = fun () -> Bind (zz (), fh, ftl) } in
       Waiting (List.map helper ss)
-    | s          -> bind s f
+    | s          -> Bind (s, fh, ftl)
 
-let rec old_bind:'a 'b . 'a t -> ('a -> 'b t) -> 'b t = fun s f ->
+let rec old_bind: 'a 'b . 'a t -> ('a -> 'b t) -> 'b t = fun s f ->
   (* Format.fprintf Format.std_formatter "old_bind: `%a`\n%!" pp s; *)
   match s with
   | Nil           -> Nil
-  | Cons (x, s)   -> mplus (f x) (from_fun (fun () -> old_bind (force s) f))
-  | Thunk zz      -> from_fun (fun () -> old_bind (zz ()) f)
-  | Bind (x, g) -> old_bind (old_bind x g) f
-  | Waiting ss    ->
-    match unwrap_suspended ss with
+  | Cons (x, s)   ->
+      (* assert false *)
+      mplus (f x) (from_fun (fun () -> old_bind (force s) f))
+  | Thunk zz      ->
+      (* assert false *)
+      from_fun (fun () -> old_bind (zz ()) f)
+  | Bind (x, g, []) -> old_bind (old_bind x g) f
+
+  | Bind (Nil, _, _) -> Nil
+  | Bind (_,_,_) ->
+      old_bind (bind_impl gh h1 tl1) f
+      (* assert false *)
+      (* List.fold_left old_bind (old_bind x gh) gtl *)
+  | Waiting ss    -> assert false
+    (* match unwrap_suspended ss with
     | Waiting ss ->
       let helper {zz} as s = {s with zz = fun () -> old_bind (zz ()) f} in
       Waiting (List.map helper ss)
-    | s          -> old_bind s f
+    | s          -> old_bind s f *)
 
 let rec msplit = function
 | Nil           -> None
@@ -186,6 +200,8 @@ let rec map f = function
 | Waiting ss   ->
   let helper {zz} as s = {s with zz = fun () -> map f (zz ())} in
   Waiting (List.map helper ss)
+
+(* let old_bind = map *)
 
 let mapi f =
   let rec helper i xs = match msplit xs with
