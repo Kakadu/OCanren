@@ -93,9 +93,12 @@ let force x =
   | Thunk zz  -> zz ()
   | xs        -> xs
 
-let bind: 'a t -> ('a -> 'b t) -> 'b t = fun x f -> Bind (x, f, [])
+let bind: 'a . 'a t -> ('a -> 'a t) -> 'a t = fun x f ->
+  match x with
+  | Bind (base, h, tl) -> Bind (base, h, tl @ [f])
+  | _ -> Bind (x, f, [])
 
-let rec mplus: 'a  .  'a t -> 'a t -> 'a t = fun xs ys ->
+let rec mplus: 'a . 'a t -> 'a t -> 'a t = fun xs ys ->
   let () = IFDEF STATS THEN mplus_counter_incr () ELSE () END in
   (* Format.printf "mplus: `%a` and `%a`\n%!" pp xs pp ys; *)
   match xs with
@@ -134,44 +137,27 @@ and bind_impl: 'a . 'a t -> ('a -> 'a t) -> ('a -> 'a t) list -> 'a t = fun s fh
   (* Format.fprintf Format.std_formatter "bind_impl: `%a`\n%!" pp s; *)
   match s with
   | Nil           -> Nil
-  | Cons (x, s)   -> (
-      match ftl with
-      | [] -> mplus (fh x) (from_fun (fun () -> Bind (force s, fh, [])))
-      | gh::gtl -> mplus (bind_impl (fh x) gh gtl) (from_fun (fun () -> Bind (force s, fh, [])))
-    )
-  | Thunk zz      ->
-      (*  hangs!!! *)
-      (* from_fun (fun () -> bind (zz ()) f) *)
-      (* Works but wrong order *)
-      from_fun (fun () -> bind_impl (zz ()) fh ftl)
-      (* Totally hangs *)
-      (* bind (zz ()) f *)
+  | Cons (x, s)   ->
+      mplus
+        (match ftl with
+          | [] -> fh x
+          | gh::gtl -> bind_impl (fh x) gh gtl)
+        (from_fun (fun () -> Bind (force s, fh, ftl)))
+  | Thunk zz      -> from_fun (fun () -> bind_impl (zz ()) fh ftl)
   | Bind (st, h1, tl1) ->
       Bind (st, h1, tl1 @ (fh::ftl))
-  | Waiting ss    ->
-    match unwrap_suspended ss with
-    | Waiting ss ->
-      let helper {zz} as s = {s with zz = fun () -> Bind (zz (), fh, ftl) } in
-      Waiting (List.map helper ss)
-    | s          -> Bind (s, fh, ftl)
+  | Waiting ss    -> failwith "Waiting streams commented out"
 
 let rec old_bind: 'a 'b . 'a t -> ('a -> 'b t) -> 'b t = fun s f ->
   (* Format.fprintf Format.std_formatter "old_bind: `%a`\n%!" pp s; *)
   match s with
   | Nil           -> Nil
-  | Cons (x, s)   ->
-      (* assert false *)
-      mplus (f x) (from_fun (fun () -> old_bind (force s) f))
-  | Thunk zz      ->
-      (* assert false *)
-      from_fun (fun () -> old_bind (zz ()) f)
+  | Cons (x, s)   -> mplus (f x) (from_fun (fun () -> old_bind (force s) f))
+  | Thunk zz      -> from_fun (fun () -> old_bind (zz ()) f)
   | Bind (x, g, []) -> old_bind (old_bind x g) f
-
   | Bind (Nil, _, _) -> Nil
-  | Bind (_,_,_) ->
-      old_bind (bind_impl gh h1 tl1) f
-      (* assert false *)
-      (* List.fold_left old_bind (old_bind x gh) gtl *)
+  | Bind (gh,h1,tl1) -> old_bind (bind_impl gh h1 tl1) f
+  | Bind (Waiting _, _, _) -> assert false
   | Waiting ss    -> assert false
     (* match unwrap_suspended ss with
     | Waiting ss ->
