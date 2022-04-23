@@ -27,6 +27,5 @@
   (action
    (run
     %{project_root}/camlp5/pp5+gt+plugins+dump.exe
-    ; -D
-    ; STATS
+    %{read-lines:../config/prop_counter_directives.cfg}
     %{input-file}))))

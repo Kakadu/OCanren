@@ -11,6 +11,7 @@
   logger-flags.cfg
   stublibs-dir.cfg
   instrumentalization.cfg
+  prop_counter_directives.cfg
   package-doc.cfg)
  (action
   (run ./discover.exe -all-flags)))

@@ -157,6 +157,13 @@ let gen_cram_files tests path =
       )
     )
 
+let check_env () =
+  let opts =
+    match Unix.getenv "OCANREN_BENCH_COUNT" with
+    | exception Not_found -> ""
+    | _ -> "-D STATS"
+  in
+  Cfg.Flags.write_lines "prep_counter_directives.cfg" [ opts ]
 
 (*** command line arguments ***)
 
@@ -219,6 +226,7 @@ let () =
     if !gt_flags || !all_flags || !all then
       (discover_stubs_dir cfg; discover_gt_flags cfg);
     if !logger_flags || !all_flags || !all then
-      discover_logger_flags cfg ;
+      discover_logger_flags cfg;
+    check_env ();
     ()
   )
