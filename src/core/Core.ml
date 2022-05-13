@@ -789,6 +789,13 @@ let unif_hack x y rez st =
     let () = Printf.bprintf b ">" in
     Buffer.contents b *)
 
+let is_free var gthen gelse st =
+  match State.reify (Obj.magic !!!var) st with
+  | [ v ] when Term.is_var (Obj.magic !!!(Answer.unctr_term v)) -> gthen st
+  | [] -> failure st
+  | _ -> gelse st
+;;
+
 module Unique = struct
   type 'a t =
     | NoAnswer
@@ -815,31 +822,70 @@ module Unique = struct
   let noanswer = Obj.magic (inj @@ F.distrib NoAnswer)
   let different = Obj.magic (inj @@ F.distrib DifferentAnswers)
 
-  let unique_answers g (rez : (_, _) injected) st =
-    let v = State.fresh st in
-    let stream = g (Obj.magic v) st in
-    if Stream.is_empty stream
-    then ( === ) rez (Obj.magic NoAnswer) st
-    else (
-      let xs =
-        Stream.take stream
-        |> List.map (fun st0 -> Subst.reify (State.env st0) (State.subst st0) v)
-      in
-      let first = List.hd xs in
-      let ( >>=? ) = Stdlib.Option.bind in
-      let result =
-        List.fold_left
-          (fun stacc v ->
-            stacc
-            >>=? fun st ->
-            Format.printf "v=%a, first = %a\n%!" Term.pp v Term.pp first;
-            State.unify (Obj.magic v) (Obj.magic first) st)
-          (Some st)
-          (List.tl xs)
-      in
-      match result with
-      | None -> ( === ) rez (Obj.magic DifferentAnswers) st
-      | Some st -> ( === ) rez (Obj.magic (Unique first)) st)
+  let unique_answers g (rez : (_, _) injected) =
+    is_free rez (fun st ->
+      let v = State.fresh st in
+      let stream = g (Obj.magic v) st in
+      if Stream.is_empty stream
+      then ( === ) rez (Obj.magic NoAnswer) st
+      else (
+        let xs =
+          Stream.take stream
+          |> List.map (fun st0 -> Subst.reify (State.env st0) (State.subst st0) v)
+        in
+        let first = List.hd xs in
+        let ( >>=? ) = Stdlib.Option.bind in
+        let result =
+          List.fold_left
+            (fun stacc v ->
+              stacc
+              >>=? fun st ->
+              Format.printf "v=%a, first = %a\n%!" Term.pp v Term.pp first;
+              State.unify (Obj.magic v) (Obj.magic first) st)
+            (Some st)
+            (List.tl xs)
+        in
+        match result with
+        | None -> ( === ) rez (Obj.magic DifferentAnswers) st
+        | Some st -> ( === ) rez (Obj.magic (Unique first)) st)
+      )
+    (conde
+      [
+        (rez === noanswer) &&& (fun st ->
+          let v = State.fresh st in
+          let stream = g (Obj.magic v) st in
+          if Stream.is_empty stream
+          then success st
+          else failure st)
+      ; (rez === different) &&& failure
+      ; Fresh.one (fun u -> (rez === unique u) &&&
+          (fun st ->
+              let stream = g (Obj.magic u) st in
+              let answer_states = Stream.take stream in
+              (match answer_states with
+              | [] -> failure st
+              | [h] -> success h
+              | h::tl ->
+                (* failure st *)
+                let first = Subst.reify (State.env h) (State.subst h) u in
+                let rec loop tl =
+                  match tl with
+                  | [] -> success
+                  | s::sss ->
+                      let candidate = Subst.reify (State.env s) (State.subst s) u in
+                      match State.unify (Obj.magic candidate) (Obj.magic first) s with
+                      | None -> failure
+                      | Some _ -> loop sss
+                in
+                loop tl h
+                (* List.fold_left (fun acc st ->
+                  (first  =/= Subst.reify (State.env st) (State.subst st) u) &&& acc
+                ) success tl h *)
+                )
+          )
+        )
+      ])
+    (* *)
   ;;
 
   let%test _ =
@@ -863,12 +909,7 @@ let trace_diseq_constraints st =
   success st
 ;;
 
-let is_free var gthen gelse st =
-  match State.reify (Obj.magic !!!var) st with
-  | [ v ] when Term.is_var (Obj.magic v) -> gthen st
-  | [] -> failure st
-  | _ -> gelse st
-;;
+
 
 let cut_off_wc_diseq_without_domain st =
   match State.cut_off_wc_diseq_without_domain st with
