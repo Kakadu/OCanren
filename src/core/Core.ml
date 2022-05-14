@@ -338,11 +338,7 @@ module State = struct
   let named_wc name { env; scope } = Env.wc ~name:(Some name) ~scope env
   let new_scope st = { st with scope = Term.Var.new_scope () }
 
-  let ( >>=? ) x f =
-    match x with
-    | Some a -> f a
-    | None -> None
-  ;;
+  let ( >>=? ) x f = Stdlib.Option.bind x f
 
   let check_diseqs st =
     Disequality.recheck (env st) (subst st) (constraints st) [] (fds st)
@@ -431,11 +427,6 @@ let only_head g st =
 ;;
 
 module FD = struct
-  (* let lt a b st =
-    match FM.lt a b (State.fds st) with
-    | None -> failure ()
-    | Some fd -> success {st with State.fd = fd } *)
-
   let eq a b st =
     match FM.eq a b (State.fds st) with
     | None -> failure ()
@@ -766,28 +757,6 @@ let unif_hack x y rez st =
   | Some _ -> ( === ) rez !!true st
   | None -> ( === ) rez !!false st
 ;;
-
-(* let gives_single_answer g : goal = fun st ->
-  let stream = g st in
-  let xs = Stream.take ~n:2 stream in
-  match xs with
-  | [] -> sin *)
-
-(* let rec my_to_string t =
-  if Obj.is_int t then string_of_int (!!!t)
-  else if Term.is_var t
-  then
-    let v : Term.Var.t = Obj.magic t in
-    Format.sprintf "(var %d)" v.Term.Var.index
-  else
-    let b = Buffer.create 10 in
-    let () = Printf.bprintf b "Block<%d, " (Obj.tag t)  in
-    let () =
-      for i=0 to Obj.size t -1 do
-         Printf.bprintf b " %s" (my_to_string @@ Obj.field t i)
-      done in
-    let () = Printf.bprintf b ">" in
-    Buffer.contents b *)
 
 let is_free var gthen gelse st =
   match State.reify (Obj.magic !!!var) st with
