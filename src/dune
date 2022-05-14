@@ -16,6 +16,7 @@
   Bool
   Nat
   Pair
+  Triple
   List
   Timer
   Peep
