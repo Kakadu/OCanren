@@ -48,9 +48,9 @@
   ./test014.exe
   ./test015runaway.exe
   ./test016sorto.exe
-  ./test017tabling.exe
+  ;./test017tabling.exe
   ./test018prjc.exe
-  ./test019tablingCache.exe
+  ;./test019tablingCache.exe
   ./test021structural.exe
   ./test022newsyntax.exe
 ))
