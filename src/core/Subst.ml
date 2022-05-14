@@ -50,7 +50,19 @@ module Binding = struct
   ;;
 
   let hash { var; term } = Hashtbl.hash (Term.Var.hash var, Term.hash term)
+
+  let pp ppf { var; term } =
+    Format.fprintf ppf "%a -> %a" Term.pp (Obj.repr var) Term.pp (Obj.repr term)
+  ;;
+
 end
+
+let pp_binding_list ppf xs =
+  Format.fprintf ppf "{bnds| ";
+  List.iter (fun bnd -> Format.fprintf ppf "%a; " Binding.pp bnd) xs;
+  Format.fprintf ppf " |bnds}"
+;;
+
 
 type t = Term.t Term.VarMap.t
 

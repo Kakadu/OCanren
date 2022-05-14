@@ -35,6 +35,7 @@ val empty : t
 val of_list : Binding.t list -> t
 val of_map : Term.t Term.VarMap.t -> t
 val split : t -> Binding.t list
+val pp_binding_list : Format.formatter -> Binding.t list -> unit
 
 (* [apply env subst x] - applies [subst] to term [x],
  *   i.e. replaces every variable to relevant binding in [subst];
