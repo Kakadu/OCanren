@@ -64,6 +64,7 @@ module Std =
     let none = Option.none
     let pair = Pair.pair
 
+    let triple = Triple.make
 
     let structural = Core.structural
     let debug_var = Core.debug_var
