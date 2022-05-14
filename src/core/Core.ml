@@ -709,7 +709,7 @@ let run n g h =
 
 (** ************************************************************************* *)
 
-(** Tabling primitives                                                        *)
+(* * Tabling primitives
 
 module Table : sig
   (* Type of table.
@@ -872,4 +872,4 @@ module Tabling = struct
     g := currier g_tabled;
     !g
   ;;
-end
+end *)

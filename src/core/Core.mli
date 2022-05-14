@@ -232,7 +232,7 @@ val qrst : (_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) NUMERAL_TYPS.f
        [let g = Tabling.(tabledrec one) (fun grec q -> (q === O) ||| (fresh (n) (q === S n) &&& (grec n)))]
 *)
 
-module Tabling : sig
+(* module Tabling : sig
   val succ
     :  (unit -> (('a -> 'b) -> 'c) * ('d -> 'e -> 'f))
     -> unit
@@ -288,7 +288,7 @@ module Tabling : sig
     -> (('b -> 'c) -> 'd)
     -> 'b
     -> 'c
-end
+end *)
 
 [%%if defined stats]
 
