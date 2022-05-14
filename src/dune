@@ -17,7 +17,7 @@
   Nat
   Pair
   Triple
-  List
+  Listo
   Timer
   Peep
   OCanren)
