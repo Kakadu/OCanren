@@ -18,7 +18,7 @@
 
 open Logic
 
-IFDEF STATS THEN
+[%%if defined stats]
 type stat = {
   mutable unification_count : int;
   mutable unification_time  : Mtime.span;
@@ -53,7 +53,7 @@ let (unification_incr,unification_time_incr,conj_counter_incr,disj_counter_incr,
     let disj_counter_incr  () = stat.disj_counter  <- stat.disj_counter + 1 in
     let delay_counter_incr () = stat.delay_counter <- stat.delay_counter + 1 in
     (unification_incr,unification_time_incr,conj_counter_incr,disj_counter_incr,delay_counter_incr)
-END
+[%%endif]
 
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
@@ -360,28 +360,29 @@ let only_head g st =
   with Failure _ -> Stream.nil
 
 let (===) x y st =
-  let _t =
-    IFDEF STATS THEN
-    (let () = unification_incr () in
-    Timer.make ())
-    ELSE () END
-  in
+  let module T = struct
+    [%%if defined stats]
+    let t = unification_incr (); Timer.make ()
+    [%%endif]
+  end in
 
-  match State.unify x y st with
-  | Some st ->
-    let () = IFDEF STATS THEN unification_time_incr _t ELSE () END in
-    success st
-  | None    ->
-    let () = IFDEF STATS THEN unification_time_incr _t ELSE () END in
-    failure st
+  let ans = State.unify x y st in
+  let module _  = struct
+    [%%if defined stats] let () = unification_time_incr T.t [%%endif]
+  end in
+  match ans with
+  | Some st -> success st
+  | None    -> failure st
 
 let unify = (===)
 
 let (=/=) x y st =
   match State.diseq x y st with
   | Some st ->
-      let () = IFDEF STATS THEN delay_counter_incr () ELSE () END in
-      success st
+    (* let module _  = struct
+      [%%if defined stats] let () = delay_counter_incr () [%%endif]
+    end in *)
+    success st
   | None    -> failure st
 
 let diseq = (=/=)
@@ -389,7 +390,9 @@ let diseq = (=/=)
 let delay g st = Stream.from_fun (fun () -> g () st)
 
 let conj f g st =
-  let () = IFDEF STATS THEN conj_counter_incr () ELSE () END in
+  let module _  = struct
+    [%%if defined stats] let () = conj_counter_incr () [%%endif]
+  end in
   Stream.bind (f st) g
 
 let debug_var v reifier call = fun st ->
@@ -480,7 +483,10 @@ let (?&) gs st =
 let disj_base f g st = Stream.mplus (f st) (Stream.from_fun (fun () -> g st))
 
 let disj f g st =
-  let () = IFDEF STATS THEN disj_counter_incr () ELSE () END in
+  (* let () = IFDEF STATS THEN disj_counter_incr () ELSE () END in *)
+  let module _  = struct
+    [%%if defined stats] let () = disj_counter_incr () [%%endif]
+  end in
   let st = State.new_scope st in
   disj_base f g |> (fun g -> Stream.from_fun (fun () -> g st))
 
@@ -678,7 +684,7 @@ module Table :
           with Not_found -> false
 
         let consume (cache, _) args =
-          let open State in fun {env; subst; scope} as st ->
+          let open State in fun ({env; subst; scope} as st) ->
           let st = State.new_scope st in
           (* [helper start curr seen] consumes answer terms from cache one by one
            *   until [curr] (i.e. current pointer into cache list) is not equal to [seen]
@@ -764,7 +770,7 @@ module Tabling =
       let sc = (Curry.succ : (('a -> 'b) -> 'c) -> ((((_) ilogic as 'k) * 'a -> 'b) -> 'k -> 'c)) in
       (sc currier, Uncurry.succ uncurrier)
 
-    let one () = ((Curry.(one) : ((_) ilogic -> _) as 'x -> 'x), Uncurry.one)
+    let one () = ((Curry.(one) : (((_) ilogic -> _) as 'x) -> 'x), Uncurry.one)
 
     let two   () = succ one ()
     let three () = succ two ()

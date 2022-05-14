@@ -115,12 +115,15 @@ let discover_logger_flags cfg =
 
 let discover_stats () =
   let filename = "instrumentalization.cfg" in
-  Sys.command (Printf.sprintf "rm -fr '%s'" filename) |> ignore;
+  let filename_ppx = "instrumentalization_ppx.cfg" in
+  Sys.command (Printf.sprintf "rm -fr '%s' '%s'" filename filename_ppx) |> ignore;
   try
     let _ = Unix.getenv "OCANREN_STATS" in
-    Cfg.Flags.write_lines filename ["-D"; "STATS"]
+    Cfg.Flags.write_lines filename ["-D"; "STATS"];
+    Cfg.Flags.write_lines filename_ppx ["ppx_optcomp.env=(env ~stats:(Defined 1))"];
   with Not_found ->
-    Cfg.Flags.write_lines filename []
+    Cfg.Flags.write_lines filename [];
+    Cfg.Flags.write_lines filename_ppx ["ppx_optcomp.env=(env ~stats:Undefined)"]
 
 let discover_docs () =
   let filename = "package-doc.cfg" in

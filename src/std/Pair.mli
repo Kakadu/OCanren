@@ -25,16 +25,16 @@ open Core
 (** {2 GT-related API} *)
 
 (** Type synonym to prevent toplevel [logic] from being hidden *)
-@type 'a logic' = 'a logic with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a logic' = 'a logic [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
 
 
-@type ('a, 'b) t = 'a * 'b with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ('a, 'b) t = 'a * 'b [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
 
 
-@type ('a, 'b) ground = 'a * 'b with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ('a, 'b) ground = 'a * 'b [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
 
 (** Logic option *)
-@type ('a, 'b) logic = ('a * 'b) logic' with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ('a, 'b) logic = ('a * 'b) logic' [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
 
 (** {2 Relational API} *)
 

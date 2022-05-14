@@ -20,9 +20,9 @@
 (** {3 Logic values} *)
 
 (** A type of a logic value *)
-@type 'a logic =
+type 'a logic =
 | Var   of GT.int * 'a logic GT.list
-| Value of 'a with show, gmap, html, eq, compare, foldl, foldr, fmt
+| Value of 'a [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
 
 (** [to_logic x] makes a logic value from a regular one *)
 val to_logic : 'a -> 'a logic
@@ -76,7 +76,7 @@ module Reifier : sig
 
   val fcomap : ('a -> 'b) -> ('b, 'c) t -> ('a, 'c) t
 
-  val fix: ( ('a, 'b) t as 'c -> 'c) -> 'c
+  val fix: ( 'c -> 'c) -> (('a, 'b) t as 'c)
 
   val rework : fv:('a Env.m -> 'b Env.m)
       -> ('a logic Env.m -> 'b logic Env.m)

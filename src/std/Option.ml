@@ -23,12 +23,12 @@ open Core
 (* to avoid clash with Std.List (i.e. logic list) *)
 (* module List = Stdlib.List *)
 
-@type 'a logic'        = 'a logic                       with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a logic'        = 'a logic                       [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
 
 let logic' = logic;;
 
-@type 'a ground        = 'a GT.option                   with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type 'a logic         = 'a GT.option logic'            with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a ground        = 'a GT.option                   [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
+type 'a logic         = 'a GT.option logic'            [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
 
 let logic = {
   logic with
@@ -39,13 +39,13 @@ let logic = {
       method eq         = logic.GT.plugins#eq
       method foldl      = logic.GT.plugins#foldl
       method foldr      = logic.GT.plugins#foldr
-      method html       = logic.GT.plugins#html
+      (* method html       = logic.GT.plugins#html *)
       method fmt        = logic.GT.plugins#fmt
       method show    fa = GT.show(logic') (fun l -> GT.show(GT.option) fa l)
     end
 };;
 
-@type 'a t = 'a ground with show, gmap, html, eq, compare, foldl, foldr, fmt;;
+type 'a t = 'a ground [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }];;
 let t = ground
 
 let inj f x = to_logic (GT.(gmap option) f x)

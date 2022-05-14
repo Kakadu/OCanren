@@ -279,13 +279,13 @@ module Tabling :
       (('b -> 'c) -> 'd) -> 'b -> 'c
   end
 
-IFDEF STATS THEN
+[%%if defined stats]
 val unification_counter : unit -> int
 val unification_time    : unit -> Mtime.span
 val conj_counter        : unit -> int
 val disj_counter        : unit -> int
 val delay_counter       : unit -> int
-END
+[%%endif]
 
 (** The call [debug_var var reifier callback] performs reification of variable [var] in a current state using [reifier] and passes list of answer to [callback] (multiple answers can arise in presence of disequality constraints). The [callback] can investigate reified value and construct required goal to continue search.
 
