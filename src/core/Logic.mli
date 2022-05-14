@@ -20,9 +20,9 @@
 (** {3 Logic values} *)
 
 (** A type of a logic value *)
-@type 'a logic =
+type 'a logic =
 | Var   of GT.int * 'a logic GT.list
-| Value of 'a with show, gmap, html, eq, compare, foldl, foldr, fmt
+| Value of 'a [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
 
 (** [to_logic x] makes a logic value from a regular one *)
 val to_logic : 'a -> 'a logic

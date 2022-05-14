@@ -23,10 +23,20 @@
  (libraries GT mtime mtime.clock.os)
  (flags
   (:standard -rectypes -short-paths -w -49))
+ ; (preprocess
+ ;  (action
+ ;   (run
+ ;    %{project_root}/camlp5/pp5+gt+plugins+dump.exe
+ ;    ; -D
+ ;    ; STATS
+ ;    %{input-file})))
  (preprocess
-  (action
-   (run
-    %{project_root}/camlp5/pp5+gt+plugins+dump.exe
-    ; -D
-    ; STATS
-    %{input-file}))))
+  (pps
+   ppx_optcomp
+   ppx_inline_test
+   GT.ppx_all
+   --
+   --cookie
+   %{read-lines:../config/instrumentalization_ppx.cfg}
+   ;
+   )))

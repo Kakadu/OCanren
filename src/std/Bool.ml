@@ -23,13 +23,13 @@ open Core
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
 
-@type 'a logic' = 'a logic                 with show, html, eq, compare, foldr, foldl, gmap, fmt
+type 'a logic' = 'a logic                 [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
 
 let logic' = logic;;
 
-@type ground    = GT.bool                  with show, html, eq, compare, foldr, foldl, gmap, fmt
-@type t         = GT.bool                  with show, html, eq, compare, foldr, foldl, gmap, fmt
-@type logic     = GT.bool logic'           with show, html, eq, compare, foldr, foldl, gmap , fmt
+type ground    = GT.bool                  [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
+type t         = GT.bool                  [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
+type logic     = GT.bool logic'           [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
 
 type groundi   = ground ilogic
 
@@ -42,7 +42,7 @@ let logic = {
       method eq      = logic.GT.plugins#eq
       method foldl   = logic.GT.plugins#foldl
       method foldr   = logic.GT.plugins#foldr
-      method html    = logic.GT.plugins#html
+      (* method html    = logic.GT.plugins#html *)
       method fmt     = logic.GT.plugins#fmt
       method show    = GT.show(logic') (GT.show(GT.bool))
     end

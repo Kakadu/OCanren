@@ -71,8 +71,9 @@ module Std =
 
 
   end
-IFDEF STATS THEN
+
+[%%if defined stats]
 module Peep = Peep
 
 let _ = Peep.unification_counter
-END
+[%%endif]

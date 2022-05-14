@@ -23,20 +23,20 @@ open Core
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
 
-@type ('a, 'l) list = Nil | Cons of 'a * 'l with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type 'a logic'     = 'a logic with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type ('a, 'l) t    = ('a, 'l) list with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ('a, 'l) list = Nil | Cons of 'a * 'l [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
+type 'a logic'     = 'a logic [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
+type ('a, 'l) t    = ('a, 'l) list [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
 
 let logic' = logic;;
 
-@type 'a ground = ('a, 'a ground) t with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type 'a logic  = ('a, 'a logic) t logic' with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a ground = ('a, 'a ground) t [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
+type 'a logic  = ('a, 'a logic) t logic' [@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
 
 let ground = {
   ground with
   GT.plugins =
     object(this)
-      method html    fa l = GT.html   (list) fa (this#html    fa) l
+      (* method html    fa l = GT.html   (list) fa (this#html    fa) l *)
       method eq      fa l = GT.eq     (list) fa (this#eq      fa) l
       method compare fa l = GT.compare(list) fa (this#compare fa) l
       method foldr   fa l = GT.foldr  (list) fa (this#foldr   fa) l
@@ -49,7 +49,7 @@ let ground = {
       method show    fa l = "[" ^
         let rec inner l =
           (GT.transform(list)
-             (fun fself -> object inherit ['a,'a ground,_]  @list[show] (GT.lift fa) (GT.lift inner) fself
+             (fun fself -> object inherit ['a,'a ground,_]  show_list_t (GT.lift fa) (GT.lift inner) fself
                 method! c_Nil   _ _      = ""
                 method! c_Cons  i s x xs = (fa x) ^ (match xs with Nil -> "" | _ -> "; " ^ (inner xs) )
               end)
@@ -69,7 +69,7 @@ let logic = {
       method eq      fa l = GT.eq      (logic') (GT.eq      (list) fa (this#eq      fa)) l
       method foldl   fa l = GT.foldl   (logic') (GT.foldl   (list) fa (this#foldl   fa)) l
       method foldr   fa l = GT.foldr   (logic') (GT.foldr   (list) fa (this#foldr   fa)) l
-      method html    fa l = GT.html    (logic') (GT.html    (list) fa (this#html    fa)) l
+      (* method html    fa l = GT.html    (logic') (GT.html    (list) fa (this#html    fa)) l *)
       method fmt fa fmt l = Format.fprintf fmt "%s" (this#show (Format.asprintf "%a" fa) l)
       method show fa l =
         GT.show(logic')
@@ -78,7 +78,7 @@ let logic = {
                 GT.transform(t)
                   (fun fself ->
                       object
-                         inherit ['a,'a logic, _] @t[show] (GT.lift fa) (GT.lift (GT.show(logic') inner)) fself
+                         inherit ['a,'a logic, _] show_list_t (GT.lift fa) (GT.lift (GT.show(logic') inner)) fself
                          method! c_Nil   _ _      = ""
                          method! c_Cons  i s x xs =
                            (fa x) ^ (match xs with Value Nil -> "" | _ -> "; " ^ (GT.show(logic') inner xs))

@@ -25,16 +25,16 @@ open Core
 (** {2 GT-related API} *)
 
 (** Type synonym to prevent toplevel [logic] from being hidden *)
-@type 'a logic' = 'a logic with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a logic' = 'a logic [@@deriving gt ~options:{ show; gmap; (* html; *)  eq; compare; foldl; foldr; fmt }]
 
 (** Synonym for regular option type *)
-@type 'a t = 'a GT.option with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a t = 'a GT.option [@@deriving gt ~options:{ show; gmap; (* html; *)  eq; compare; foldl; foldr; fmt }]
 
 (** Ground option (the regular one) *)
-@type 'a ground = 'a GT.option with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a ground = 'a GT.option [@@deriving gt ~options:{ show; gmap; (* html; *)  eq; compare; foldl; foldr; fmt }]
 
 (** Logic option *)
-@type 'a logic = 'a GT.option logic' with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a logic = 'a GT.option logic' [@@deriving gt ~options:{ show; gmap; (* html; *)  eq; compare; foldl; foldr; fmt }]
 
 (** {2 Relational API} *)
 
