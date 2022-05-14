@@ -24,34 +24,23 @@
 
 type t
 
-val empty         : unit -> t
-
-val create        : anchor:Term.Var.env -> t
-
-val fresh         : scope:Term.Var.scope -> t -> 'a
-
-val check         : t -> Term.Var.t -> bool
-
-val check_exn     : t -> Term.Var.t -> unit
-
-val is_var        : t -> 'a -> bool
-
-val var           : t -> 'a -> Term.Var.t option
-
-val freevars      : t -> 'a -> Term.VarSet.t
-
-val is_open       : t -> 'a -> bool
-
-val equal         : t -> t -> bool
+val empty : unit -> t
+val create : anchor:Term.Var.env -> t
+val fresh : scope:Term.Var.scope -> t -> 'a
+val check : t -> Term.Var.t -> bool
+val check_exn : t -> Term.Var.t -> unit
+val is_var : t -> 'a -> bool
+val var : t -> 'a -> Term.Var.t option
+val freevars : t -> 'a -> Term.VarSet.t
+val is_open : t -> 'a -> bool
+val equal : t -> t -> bool
 
 (** Essentially, a reader monad over Env.t. Useful for reification. *)
 module Monad : sig
   type nonrec 'a t = t -> 'a
 
   val return : 'a -> 'a t
-
   val fmap : ('a -> 'b) -> 'a t -> 'b t
-
   val bind : 'a t -> ('a -> 'b t) -> 'b t
 
   val (<*>):  ('a -> 'b) t -> 'a t -> 'b t
@@ -67,7 +56,7 @@ module Monad : sig
   (** Do-notation is avaliable since OCaml 4.08. See OCaml manual for details. *)
 
   module Syntax : sig
-    val ( let* ) : 'a t -> ('a -> 'b t ) -> 'b t
+    val ( let* ) : 'a t -> ('a -> 'b t) -> 'b t
     val ( let+ ) : 'a t -> ('a -> 'b) -> 'b t
   end
 end
