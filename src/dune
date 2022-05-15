@@ -4,6 +4,7 @@
  (name OCanren)
  (public_name OCanren)
  (modules
+  DISEQ_SIG
   Logic
   Core
   Stream
@@ -25,6 +26,8 @@
  (libraries GT mtime mtime.clock.os)
  (flags
   (:standard -rectypes -short-paths -w -49))
+ (inline_tests)
+ (modules_without_implementation DISEQ_SIG)
  ; (preprocess
  ;  (action
  ;   (run
