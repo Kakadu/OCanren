@@ -304,7 +304,7 @@ val delay_counter : unit -> int
 
 See also: {!structural}.
 *)
-val debug_var : 'a ilogic -> ('a ilogic -> Env.t -> 'b) -> ('b list -> goal) -> goal
+val debug_var : 'a ilogic -> ('a ilogic, 'b) Reifier.t -> ('b list -> goal) -> goal
 
 (** The goal [only_head f] returns no answers when [f] returns:
   - empty stream when [f] returns empty stream;
@@ -320,4 +320,25 @@ module PrunesControl : sig
   val incr : unit -> unit
   val is_exceeded : unit -> bool
   val skipped_prunes : unit -> int
+end
+
+val is_free : 'a ilogic -> goal -> goal -> goal
+
+module Unique : sig
+  type 'a t =
+    | NoAnswer
+    | Unique of 'a
+    | DifferentAnswers
+  [@@deriving gt ~options:{ show; gmap }]
+
+  type 'a ground = 'a t [@@deriving gt ~options:{ show }]
+  type 'a logic = 'a t Logic.logic [@@deriving gt ~options:{ show }]
+  type nonrec 'a injected = 'a t Logic.ilogic
+
+  val reify : ('a, 'b) Reifier.t -> ('a injected, 'b logic) Reifier.t
+
+  val unique : 'a -> 'a injected
+  val noanswer : unit -> 'a injected
+  val different : unit -> 'a injected
+  val unique_answers : ('a Logic.ilogic -> goal) -> 'a Logic.ilogic injected -> goal
 end

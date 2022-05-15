@@ -1,6 +1,6 @@
 (*
  * OCanren.
- * Copyright (C) 2015-2017
+ * Copyright (C) 2015-2022
  * Dmitri Boulytchev, Dmitry Kosarev, Alexey Syomin, Evgeny Moiseenko
  * St.Petersburg State University, JetBrains Research
  *
@@ -458,7 +458,7 @@ let conj f g st =
 let debug_var v reifier call st =
   let xs =
     List.map
-      (fun answ -> reifier (Obj.magic @@ Answer.ctr_term answ) (Answer.env answ))
+      (fun answ -> (Logic.make_rr (Answer.env answ) (Obj.magic @@ Answer.ctr_term answ))#reify reifier)
       (State.reify v st)
   in
   call xs st
@@ -871,3 +871,111 @@ module Tabling = struct
     !g
   ;;
 end *)
+
+let is_free var gthen gelse st =
+  match State.reify (Obj.magic !!!var) st with
+  | [ v ] when Term.is_var (Obj.magic !!!(Answer.unctr_term v)) -> gthen st
+  | [] -> failure st
+  | _ -> gelse st
+;;
+
+module Unique = struct
+  type 'a t =
+    | NoAnswer
+    | Unique of 'a
+    | DifferentAnswers
+  [@@deriving gt ~options:{ show; gmap }]
+
+  type 'a ground = 'a t [@@deriving gt ~options:{ show }]
+  type 'a logic = 'a t Logic.logic [@@deriving gt ~options:{ show }]
+  type nonrec 'a injected = 'a t Logic.ilogic
+
+  let unique x = inj (Unique x)
+  let noanswer () = inj NoAnswer
+  let different () = inj DifferentAnswers
+
+  let reify : ('a, 'b) Reifier.t -> ('a injected, 'b logic) Reifier.t = fun ra ->
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun _self ->
+    Reifier.compose Reifier.reify
+        (
+          let* fa = ra in
+          let rec foo = function
+            | Var (v, xs) ->
+              Var (v, Stdlib.List.map foo xs)
+            | Value x -> Value (GT.gmap t fa x)
+          in
+          Env.Monad.return foo
+      ))
+
+  let unique_answers g (rez : _ ilogic) =
+    is_free rez (fun st ->
+      let v = State.fresh st in
+      let stream = g (Obj.magic v) st in
+      if Stream.is_empty stream
+      then ( === ) rez (Obj.magic NoAnswer) st
+      else (
+        let xs =
+          Stream.take stream
+          |> List.map (fun st0 -> Subst.reify (State.env st0) (State.subst st0) v)
+        in
+        let first = List.hd xs in
+        let ( >>=? ) = Stdlib.Option.bind in
+        let result =
+          List.fold_left
+            (fun stacc v ->
+              stacc
+              >>=? fun st ->
+              (* Format.printf "v=%a, first = %a\n%!" Term.pp v Term.pp first; *)
+              State.unify (Obj.magic v) (Obj.magic first) st)
+            (Some st)
+            (List.tl xs)
+        in
+        match result with
+        | None -> ( === ) rez (Obj.magic DifferentAnswers) st
+        | Some st -> ( === ) rez (Obj.magic (Unique first)) st)
+      )
+    (conde
+      [
+        (rez === noanswer ()) &&& (fun st ->
+          let v = State.fresh st in
+          let stream = g (Obj.magic v) st in
+          if Stream.is_empty stream
+          then success st
+          else failure st)
+      ; (rez === different ()) &&& failure
+      ; Fresh.one (fun u -> (rez === unique u) &&&
+          (fun st ->
+              let stream = g (Obj.magic u) st in
+              let answer_states = Stream.take stream in
+              (match answer_states with
+              | [] -> failure st
+              | [h] -> success h
+              | h::tl ->
+                let first = Subst.reify (State.env h) (State.subst h) u in
+                let rec loop tl =
+                  match tl with
+                  | [] -> success
+                  | s::sss ->
+                      let candidate = Subst.reify (State.env s) (State.subst s) u in
+                      match State.unify (Obj.magic candidate) (Obj.magic first) s with
+                      | None -> failure
+                      | Some _ -> loop sss
+                in
+                loop tl h)
+          )
+        )
+      ])
+   ;;
+
+  let%test _ =
+    let goal x = Fresh.two (fun u v -> conde [ x === u; x === v ]) in
+    not
+    @@ Stream.is_empty
+    @@ run
+         q
+         (fun q -> Fresh.one (fun rez -> unique_answers goal rez))
+         (fun rr -> rr#reify Logic.reify)
+  ;;
+
+end
