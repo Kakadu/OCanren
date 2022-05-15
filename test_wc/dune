@@ -1,0 +1,20 @@
+(executables
+ (names unique)
+ (preprocess
+  (pps
+   ;OCanren-ppx.ppx_wildcard
+   OCanren-ppx.ppx_repr
+   OCanren-ppx.ppx_fresh
+   OCanren-ppx.ppx_tester
+   GT.ppx_all))
+ (libraries OCanren OCanren.tester))
+
+(cram
+ (deps
+  ;./main.exe
+  ./unique.exe
+  ;./debug_var.exe
+  ;./fd.exe
+  ;./cut_off.exe
+  ;
+  ))
