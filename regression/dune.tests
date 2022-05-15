@@ -14,14 +14,14 @@
     test014
     test015runaway
     test016sorto
-    test017tabling
+    ;test017tabling
     test018prjc
-    test019tablingCache
+    ;test019tablingCache
     test021structural
     test022newsyntax
   )
   (package OCanren)
-  (public_names - - - - - -  - - - - - -  - - - - - -  -)
+  (public_names - - - - - -  - - - - - -  - - - - -)
   (libraries GT OCanren OCanren.tester)
   (preprocess (action
     (run %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe %{input-file})
