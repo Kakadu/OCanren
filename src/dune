@@ -7,14 +7,13 @@
  (flags
   (:standard -short-paths -rectypes))
  (inline_tests)
- (modules_without_implementation DISEQ_SIG CORE_SIG)
+ (modules_without_implementation DISEQ_SIG)
  (preprocess
   (per_module
    ((pps ppx_expect ppx_inline_test GT.ppx_all ppx_optcomp)
     Disequality
     Disequality2
     DISEQ_SIG
-    ; CORE_SIG
     Term
     FM
     ;Tabling
