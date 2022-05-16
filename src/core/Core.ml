@@ -299,12 +299,21 @@ let set_skip_prunes_count n =
   max_prunes_skipped := n
 *)
 module State = struct
+  module Disequality = Disequality2.Make (struct
+    type t = FM.t
+
+    let neq = FM.neq
+    let is_interesting_var = FM.is_interesting_var
+    let trace = FM.trace
+  end)
+
   type t =
     { env : Env.t
     ; subst : Subst.t
     ; ctrs : Disequality.t
     ; prunes : Prunes.t
     ; scope : Term.Var.scope
+    ; fd : FM.t
     }
 
   type reified = Env.t * Term.t
@@ -315,6 +324,7 @@ module State = struct
     ; ctrs = Disequality.empty
     ; prunes = Prunes.empty
     ; scope = Term.Var.new_scope ()
+    ; fd = FM.empty ()
     }
   ;;
 
@@ -323,17 +333,26 @@ module State = struct
   let constraints { ctrs } = ctrs
   let scope { scope } = scope
   let prunes { prunes } = prunes
+  let fds { fd } = fd
   let fresh { env; scope } = Env.fresh ~scope env
+  let wc { env; scope } = Env.wc ~scope env
   let new_scope st = { st with scope = Term.Var.new_scope () }
 
   let ( >>=? ) = Stdlib.Option.bind
 
-  let unify x y ({ env; subst; ctrs; scope } as st) =
+  let check_diseqs st =
+    Disequality.recheck (env st) (subst st) (constraints st) [] (fds st)
+    >>=? fun (ctrs, fd) -> Some { st with ctrs; fd }
+  ;;
+
+  let unify x y ({ env; subst; ctrs; scope; fd } as st) =
     Subst.unify ~scope env subst x y
     >>=? fun (prefix, subst) ->
-    Disequality.recheck env subst ctrs prefix
-    >>=? fun ctrs ->
-    let next_state = { st with subst; ctrs } in
+    Disequality.recheck env subst ctrs prefix fd
+    >>=? fun (ctrs, fd) ->
+    FM.recheck env subst fd prefix
+    >>=? fun fd ->
+    let next_state = { st with subst; ctrs; fd } in
     if PrunesControl.is_exceeded ()
     then (
       let () = PrunesControl.reset_cur_counter () in
@@ -345,13 +364,13 @@ module State = struct
       Some next_state)
   ;;
 
-  let diseq x y ({ env; subst; ctrs; scope } as st) =
-    match Disequality.add env subst ctrs x y with
+  let diseq x y ({ env; subst; ctrs; scope; fd } as st) =
+    match Disequality.add env subst ctrs x y fd with
     | None -> None
-    | Some ctrs ->
+    | Some (ctrs,fd) ->
       (match Prunes.recheck (prunes st) env subst with
       | Prunes.Violated -> None
-      | NonViolated -> Some { st with ctrs })
+      | NonViolated -> Some { st with ctrs; fd })
   ;;
 
   (* returns always non-empty list *)
@@ -386,6 +405,12 @@ module State = struct
       ListLabels.map diseqs ~f:(fun diseq ->
           Answer.make env (helper diseq [] val_in_subst))
   ;;
+
+  let cut_off_wc_diseq_without_domain st =
+    match Disequality.cut_off_wc_without_domain st.ctrs with
+    | None -> None
+    | Some new_ctrs -> Some { st with ctrs = new_ctrs }
+  ;;
 end
 
 let ( !!! ) = Obj.magic
@@ -401,6 +426,32 @@ let only_head g st =
   try Stream.single @@ Stream.hd stream with
   | Failure _ -> Stream.nil
 ;;
+
+module FD = struct
+  let eq a b st =
+    match FM.eq a b (State.fds st) with
+    | None -> failure ()
+    | Some fd -> success { st with State.fd }
+  ;;
+
+  let neq a b st =
+    match FM.neq a b (State.fds st) with
+    | None -> failure ()
+    | Some fd -> success { st with State.fd }
+  ;;
+
+  let domain v xs st =
+    match FM.domain v xs (State.fds st) with
+    | None -> failure ()
+    | Some fd ->
+      (* Format.printf "%s: Domain added successfully to %s\n%!" __FILE__ (Term.show (Obj.repr v)); *)
+      let st = { st with State.fd } in
+      (match State.check_diseqs st with
+      | None -> failure
+      | Some st -> success)
+        st
+  ;;
+end
 
 let ( === ) x y st =
   let module T = struct
@@ -574,6 +625,11 @@ let conde = ( ?| )
 
 let call_fresh f st =
   let x = State.fresh st in
+  f x st
+;;
+
+let wc f st =
+  let x = State.wc st in
   f x st
 ;;
 
@@ -979,3 +1035,24 @@ module Unique = struct
   ;;
 
 end
+let unif_hack x y rez st =
+  match State.unify (Obj.magic x) (Obj.magic y) st with
+  | Some _ -> ( === ) rez !!true st
+  | None -> ( === ) rez !!false st
+;;
+
+let trace_domain_constraints st =
+  let () = FM.trace (State.fds st) in
+  success st
+;;
+
+let trace_diseq_constraints st =
+  let () = Format.printf "%a\n%!" State.Disequality.pp (State.constraints st) in
+  success st
+;;
+
+let cut_off_wc_diseq_without_domain st =
+  match State.cut_off_wc_diseq_without_domain st with
+  | Some st -> success st
+  | None -> failure st
+;;

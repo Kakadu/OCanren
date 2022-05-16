@@ -87,5 +87,9 @@ end
 
 val reify : Env.t -> t -> 'a -> Answer.t
 
+[%%if defined stats]
+
 (** Walk counter *)
 val walk_counter : unit -> int
+
+[%%endif]

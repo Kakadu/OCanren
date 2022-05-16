@@ -17,11 +17,21 @@
  * (enclosed in the file COPYING).
  *)
 
+[%%if defined stats]
 type stat = { mutable walk_count : int }
 
 let stat = { walk_count = 0 }
 let walk_counter () = stat.walk_count
 let walk_incr () = stat.walk_count <- stat.walk_count + 1
+[%%endif]
+
+let use_logging = true
+
+let log fmt =
+  if use_logging
+  then Format.kasprintf (fun s -> Format.printf "%s\n%!" s) fmt
+  else Format.ifprintf Format.std_formatter fmt
+;;
 
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
@@ -85,21 +95,27 @@ let split s = Term.VarMap.fold (fun var term xs -> Binding.{ var; term } :: xs) 
 type lterm =
   | Var of Term.Var.t
   | Value of Term.t
+  | WC of Term.Var.t
 
 let walk env subst x =
   (* walk var *)
   let rec walkv env subst v =
-    walk_incr ();
+    (* walk_incr (); *)
     Env.check_exn env v;
-    match v.Term.Var.subst with
-    | Some term -> walkt env subst (Obj.magic term)
-    | None ->
-      (try walkt env subst (Term.VarMap.find v subst) with
-      | Not_found -> Var v)
+    if Term.Var.is_wildcard v
+    then WC v
+    else (
+      match v.Term.Var.subst with
+      | Some term -> walkt env subst (Obj.magic term)
+      | None ->
+        (try walkt env subst (Term.VarMap.find v subst) with
+        | Not_found -> Var v))
+
   (* walk term *)
   and walkt env subst t =
-    walk_incr ();
+    (* walk_incr (); *)
     match Env.var env t with
+    | Some v when Term.Var.is_wildcard v -> WC v
     | Some v -> walkv env subst v
     | None -> Value t
   in
@@ -111,7 +127,7 @@ let map ~fvar ~fval env subst x =
   let rec deepfvar v =
     Env.check_exn env v;
     match walk env subst v with
-    | Var v -> fvar v
+    | WC v | Var v -> fvar v
     | Value x -> Term.map x ~fval ~fvar:deepfvar
   in
   Term.map x ~fval ~fvar:deepfvar
@@ -122,7 +138,7 @@ let iter ~fvar ~fval env subst x =
   let rec deepfvar v =
     Env.check_exn env v;
     match walk env subst v with
-    | Var v -> fvar v
+    | WC v | Var v -> fvar v
     | Value x -> Term.iter x ~fval ~fvar:deepfvar
   in
   Term.iter x ~fval ~fvar:deepfvar
@@ -133,7 +149,7 @@ let fold ~fvar ~fval ~init env subst x =
   let rec deepfvar acc v =
     Env.check_exn env v;
     match walk env subst v with
-    | Var v -> fvar acc v
+    | WC v | Var v -> fvar acc v
     | Value x -> Term.fold x ~fval ~fvar:deepfvar ~init:acc
   in
   Term.fold x ~init ~fval ~fvar:deepfvar
@@ -185,13 +201,25 @@ let unify ?(subsume = false) ?(scope = Term.Var.non_local_scope) env subst x y =
       ~init:acc
       ~fvar:(fun ((_, subst) as acc) x y ->
         match walk env subst x, walk env subst y with
+        | WC _, WC _ -> failwith "unifying two wildcards will be fixed later"
+        | Var z, WC v | WC v, Var z -> extend (Obj.magic v) (Obj.repr z) acc
+        | Value z, WC v | WC v, Value z ->
+          (* acc  *)
+          extend (Obj.magic v) (Obj.repr z) acc
+        | Value y, Var x | Var x, Value y ->
+          (* let newvar  = Env.fresh ~scope:Term.Var.non_local_scope env in
+            extend newvar (Obj.magic z) acc *)
+          (* log "got (variable?) %s and wildcard " (Term.show @@ Obj.repr y); *)
+          extend x y acc
         | Var x, Var y -> if Var.equal x y then acc else extend x (Term.repr y) acc
-        | Var x, Value y -> extend x y acc
-        | Value x, Var y -> extend y x acc
+        (* | Var x, Value y -> extend x y acc *)
+        (* | Value x, Var y -> extend y x acc *)
         | Value x, Value y -> helper x y acc)
       ~fval:(fun acc x y -> if x = y then acc else raise Unification_failed)
       ~fk:(fun ((_, subst) as acc) l v y ->
-        if subsume && l = Term.R
+        if Term.Var.is_wildcard v
+        then acc
+        else if subsume && l = Term.R
         then raise Unification_failed
         else (
           match walk env subst v with

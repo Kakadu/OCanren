@@ -44,9 +44,17 @@ module Var : sig
   val equal : t -> t -> bool
   val compare : t -> t -> int
   val hash : t -> int
+  val is_wildcard : t -> bool
+  val make_wc : env:env -> scope:scope -> t
 end
 
-module VarSet : Set.S with type elt = Var.t
+module VarSet : sig
+  include Set.S with type elt = Var.t
+
+  val iteri : (int -> elt -> unit) -> t -> unit
+  val pp : Format.formatter -> t -> unit
+end
+
 module VarTbl : Hashtbl.S with type key = Var.t
 
 module VarMap : sig
@@ -105,7 +113,18 @@ val fold2
   -> 'a
 
 val show : t -> string
+val describe_var : Format.formatter -> Var.t -> unit
 val pp : Format.formatter -> t -> unit
 val equal : t -> t -> bool
 val compare : t -> t -> int
 val hash : t -> int
+
+val fold_monoid
+  :  fvar:(Var.t -> Var.t -> 'a)
+  -> fval:(value -> value -> 'a)
+  -> fk:(label -> Var.t -> value -> 'a)
+  -> join:('a -> 'a -> 'a)
+  -> empty:'a
+  -> value
+  -> value
+  -> 'a

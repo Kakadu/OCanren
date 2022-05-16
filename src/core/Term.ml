@@ -19,6 +19,14 @@
 
 open Printf
 
+let use_logging = false
+
+let log fmt =
+  if use_logging
+  then Format.kasprintf (fun s -> Format.printf "%s\n%!" s) fmt
+  else Format.ifprintf Format.std_formatter fmt
+;;
+
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
 
@@ -53,6 +61,9 @@ module Var = struct
     { env; anchor = global_anchor; subst = None; constraints = []; index; scope }
   ;;
 
+  let is_wildcard { index } = index = -42
+  let make_wc ~env ~scope = make ~env ~scope (-42)
+
   let dummy =
     let env = 0 in
     let scope = 0 in
@@ -70,7 +81,26 @@ module Var = struct
   let hash x = Hashtbl.hash (x.env, x.index)
 end
 
-module VarSet = Set.Make (Var)
+module VarSet = struct
+  include Set.Make (Var)
+  let iteri f set =
+    let (_ : int) =
+      fold
+        (fun x i ->
+          f i x;
+          i + 1)
+        set
+        0
+    in
+    ()
+  ;;
+
+  let pp ppf s =
+    Format.fprintf ppf "{| ";
+    iter (fun { Var.index } -> Format.fprintf ppf "%d " index) s;
+    Format.fprintf ppf " |}"
+  ;;
+end
 module VarTbl = Hashtbl.Make (Var)
 
 module VarMap = struct
@@ -348,4 +378,47 @@ let rec hash x =
         , List.fold_left (fun acc x -> Hashtbl.hash (acc, hash x)) acc v.Var.constraints
         ))
     ~fval:(fun acc x -> Hashtbl.hash (acc, Hashtbl.hash x))
+;;
+
+
+external unsafe_cast_to_var : 'a -> Var.t = "%identity"
+
+let rec fold_monoid ~fvar ~fval ~fk ~join ~empty x y =
+  let tx, ty = Obj.tag x, Obj.tag y in
+  match is_box tx, is_box ty with
+  | true, true ->
+    let sx, sy = Obj.size x, Obj.size y in
+    (match has_var_structure tx sx x, has_var_structure ty sy y with
+    | true, true -> fvar (unsafe_cast_to_var x) (unsafe_cast_to_var y)
+    | true, false -> fk L (unsafe_cast_to_var x) y
+    | false, true -> fk R (unsafe_cast_to_var y) x
+    | false, false ->
+      if tx = ty && sx = sy
+      then (
+        let fx, fy = Obj.field x, Obj.field y in
+        let rec inner i acc =
+          if i < sx
+          then (
+            let acc = join acc (fold_monoid ~join ~empty ~fvar ~fval ~fk (fx i) (fy i)) in
+            inner (i + 1) acc)
+          else acc
+        in
+        inner 0 empty)
+      else raise (Different_shape (tx, ty)))
+  | true, false ->
+    is_valid_tag_exn ty;
+    let sx = Obj.size x in
+    if has_var_structure tx sx x
+    then fk L (Obj.magic x) y
+    else raise (Different_shape (tx, ty))
+  | false, true ->
+    is_valid_tag_exn tx;
+    let sy = Obj.size y in
+    if has_var_structure ty sy y
+    then fk R (Obj.magic y) x
+    else raise (Different_shape (tx, ty))
+  | false, false ->
+    is_valid_tag_exn tx;
+    is_valid_tag_exn ty;
+    if tx = ty then fval x y else raise (Different_shape (tx, ty))
 ;;

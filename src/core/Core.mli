@@ -34,6 +34,8 @@ type goal = State.t Stream.t goal'
     parameter *)
 val call_fresh : ('a ilogic -> goal) -> goal
 
+val wc : ('a ilogic -> goal) -> goal
+
 (** [x === y] creates a goal, which performs a unification of [x] and [y] *)
 val ( === ) : 'a ilogic -> 'a ilogic -> goal
 
@@ -322,6 +324,12 @@ module PrunesControl : sig
   val skipped_prunes : unit -> int
 end
 
+module FD : sig
+  val eq : int ilogic -> int ilogic -> goal
+  val neq : int ilogic -> int ilogic -> goal
+  val domain : int ilogic -> int list -> goal
+end
+
 val is_free : 'a ilogic -> goal -> goal -> goal
 
 module Unique : sig
@@ -342,3 +350,7 @@ module Unique : sig
   val different : unit -> 'a injected
   val unique_answers : ('a Logic.ilogic -> goal) -> 'a Logic.ilogic injected -> goal
 end
+
+val trace_domain_constraints : goal
+val trace_diseq_constraints : goal
+val cut_off_wc_diseq_without_domain : goal

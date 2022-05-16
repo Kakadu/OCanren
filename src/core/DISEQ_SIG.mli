@@ -20,18 +20,20 @@
 module type S = sig
   type t
 
+  type extra
+
   (* [empty] empty disequality constraint store *)
   val empty : t
 
   (* [add env subst diseq x y] adds constraint [x =/= y] into disequality constraint store *)
-  val add : Env.t -> Subst.t -> t -> 'a -> 'a -> t option
+  val add : Env.t -> Subst.t -> t -> 'a -> 'a -> extra -> (t * extra) option
 
   (* [recheck env subst diseq bindings] - checks that disequality is not violated in refined substitution.
   *   [bindings] is a substitution prefix, i.e. new bindings obtained during unification.
   *   This function may rebuild internal representation of constraints and thus it returns new object.
   *   If constraint is violated then [None] is returned.
   *)
-  val recheck : Env.t -> Subst.t -> t -> Subst.Binding.t list -> t option
+  val recheck : Env.t -> Subst.t -> t -> Subst.Binding.t list -> extra -> (t * extra) option
 
   (* [project env subst diseq fv] - projects [diseq] into the set of free-variables [fv],
   *   i.e. it extracts only those constraints that are relevant to variables from [fv]
