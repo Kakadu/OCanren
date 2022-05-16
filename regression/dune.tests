@@ -19,9 +19,11 @@
     ;test019tablingCache
     test021structural
     test022newsyntax
+    test030fd
+    test031wc
   )
   (package OCanren)
-  (public_names - - - - - -  - - - - - -  - - - - -)
+  (public_names - - - - - -  - - - - - -  - - - - - - -)
   (libraries GT OCanren OCanren.tester)
   (preprocess (action
     (run %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe %{input-file})
@@ -50,6 +52,7 @@
   ./test016sorto.exe
   ;./test017tabling.exe
   ./test018prjc.exe
+  ;./test020.exe
   ;./test019tablingCache.exe
   ./test021structural.exe
   ./test022newsyntax.exe
