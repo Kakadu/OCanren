@@ -56,4 +56,6 @@
   ;./test019tablingCache.exe
   ./test021structural.exe
   ./test022newsyntax.exe
+  ./test030fd.exe
+  ./test031wc.exe
 ))

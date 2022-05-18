@@ -8,7 +8,7 @@ let rel1 x =
     (FD.neq x !!2)*)
 
 
-let runL eta = runR OCanren.reify GT.(show int) GT.(show logic @@ show int) eta
+let runL eta = run_r OCanren.reify GT.(show logic @@ show int) eta
 
 let rel3 dom a b c d =
   fresh (_temp)

@@ -12,8 +12,8 @@ let show_booll      = show(logic)  (show(bool))
 let show_intl_optl = show(logic)  (show(option) (show(logic) (show(int))))
 
 
-let runInt eta = runR OCanren.reify (GT.show(GT.int)) show_intl eta
-let runBool eta = runR OCanren.reify (GT.show(GT.bool)) (show(logic) @@ show bool) eta
+let runInt eta = run_r OCanren.reify  show_intl eta
+let runBool eta = run_r OCanren.reify  (show(logic) @@ show bool) eta
 
 
 
@@ -63,14 +63,13 @@ let pair_has_true p r = wc (fun __ -> conde [
   (p =/= pair !!true __) &&& (p =/= pair __ !!true) &&& (r === !!3)
 ])
 
-let runBool eta = runR OCanren.reify (GT.show(GT.bool)) (show(logic) @@ show bool) eta
-let runPair eta = runR (Pair.reify OCanren.reify OCanren.reify) (GT.show(Pair.ground) show_int show_int)
+let runBool eta = run_r OCanren.reify (show(logic) @@ show bool) eta
+let runPair eta = run_r (Pair.reify OCanren.reify OCanren.reify)
   (show Pair.logic show_intl show_intl) eta
-let runPairB eta = runR (Pair.reify OCanren.reify OCanren.reify) (GT.show(Pair.ground) show_bool show_bool)
+let runPairB eta = run_r (Pair.reify OCanren.reify OCanren.reify)
   (show Pair.logic show_booll show_booll) eta
 let run_option_int eta =
-  runR (Option.reify OCanren.reify) (GT.show(Option.ground) show_int)
-  (show Option.logic show_intl) eta
+  run_r (Option.reify OCanren.reify) (show Option.logic show_intl) eta
 
 let __ _ =
   runPair (-1) q qh (REPR(fun q ->
