@@ -83,7 +83,7 @@ val reify :  ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t
 
 val prj_exn : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t
 
-val prj : (int -> 'b ground) -> ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t
+val from_logic: ('a -> 'b) -> 'a logic -> 'b Stdlib.List.t
 
 (** Relational foldr *)
 val foldro :

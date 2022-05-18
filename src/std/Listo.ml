@@ -116,14 +116,8 @@ let rec prj_exn : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t =
       let* fr = rself in
       Env.Monad.return (fun x -> GT.gmap t fa fr x)))
 
-let rec prj : (int -> _ ground) -> ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t =
-  fun onvar ra ->
-    let ( >>= ) = Env.Monad.bind in
-    Reifier.fix (fun self ->
-    Reifier.compose (Reifier.prj (fun _ -> assert false))
-    (ra >>= fun fa ->
-     self >>= fun fr ->
-     Env.Monad.return (fun x -> GT.gmap t fa fr x)))
+let from_logic  f (xs : _ logic) : _ Stdlib.List.t =
+  GT.foldr logic (fun acc x -> f x :: acc) [] xs
 
 let nil () : 'a groundi = Logic.inj Nil
 let cons : 'a -> 'a groundi -> 'a groundi = fun x y ->
