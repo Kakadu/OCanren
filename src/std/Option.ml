@@ -52,6 +52,8 @@ let inj f x = to_logic (GT.(gmap option) f x)
 
 type 'a groundi = 'a ground ilogic
 
+type 'a injected = 'a groundi
+
 let rec reify : 'a 'b . ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t =
   fun ra ->
   let open Env.Monad.Syntax in

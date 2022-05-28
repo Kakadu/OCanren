@@ -44,6 +44,8 @@ val inj : ('a -> 'b) -> 'a ground -> 'b logic
 (** A synonym for injected option *)
 type 'a groundi = 'a ground ilogic
 
+type 'a injected = 'a groundi
+
 (** Make injected [option] from ground one with injected value *)
 val option : 'a ilogic ground -> 'a ilogic groundi
 
