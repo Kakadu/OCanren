@@ -16,6 +16,7 @@
  * (enclosed in the file COPYING).
  *)
 
+IFDEF STATS THEN
 type t = unit -> Mtime.span
   
 let make () =
@@ -30,3 +31,5 @@ let make () =
     (times ()).tms_utime -. origin
   ) *)
     
+END
+

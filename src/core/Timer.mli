@@ -16,7 +16,9 @@
  * (enclosed in the file COPYING).
  *)
 
+IFDEF STATS THEN
 type t = unit -> Mtime.span
    
 val make : unit -> t
-    
+END
+
