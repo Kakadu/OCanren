@@ -56,8 +56,12 @@ let logic =
 
                       sprintf " %s" (GT.show GT.list (fun l ->
                         let constraints_str = fself () l in
-                        (* assert (constraints_str <> ""); *)
-                        "=/= " ^ constraints_str
+                          if constraints_str = "" then
+                            let () = Format.printf "bad value of constraint is '%s'\n%!" (Term.show (Obj.repr l) ) in
+                            assert false
+                          else "=/= " ^ constraints_str
+
+
                         ) cs)
                   in
                   sprintf "_.%d%s" i c
