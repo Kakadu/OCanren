@@ -53,7 +53,12 @@ let logic =
                     match cs with
                     | [] -> ""
                     | _ ->
-                      sprintf " %s" (GT.show GT.list (fun l -> "=/= " ^ fself () l) cs)
+
+                      sprintf " %s" (GT.show GT.list (fun l ->
+                        let constraints_str = fself () l in
+                        (* assert (constraints_str <> ""); *)
+                        "=/= " ^ constraints_str
+                        ) cs)
                   in
                   sprintf "_.%d%s" i c
 
