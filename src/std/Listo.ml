@@ -73,14 +73,12 @@ let ground = {
         in inner l ^ "]"
     end
 }
+let rec is_finite_guaranteed = function
+  | Value Nil -> true
+  | Var _ -> false
+  | Value (Cons (_, tl)) -> is_finite_guaranteed tl
 
 let rec pp pp_el ppf =
-  let rec is_finite_guaranteed= function
-    | Value Nil -> true
-    | Var _ -> false
-    | Value (Cons (_, tl)) -> is_finite_guaranteed tl
-  in
-
   let open Format in
   let rec pp_finite ppf : 'a logic -> unit = function
   | Value Nil -> ()

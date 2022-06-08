@@ -60,7 +60,8 @@ val (%<) : ('a, 'b) injected -> ('a, 'b) injected -> ('a, 'b) groundi
 (** [!< x] is a synonym for [cons x (nil ())] *)
 val (!<) : ('a, 'b) injected -> ('a, 'b) groundi
 
-(** {3 Built-in relations} *)
+(* Checks if a logic list has finite length, i.e. does Value Nil present in the tail. *)
+val is_finite_guaranteed: 'a logic -> bool
 
 (** [of_list l] converts regular OCaml list [l] into isomorphic OCanren [ground] list *)
 val of_list : ('a -> 'b) -> 'a GT.list -> 'b ground
@@ -81,6 +82,8 @@ val reify : (Env.t -> ('a, 'b) injected -> 'b) -> Env.t -> ('a ground, 'b logic)
 
 val prjc : (Env.t -> ('a, 'b) injected -> 'a) -> (int -> 'a ground GT.list -> 'a ground) ->
   Env.t -> ('a ground, 'b logic) injected -> 'a ground
+
+(** {3 Built-in relations} *)
 
 (** Relational foldr *)
 val foldro : (('a, 'b) injected -> ('acc, _ logic' as 'acc2) injected -> ('acc, 'acc2) injected -> goal) -> ('acc, 'acc2) injected -> ('a, 'b) groundi -> ('acc, 'acc2) injected -> goal
