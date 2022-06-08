@@ -64,7 +64,8 @@ val (%<) : 'a  -> 'a -> 'a groundi
 (** [!< x] is a synonym for [cons x (nil ())] *)
 val (!<) : 'a  ->  'a groundi
 
-(** {3 Built-in relations} *)
+(* Checks if a logic list has finite length, i.e. does Value Nil present in the tail. *)
+val is_finite_guaranteed: 'a logic -> bool
 
 (** [of_list l] converts regular OCaml list [l] into isomorphic OCanren [ground] list *)
 val of_list : ('a -> 'b) -> 'a GT.list -> 'b ground
@@ -84,6 +85,8 @@ val reify :  ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t
 val prj_exn : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t
 
 val from_logic: ('a -> 'b) -> 'a logic -> 'b Stdlib.List.t
+
+(** {3 Built-in relations} *)
 
 (** Relational foldr *)
 val foldro :
