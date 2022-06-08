@@ -74,6 +74,37 @@ let ground = {
     end
 }
 
+let rec pp pp_el ppf =
+  let rec is_finite_guaranteed= function
+    | Value Nil -> true
+    | Var _ -> false
+    | Value (Cons (_, tl)) -> is_finite_guaranteed tl
+  in
+
+  let open Format in
+  let rec pp_finite ppf : 'a logic -> unit = function
+  | Value Nil -> ()
+  | Value (Cons (h, Value Nil)) -> fprintf ppf "%a" pp_el h
+  | Value (Cons (h, tl)) ->
+    fprintf ppf "%a; " pp_el h;
+    pp_finite ppf tl
+  | Var _ -> failwith "A list is not finite"
+  in
+
+  let rec pp_infinite1 ppf = function
+  | Nil -> fprintf ppf "[]" (* but should not happen *)
+  | (Cons (h, Value tl)) ->
+      fprintf ppf "%a :: %a" pp_el h  pp_infinite1 tl
+  | (Cons (h, (Var _ as v))) ->
+      fprintf ppf "%a :: %a" pp_el h  pp_infinite v
+  and pp_infinite ppf : 'a logic -> unit = function
+  | Value v -> pp_infinite1 ppf v
+  | Var _ as v -> GT.fmt Logic.logic pp_infinite1 ppf v
+  in
+  fun xs ->
+    (if is_finite_guaranteed xs
+      then fprintf ppf "[%a]" pp_finite else pp_infinite ppf) xs
+
 let logic = {
   logic with
   GT.plugins =
@@ -84,24 +115,8 @@ let logic = {
       method foldl   fa l = GT.foldl   (logic') (GT.foldl   (list) fa (this#foldl   fa)) l
       method foldr   fa l = GT.foldr   (logic') (GT.foldr   (list) fa (this#foldr   fa)) l
       (* method html    fa l = GT.html    (logic') (GT.html    (list) fa (this#html    fa)) l *)
-      method fmt fa fmt l = Format.fprintf fmt "%s" (this#show (Format.asprintf "%a" fa) l)
-      method show fa l =
-        GT.show(logic')
-          (fun l -> "[" ^
-              let rec inner l =
-                GT.transform(t)
-                  (fun fself ->
-                      object
-                         inherit ['a,'a logic, _] show_list_t (GT.lift fa) (GT.lift (GT.show(logic') inner)) fself
-                         method! c_Nil   _ _      = ""
-                         method! c_Cons  i s x xs =
-                           (fa x) ^ (match xs with Value Nil -> "" | _ -> "; " ^ (GT.show(logic') inner xs))
-                      end)
-                  ()
-                  l
-               in inner l ^ "]"
-          )
-          l
+      method fmt       = pp
+      method show fa l = Format.asprintf "%a" (this#fmt (fun ppf x -> Format.fprintf ppf "%s" (fa x))) l
     end
 }
 
