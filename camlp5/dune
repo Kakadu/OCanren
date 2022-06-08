@@ -33,6 +33,8 @@
   (run
    mkcamlp5.opt
    -package
+   ppx_inline_test.runtime-lib
+   -package
    camlp5,camlp5.pa_o,camlp5.macro,camlp5.pr_dump,GT.syntax,GT.syntax.all
    %{read-lines:../config/package-doc.cfg}
    %{cmas}
