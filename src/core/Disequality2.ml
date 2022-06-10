@@ -223,6 +223,8 @@ module Make (FDC : EXTRA) = struct
 
   type extra = FDC.t
 
+  type subsumes_rez = SuLeft | SuRight | SuNot
+
   module Disjunct : sig
     type t
 
@@ -255,6 +257,8 @@ module Make (FDC : EXTRA) = struct
     val extract : t -> Term.Var.t -> Obj.t list
     val propagate_to_fdc : t -> extra -> extra option
     val is_violated_rigorously : t -> bool
+
+    val subsumes : t -> t -> subsumes_rez
   end = struct
     module LLL = struct
       include Set.Make (Conjunct)
@@ -278,6 +282,26 @@ module Make (FDC : EXTRA) = struct
 
     let empty = { wcs = VarSet.empty; conjs = LLL.empty }
     let is_empty { conjs; wcs } = LLL.is_empty conjs && VarSet.is_empty wcs
+
+    let subsumes =
+      let cmp_wcs l r =
+        let u = VarSet.union l r  in
+        if VarSet.equal u l then SuRight
+        else if VarSet.equal u r then SuLeft
+        else SuNot
+      in
+      let cmp_conjs l r =
+        let u = LLL.union l r  in
+        if LLL.equal u l then SuRight
+        else if LLL.equal u r then SuLeft
+        else SuNot
+      in
+      (*  constraint is a pair of set. One subsumes another that when boths sets are strictly smaller *)
+      fun l r ->
+      match cmp_wcs l.wcs r.wcs, cmp_conjs l.conjs r.conjs with
+      | SuLeft, SuLeft -> SuLeft
+      | SuRight, SuRight -> SuRight
+      | _,_ -> SuNot
 
     let is_violated_rigorously { wcs } =
       (* TODO: assert that wildcard variables didn't get into conjs *)
@@ -490,6 +514,10 @@ module Make (FDC : EXTRA) = struct
 
     let fold_left f i xs = fold (fun x acc -> f acc x) xs i
     let concat_map f xs = fold (fun x acc -> union (f x) acc) xs empty
+
+    let of_seq_without_duplicates s =
+      (* TODO: finish implementation *)
+      Seq.fold_left (fun acc x -> if mem x acc then acc else add x acc)
   end
 
   type t = DisjSet.t
