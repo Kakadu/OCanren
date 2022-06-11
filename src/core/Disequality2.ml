@@ -223,7 +223,7 @@ module Make (FDC : EXTRA) = struct
 
   type extra = FDC.t
 
-  type subsumes_rez = SuLeft | SuRight | SuNot
+  type subsumes_rez = SuLeft | SuRight | SuNot | SuEqual [@@deriving gt ~options:{fmt}]
 
   module Disjunct : sig
     type t
@@ -285,12 +285,16 @@ module Make (FDC : EXTRA) = struct
 
     let subsumes =
       let cmp_wcs l r =
-        let u = VarSet.union l r  in
+        if VarSet.equal l r then SuEqual
+        else
+        let u = VarSet.union l r in
         if VarSet.equal u l then SuRight
         else if VarSet.equal u r then SuLeft
         else SuNot
       in
       let cmp_conjs l r =
+        if LLL.equal l r then SuEqual
+        else
         let u = LLL.union l r  in
         if LLL.equal u l then SuRight
         else if LLL.equal u r then SuLeft
@@ -299,6 +303,8 @@ module Make (FDC : EXTRA) = struct
       (*  constraint is a pair of set. One subsumes another that when boths sets are strictly smaller *)
       fun l r ->
       match cmp_wcs l.wcs r.wcs, cmp_conjs l.conjs r.conjs with
+      | SuEqual, r -> r
+      | r, SuEqual -> r
       | SuLeft, SuLeft -> SuLeft
       | SuRight, SuRight -> SuRight
       | _,_ -> SuNot
@@ -322,7 +328,16 @@ module Make (FDC : EXTRA) = struct
     ;;
 
     let conj : t -> t -> t =
-     fun l r -> { wcs = VarSet.union l.wcs r.wcs; conjs = LLL.append l.conjs r.conjs }
+     fun l r ->
+      match subsumes l r with
+      | SuLeft -> l
+      | SuRight -> r
+      | SuEqual -> l
+      | SuNot ->
+      { wcs = VarSet.union l.wcs r.wcs; conjs = LLL.append l.conjs r.conjs }
+      |> (fun ans ->
+        (* printf "conj of '%a' and '%a' leads to '%a'\n%!" pp l pp r pp ans; *)
+        ans )
    ;;
 
     let intersects_with ~set { conjs } =
@@ -513,19 +528,70 @@ module Make (FDC : EXTRA) = struct
     ;;
 
     let fold_left f i xs = fold (fun x acc -> f acc x) xs i
+
+    let pp ppf xs =
+      printf "All disjuncts (%d)\n%!" (cardinal xs);
+      iteri (fun i -> fprintf ppf "\t%d: %a\n%!" i Disjunct.pp) xs
+    ;;
+
+    let dedup set =
+      let add set x =
+        fold_left (fun (flg,acc) eset ->
+          match Disjunct.subsumes x eset with
+          | SuLeft -> (flg,acc)
+          | SuEqual
+          | SuRight -> (false, add eset acc)
+          | SuNot -> (flg, add eset acc)
+          )
+          (true, empty)
+          set
+          |> function (true,set) -> add x set
+          | (false,set) -> set
+      in
+      fold_left add empty set
+
+    let union l r =
+      (* printf "%s %d \n%!" __FILE__ __LINE__; *)
+      let add set x =
+        fold_left (fun (flg,acc) eset ->
+          match Disjunct.subsumes x eset with
+          | SuLeft -> (flg,acc)
+          | SuEqual
+          | SuRight -> (false, add eset acc)
+          | SuNot -> (flg, add eset acc)
+          )
+          (true, empty)
+          set
+          |> function (true,set) -> add x set
+          | (false,set) -> set
+      in
+      let ans = fold_left add l r in
+      (* printf "DisjSet.union of '%a' and '%a'\nleads to '%a'\n%!" pp l pp r pp ans ; *)
+      ans
+
     let concat_map f xs = fold (fun x acc -> union (f x) acc) xs empty
 
     let of_seq_without_duplicates s =
       (* TODO: finish implementation *)
-      Seq.fold_left (fun acc x -> if mem x acc then acc else add x acc)
+      let add set x =
+        fold_left (fun (flg,acc) eset ->
+          match Disjunct.subsumes x eset with
+          | SuLeft -> (flg,acc)
+          | SuEqual
+          | SuRight -> (false, add eset acc)
+          | SuNot -> (flg, add eset acc)
+          )
+          (true, empty)
+          set
+          |> function (true,set) -> add x set
+          | (false,set) -> set
+      in
+      Seq.fold_left add empty s
   end
 
   type t = DisjSet.t
 
-  let pp ppf xs =
-    printf "All disjuncts (%d)\n%!" (DisjSet.cardinal xs);
-    DisjSet.iteri (fun i -> fprintf ppf "\t%d: %a\n%!" i Disjunct.pp) xs
-  ;;
+  let pp = DisjSet.pp
 
   let empty : t = DisjSet.empty
   let is_empty = DisjSet.is_empty
@@ -533,9 +599,12 @@ module Make (FDC : EXTRA) = struct
 
   let conj : t -> t -> t =
    fun l r ->
+    (* printf "Disjunct.conj '%a' and '%a'\n" pp l pp r; *)
     l
     |> DisjSet.concat_map (fun (c1 : Disjunct.t) ->
-           DisjSet.map (fun (c2 : Disjunct.t) -> Disjunct.conj c1 c2) r)
+           DisjSet.map (fun (c2 : Disjunct.t) -> Disjunct.conj c1 c2) r
+           (* |> DisjSet.dedup *)
+           )
  ;;
 
   let disequality_of_terms l r : t =
@@ -612,7 +681,8 @@ module Make (FDC : EXTRA) = struct
               (DisjSet.to_seq d)
               (DisjSet.to_seq cstrs)
               ~f:Disjunct.conj
-            |> DisjSet.of_seq
+            (* |> DisjSet.of_seq *)
+            |> DisjSet.of_seq_without_duplicates
           in
           assert (DisjSet.cardinal whole_set <> 0);
           (* if all constraints are violated, it is bad *)
@@ -828,5 +898,43 @@ module _ = struct
       	2: [ { _.2 <> 'int<2>' }{ _.3 <> 'int<3>' } ] {| |}
       	3: [ { _.2 <> 'int<2>' }{ _.4 <> 'int<4>' } ] {| |}
     |xxx}]
+  ;;
+
+  let%expect_test "Removing duplicated disjuncts 1" =
+    let v1 = make_var 1 in
+    let v2 = make_var 2 in
+    let v3 = make_var 3 in
+    let v4 = make_var 4 in
+    let d1 = disequality_of_terms !!!v1 !!!v2 in
+    Format.printf "%a\n" pp d1;
+    let d2 = disequality_of_terms !!!(v1, v3) !!!(v2, v4) in
+    Format.printf "%a\n" pp d2;
+    let d3 = conj d1 d2 in
+    Format.printf "%a" pp d3;
+    [%expect
+      {xxx|
+        All disjuncts (1)
+        	0: [ { _.1 <> '_.2' } ] {| |}
+
+        All disjuncts (2)
+        	0: [ { _.1 <> '_.2' } ] {| |}
+        	1: [ { _.3 <> '_.4' } ] {| |}
+
+        All disjuncts (2)
+        	0: [ { _.1 <> '_.2' } ] {| |}
+        	1: [ { _.1 <> '_.2' }{ _.3 <> '_.4' } ] {| |}
+
+    |xxx}];
+    (* assert (DisjSet.cardinal d1 = 1);
+    assert (DisjSet.cardinal d2 = 2);
+    let u = DisjSet.min_elt d3 in
+    let v = DisjSet.max_elt d3 in
+    Format.printf "u = %a\n%!" Disjunct.pp u;
+    Format.printf "v = %a\n%!" Disjunct.pp v;
+    printf "%a" (GT.fmt subsumes_rez) (Disjunct.subsumes u  v);
+    [%expect
+      {xxx|
+
+    |xxx}] *)
   ;;
 end
