@@ -373,6 +373,7 @@ module MYZ3 = struct
   end
 
   let check { vars; solver } =
+    (* Format.fprintf "checking %a" pp *)
     match Layer.check solver with
     | Z3.Solver.SATISFIABLE ->
       (match Z3.Solver.get_model solver with

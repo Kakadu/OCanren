@@ -223,7 +223,12 @@ module Make (FDC : EXTRA) = struct
 
   type extra = FDC.t
 
-  type subsumes_rez = SuLeft | SuRight | SuNot | SuEqual [@@deriving gt ~options:{fmt}]
+  type subsumes_rez =
+    | SuLeft
+    | SuRight
+    | SuNot
+    | SuEqual
+  [@@deriving gt ~options:{ fmt }]
 
   module Disjunct : sig
     type t
@@ -257,7 +262,6 @@ module Make (FDC : EXTRA) = struct
     val extract : t -> Term.Var.t -> Obj.t list
     val propagate_to_fdc : t -> extra -> extra option
     val is_violated_rigorously : t -> bool
-
     val subsumes : t -> t -> subsumes_rez
   end = struct
     module LLL = struct
@@ -285,29 +289,28 @@ module Make (FDC : EXTRA) = struct
 
     let subsumes =
       let cmp_wcs l r =
-        if VarSet.equal l r then SuEqual
-        else
-        let u = VarSet.union l r in
-        if VarSet.equal u l then SuRight
-        else if VarSet.equal u r then SuLeft
-        else SuNot
+        if VarSet.equal l r
+        then SuEqual
+        else (
+          let u = VarSet.union l r in
+          if VarSet.equal u l then SuRight else if VarSet.equal u r then SuLeft else SuNot)
       in
       let cmp_conjs l r =
-        if LLL.equal l r then SuEqual
-        else
-        let u = LLL.union l r  in
-        if LLL.equal u l then SuRight
-        else if LLL.equal u r then SuLeft
-        else SuNot
+        if LLL.equal l r
+        then SuEqual
+        else (
+          let u = LLL.union l r in
+          if LLL.equal u l then SuRight else if LLL.equal u r then SuLeft else SuNot)
       in
       (*  constraint is a pair of set. One subsumes another that when boths sets are strictly smaller *)
       fun l r ->
-      match cmp_wcs l.wcs r.wcs, cmp_conjs l.conjs r.conjs with
-      | SuEqual, r -> r
-      | r, SuEqual -> r
-      | SuLeft, SuLeft -> SuLeft
-      | SuRight, SuRight -> SuRight
-      | _,_ -> SuNot
+        match cmp_wcs l.wcs r.wcs, cmp_conjs l.conjs r.conjs with
+        | SuEqual, r -> r
+        | r, SuEqual -> r
+        | SuLeft, SuLeft -> SuLeft
+        | SuRight, SuRight -> SuRight
+        | _, _ -> SuNot
+    ;;
 
     let is_violated_rigorously { wcs } =
       (* TODO: assert that wildcard variables didn't get into conjs *)
@@ -334,10 +337,10 @@ module Make (FDC : EXTRA) = struct
       | SuRight -> r
       | SuEqual -> l
       | SuNot ->
-      { wcs = VarSet.union l.wcs r.wcs; conjs = LLL.append l.conjs r.conjs }
-      |> (fun ans ->
+        { wcs = VarSet.union l.wcs r.wcs; conjs = LLL.append l.conjs r.conjs }
+        |> fun ans ->
         (* printf "conj of '%a' and '%a' leads to '%a'\n%!" pp l pp r pp ans; *)
-        ans )
+        ans
    ;;
 
     let intersects_with ~set { conjs } =
@@ -425,6 +428,9 @@ module Make (FDC : EXTRA) = struct
       | Violated -> Stdlib.Result.error `Violated
     ;;
 
+    (** Check that every disequality doesn't violate by itself extra constraints
+        TODO: Check another half of the constraint of `interesting` variable too.
+      *)
     let shallow_recheck_gen extra { conjs; _ } =
       LLL.fold
         (fun conj acc ->
@@ -432,6 +438,10 @@ module Make (FDC : EXTRA) = struct
           match acc with
           | None -> None
           | Some extra ->
+            (* TODO: check another part if it is a variable.
+               To add more types we should replace (var*term) by
+              (`TwoVars of var*var | `VarTerm of var*term )
+            *)
             if FDC.is_interesting_var Subst.Binding.(conj.var) extra
             then
               (* let () = printf "conj = %a is interesting\n " Conjunct.pp conj in *)
@@ -450,11 +460,11 @@ module Make (FDC : EXTRA) = struct
       | Some _ -> true
     ;;
 
-    let recheck_exn env subst _bnds extra { wcs; conjs } =
-      (* For every conjunct we should check that this conjuct is a sensible constraint.
-         For every wildcard variable we should check that they could be inhabited. (but let's implement it later)
+    (** For every conjunct we should check that this conjuct is a sensible constraint in current [subst].
+        TODO: For every wildcard variable check that it could be inhabited.
          Some changes
       *)
+    let recheck_exn env subst _bnds extra { wcs; conjs } =
       log "recheck_exn of %a" pp { wcs; conjs };
       try
         let conjs : LLL.elt Seq.t Seq.t =
@@ -479,18 +489,29 @@ module Make (FDC : EXTRA) = struct
                 List.to_seq bnds)
             (LLL.to_seq conjs)
         in
-        Some
-          ( List.filter_map
-              (fun conjs ->
-                match of_bindings (List.of_seq conjs) extra with
-                | Result.Error _ -> None
-                | Ok (sub_disjunct, extra) ->
-                  let sub_disjunct =
-                    { sub_disjunct with wcs = VarSet.union wcs sub_disjunct.wcs }
-                  in
-                  if shallow_recheck extra sub_disjunct then Some sub_disjunct else None)
-              (CartesianHacks.cartesian_seq conjs |> List.of_seq)
-          , extra )
+        let new_diseqs =
+          List.filter_map
+            (fun conjs ->
+              match of_bindings (List.of_seq conjs) extra with
+              | Result.Error _ -> None
+              | Ok (sub_disjunct, extra) ->
+                let sub_disjunct =
+                  { sub_disjunct with wcs = VarSet.union wcs sub_disjunct.wcs }
+                in
+                if is_empty sub_disjunct
+                then None
+                else if shallow_recheck extra sub_disjunct
+                then Some sub_disjunct
+                else None)
+            (CartesianHacks.cartesian_seq conjs |> List.of_seq)
+        in
+        (* assert (not (is_empty new_diseqs)); *)
+        (* printf "There are %d new disjuncts\n%!" (List.length new_diseqs); *)
+        let () =
+          ListLabels.iter new_diseqs ~f:(fun d ->
+              if is_empty d then failwith "Empty disjuncts should be filtered out")
+        in
+        Some (new_diseqs, extra)
       with
       | Violated -> None
     ;;
@@ -536,63 +557,65 @@ module Make (FDC : EXTRA) = struct
 
     let dedup set =
       let add set x =
-        fold_left (fun (flg,acc) eset ->
-          match Disjunct.subsumes x eset with
-          | SuLeft -> (flg,acc)
-          | SuEqual
-          | SuRight -> (false, add eset acc)
-          | SuNot -> (flg, add eset acc)
-          )
+        fold_left
+          (fun (flg, acc) eset ->
+            match Disjunct.subsumes x eset with
+            | SuLeft -> flg, acc
+            | SuEqual | SuRight -> false, add eset acc
+            | SuNot -> flg, add eset acc)
           (true, empty)
           set
-          |> function (true,set) -> add x set
-          | (false,set) -> set
+        |> function
+        | true, set -> add x set
+        | false, set -> set
       in
       fold_left add empty set
+    ;;
 
     let union l r =
       (* printf "%s %d \n%!" __FILE__ __LINE__; *)
       let add set x =
-        fold_left (fun (flg,acc) eset ->
-          match Disjunct.subsumes x eset with
-          | SuLeft -> (flg,acc)
-          | SuEqual
-          | SuRight -> (false, add eset acc)
-          | SuNot -> (flg, add eset acc)
-          )
+        fold_left
+          (fun (flg, acc) eset ->
+            match Disjunct.subsumes x eset with
+            | SuLeft -> flg, acc
+            | SuEqual | SuRight -> false, add eset acc
+            | SuNot -> flg, add eset acc)
           (true, empty)
           set
-          |> function (true,set) -> add x set
-          | (false,set) -> set
+        |> function
+        | true, set -> add x set
+        | false, set -> set
       in
       let ans = fold_left add l r in
       (* printf "DisjSet.union of '%a' and '%a'\nleads to '%a'\n%!" pp l pp r pp ans ; *)
       ans
+    ;;
 
     let concat_map f xs = fold (fun x acc -> union (f x) acc) xs empty
 
     let of_seq_without_duplicates s =
       (* TODO: finish implementation *)
       let add set x =
-        fold_left (fun (flg,acc) eset ->
-          match Disjunct.subsumes x eset with
-          | SuLeft -> (flg,acc)
-          | SuEqual
-          | SuRight -> (false, add eset acc)
-          | SuNot -> (flg, add eset acc)
-          )
+        fold_left
+          (fun (flg, acc) eset ->
+            match Disjunct.subsumes x eset with
+            | SuLeft -> flg, acc
+            | SuEqual | SuRight -> false, add eset acc
+            | SuNot -> flg, add eset acc)
           (true, empty)
           set
-          |> function (true,set) -> add x set
-          | (false,set) -> set
+        |> function
+        | true, set -> add x set
+        | false, set -> set
       in
       Seq.fold_left add empty s
+    ;;
   end
 
   type t = DisjSet.t
 
   let pp = DisjSet.pp
-
   let empty : t = DisjSet.empty
   let is_empty = DisjSet.is_empty
   let disj : t -> t -> t = DisjSet.union
@@ -603,8 +626,7 @@ module Make (FDC : EXTRA) = struct
     l
     |> DisjSet.concat_map (fun (c1 : Disjunct.t) ->
            DisjSet.map (fun (c2 : Disjunct.t) -> Disjunct.conj c1 c2) r
-           (* |> DisjSet.dedup *)
-           )
+           (* |> DisjSet.dedup *))
  ;;
 
   let disequality_of_terms l r : t =
@@ -706,6 +728,7 @@ module Make (FDC : EXTRA) = struct
         (fun (extra, acc) hc ->
           match Disjunct.recheck_exn env subst bnds extra hc with
           | exception Violated ->
+            (* TODO: no model doesn't necessary mean violated *)
             log "rechecking disjunct failed %s %d" __FILE__ __LINE__;
             extra, acc
           | None ->
@@ -714,7 +737,7 @@ module Make (FDC : EXTRA) = struct
           | Some (d, extra) ->
             (* We have an updated disjunct *)
             let dset = List.fold_left (fun acc x -> DisjSet.add x acc) acc d in
-            log "Updated disjunct %s %d: %a" __FILE__ __LINE__ pp dset;
+            log "Updated disjunct %s %d: `%a`" __FILE__ __LINE__ pp dset;
             extra, dset)
         (extra, DisjSet.empty)
         store
@@ -727,31 +750,32 @@ module Make (FDC : EXTRA) = struct
         Some (cs, extra))
       else (
         let newc = simplify cs in
+        (*
         if DisjSet.is_empty newc
         then (
           log "%s %d" __FILE__ __LINE__;
           raise Violated)
-        else (
-          let () = log "recheck successful %s %d" __FILE__ __LINE__ in
-          let __ () =
-            log "New FDC constraints:";
-            FDC.trace extra
-          in
-          let extra =
-            if DisjSet.cardinal newc = 1
-            then (
-              let disjunct = DisjSet.min_elt newc in
-              match Disjunct.shallow_recheck_gen extra disjunct with
-              | None -> raise Violated
-              | Some extra -> extra)
-            else (
-              let __ () =
-                print_endline "shallow_recheck_gen is not applicable ";
-                Format.printf "%a\n%!" pp newc
-              in
-              extra)
-          in
-          Some (newc, extra)))
+        else*)
+        let () = log "recheck successful %s %d" __FILE__ __LINE__ in
+        let __ () =
+          log "New FDC constraints:";
+          FDC.trace extra
+        in
+        let extra =
+          if DisjSet.cardinal newc = 1
+          then (
+            let disjunct = DisjSet.min_elt newc in
+            match Disjunct.shallow_recheck_gen extra disjunct with
+            | None -> raise Violated
+            | Some extra -> extra)
+          else (
+            let __ () =
+              print_endline "shallow_recheck_gen is not applicable ";
+              Format.printf "%a\n%!" pp newc
+            in
+            extra)
+        in
+        Some (newc, extra))
     with
     | Violated ->
       log "got exception Violated %s %d" __FILE__ __LINE__;
@@ -924,8 +948,9 @@ module _ = struct
         	0: [ { _.1 <> '_.2' } ] {| |}
         	1: [ { _.1 <> '_.2' }{ _.3 <> '_.4' } ] {| |}
 
-    |xxx}];
-    (* assert (DisjSet.cardinal d1 = 1);
+    |xxx}]
+  ;;
+  (* assert (DisjSet.cardinal d1 = 1);
     assert (DisjSet.cardinal d2 = 2);
     let u = DisjSet.min_elt d3 in
     let v = DisjSet.max_elt d3 in
@@ -936,5 +961,4 @@ module _ = struct
       {xxx|
 
     |xxx}] *)
-  ;;
 end
