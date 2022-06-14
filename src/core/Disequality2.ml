@@ -466,6 +466,7 @@ module Make (FDC : EXTRA) = struct
       *)
     let recheck_exn env subst _bnds extra { wcs; conjs } =
       log "recheck_exn of %a" pp { wcs; conjs };
+      let exception Early_exit of FDC.t in
       try
         (* Every conjunct could blowup to many coinjuncts because of recent unifications,
            so we need two Seq's here *)
@@ -506,7 +507,7 @@ module Make (FDC : EXTRA) = struct
                   { sub_disjunct with wcs = VarSet.union wcs sub_disjunct.wcs }
                 in
                 if is_empty sub_disjunct
-                then None
+                then raise (Early_exit extra)
                 else if shallow_recheck extra sub_disjunct
                 then Some sub_disjunct
                 else None)
@@ -514,13 +515,16 @@ module Make (FDC : EXTRA) = struct
         in
         (* assert (not (is_empty new_diseqs)); *)
         (* printf "There are %d new disjuncts\n%!" (List.length new_diseqs); *)
-        let () =
+        (* let () =
           ListLabels.iter new_diseqs ~f:(fun d ->
               if is_empty d then failwith "Empty disjuncts should be filtered out")
-        in
-        Some (new_diseqs, extra)
+        in *)
+        match new_diseqs with
+        | _::_ -> Some (new_diseqs, extra)
+        | [] -> raise Violated
       with
       | Violated -> None
+      | Early_exit e -> Some ([], e)
     ;;
 
     let propagate_to_fdc cstr extra = shallow_recheck_gen extra cstr
@@ -737,10 +741,12 @@ module Make (FDC : EXTRA) = struct
           | exception Violated ->
             (* TODO: no model doesn't necessary mean violated *)
             log "rechecking disjunct failed %s %d" __FILE__ __LINE__;
-            extra, acc
+            (* extra, acc *)
+            raise Violated
           | None ->
             log "rechecking disjunct failed %s %d" __FILE__ __LINE__;
-            extra, acc
+            (* extra, acc *)
+            raise Violated
           | Some (d, extra) ->
             (* We have an updated disjunct *)
             let dset = List.fold_left (fun acc x -> DisjSet.add x acc) acc d in
