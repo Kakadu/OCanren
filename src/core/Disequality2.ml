@@ -394,7 +394,7 @@ module Make (FDC : EXTRA) = struct
 
     let of_bindings bnds extra0 =
       (* assert ([] <> bnds); *)
-      let exception ToRemove in
+      (* let exception ToRemove in *)
       try
         Stdlib.List.fold_left
           (fun ({ wcs; conjs }, extra) bnd ->
@@ -424,7 +424,7 @@ module Make (FDC : EXTRA) = struct
           bnds
         |> Stdlib.Result.ok
       with
-      | ToRemove -> Stdlib.Result.error `ToRemove
+      (* | ToRemove -> Stdlib.Result.error `ToRemove *)
       | Violated -> Stdlib.Result.error `Violated
     ;;
 
@@ -462,11 +462,13 @@ module Make (FDC : EXTRA) = struct
 
     (** For every conjunct we should check that this conjuct is a sensible constraint in current [subst].
         TODO: For every wildcard variable check that it could be inhabited.
-         Some changes
+
       *)
     let recheck_exn env subst _bnds extra { wcs; conjs } =
       log "recheck_exn of %a" pp { wcs; conjs };
       try
+        (* Every conjunct could blowup to many coinjuncts because of recent unifications,
+           so we need two Seq's here *)
         let conjs : LLL.elt Seq.t Seq.t =
           Seq.map
             (fun { Subst.Binding.var; term } ->
@@ -490,10 +492,15 @@ module Make (FDC : EXTRA) = struct
             (LLL.to_seq conjs)
         in
         let new_diseqs =
+          (* A single disjunct has blown up to a pack of disequlaity pair, so we effectively have
+             a disjunction of conjuctions. It should be filtered out:
+              * some may fail, if all fail the disjuncts are violated
+              * if one is empty, then everything could be thrown away
+            *)
           List.filter_map
             (fun conjs ->
               match of_bindings (List.of_seq conjs) extra with
-              | Result.Error _ -> None
+              | Result.Error `Violated -> None
               | Ok (sub_disjunct, extra) ->
                 let sub_disjunct =
                   { sub_disjunct with wcs = VarSet.union wcs sub_disjunct.wcs }
