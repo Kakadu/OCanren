@@ -389,3 +389,4 @@ val trace_domain_constraints : goal
 val trace_diseq_constraints : goal
 val is_free : ('a, 'b) injected -> goal -> goal -> goal
 val cut_off_wc_diseq_without_domain : goal
+val debug_enriching_subst: goal

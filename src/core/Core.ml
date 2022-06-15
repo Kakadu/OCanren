@@ -303,6 +303,7 @@ module State = struct
     let neq = FM.neq
     let is_interesting_var = FM.is_interesting_var
     let trace = FM.trace
+    let get_domain_size = FM.get_domain_size
   end)
 
   type t =
@@ -885,3 +886,7 @@ let cut_off_wc_diseq_without_domain st =
   | Some st -> success st
   | None -> failure st
 ;;
+
+let debug_enriching_subst st =
+  State.Disequality.debug_enriching_subst (State.constraints st) (State.fds st);
+  success st

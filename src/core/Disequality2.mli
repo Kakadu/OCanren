@@ -5,6 +5,7 @@ module type EXTRA = sig
 
   val neq : (int, int logic) injected -> (int, int logic) injected -> t -> t option
   val is_interesting_var : Term.Var.t -> t -> bool
+  val get_domain_size: Term.Var.t -> t -> int list option
   val trace : t -> unit
 end
 
@@ -12,6 +13,9 @@ module Make : functor (E : EXTRA) -> sig
   include DISEQ_SIG.S with type extra = E.t
 
   val pp : Format.formatter -> t -> unit
+
+  val debug_enriching_subst: t -> E.t -> unit
 end
+
 
 val set_logging : bool -> unit
