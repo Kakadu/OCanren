@@ -33,6 +33,7 @@ module type EXTRA = sig
 
   val neq : int ilogic -> int ilogic -> t -> t option
   val is_interesting_var : Term.Var.t -> t -> bool
+  val get_domain_size: Term.Var.t -> t -> int list option
   val trace : t -> unit
 end
 
@@ -264,6 +265,8 @@ module Make (FDC : EXTRA) = struct
     val propagate_to_fdc : t -> extra -> extra option
     val is_violated_rigorously : t -> bool
     val subsumes : t -> t -> subsumes_rez
+
+    val fold_bindings: ('a -> Subst.Binding.t -> 'a) -> 'a -> t -> 'a
   end = struct
     module LLL = struct
       include Set.Make (Conjunct)
@@ -279,6 +282,8 @@ module Make (FDC : EXTRA) = struct
       { conjs : LLL.t
       ; wcs : VarSet.t
       }
+
+    let fold_bindings f init { conjs } = LLL.fold_left f init conjs
 
     let compare { wcs; conjs } { wcs = wcs2; conjs = conjs2 } =
       let rez_conjs = LLL.compare conjs conjs2 in
@@ -712,6 +717,25 @@ module Make (FDC : EXTRA) = struct
     | Violated -> None
  ;;
 
+  let debug_enriching_subst t extra =
+    (* we do something only we have single disjunct *)
+    if DisjSet.cardinal t <> 1 then ()
+    else
+      let new_ones = (DisjSet.min_elt t) |> Disjunct.fold_bindings
+        (fun acc Subst.Binding.{var; term} ->
+          let dom = FDC.get_domain_size var extra in
+          let () =
+            match (Term.is_var term), dom with
+            | false, Some [v1; v2] ->
+              let next_val = if Obj.repr v1 = Obj.repr term then v2 else v1 in
+              printf "Found a candidate for simplifying: %a to be %d\n" Term.pp (Obj.magic var) next_val
+            | _ -> ()
+          in
+          acc
+        ) []
+      in
+      ()
+
   let add env subst cstrs l r extra =
     log
       "add: '%a' and '%a' on  %s %d"
@@ -898,14 +922,16 @@ end
 
 (** *******************  tests ***************************  *)
 module _ = struct
-  open Make (struct
+  module FD_dummy = struct
     type t
 
     let neq _ _ _ = assert false
     let is_interesting_var _ _ = assert false
     let trace _ = ()
     (* let cut_off_wc_without_domain t = Option.some t *)
-  end)
+    let get_domain_size _ _ = None
+  end
+  open Make (FD_dummy)
 
   let make_var i = Obj.magic (Term.Var.make ~env:0 ~scope:Term.Var.non_local_scope i)
 

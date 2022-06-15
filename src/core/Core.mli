@@ -356,3 +356,4 @@ val trace_diseq_constraints : goal
 val cut_off_wc_diseq_without_domain : goal
 
 val unif_hack : 'a ilogic -> 'a ilogic -> bool ilogic -> goal
+val debug_enriching_subst: goal

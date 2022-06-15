@@ -728,3 +728,12 @@ let domain (v : inti) ints store =
   with Bad -> None *)
 
 let is_interesting_var v store = MYSOLVER.is_interesting_var store v.Term.Var.index
+
+let get_domain_size term t =
+  match Term.var term with
+  | None -> None
+  | Some v ->
+    match MYZ3.IntMap.find v.Var.index t.MYSOLVER.vars with
+    | (_, None)
+    | exception Not_found -> None
+    | (_, Some dom) -> Some dom

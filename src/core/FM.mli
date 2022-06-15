@@ -18,4 +18,5 @@ val neq : inti -> inti -> t -> t option
 (* val lt : inti -> inti -> t -> t option *)
 val domain : inti -> int list -> t -> t option
 val is_interesting_var : Term.Var.t -> t -> bool
+val get_domain_size: Term.Var.t -> t -> int list option
 val trace : t -> unit
