@@ -13,3 +13,5 @@ module Make : functor (E : EXTRA) -> sig
 
   val pp : Format.formatter -> t -> unit
 end
+
+val set_logging : bool -> unit

@@ -1,6 +1,6 @@
 (*
   Going to implement very naive disequality constraints
-  which will be stored internally as disjunction of conjunction (DNF)
+  which will be stored internally as disjunction of conjunctions (DNF)
 *)
 
 open Format
@@ -8,11 +8,12 @@ open Format
 exception Violated
 
 let ( !!! ) = Obj.magic
-let use_logging = true
-let use_logging = false
+let use_logging = ref false
+let set_logging flg = use_logging := flg
+(* TODO: Allowing to set this flag externally could hurt performace. *)
 
 let log fmt =
-  if use_logging
+  if !use_logging
   then Format.kasprintf (fun s -> Format.printf "%s\n%!" s) fmt
   else Format.ifprintf Format.std_formatter fmt
 ;;
@@ -242,7 +243,7 @@ module Make (FDC : EXTRA) = struct
     val of_bindings
       :  Subst.Binding.t list
       -> extra
-      -> (t * extra, [ `ToRemove | `Violated ]) Result.t
+      -> [ `Meaningful of t * extra | `Violated | `ToRemove of extra ]
 
     val intersects_with : set:VarSet.t -> t -> bool
     val conj : t -> t -> t
@@ -250,10 +251,9 @@ module Make (FDC : EXTRA) = struct
     val recheck_exn
       :  Env.t
       -> Subst.t
-      -> Subst.Binding.t list
       -> extra
       -> t
-      -> (t list * extra) option
+      -> [ `Meaningful of (t list * extra) | `Violated | `ToRemove of extra ]
 
     (** returns true if not violated *)
     val shallow_recheck : extra -> t -> bool
@@ -392,41 +392,56 @@ module Make (FDC : EXTRA) = struct
       then { conjs = LLL.empty; wcs = VarSet.(add !!!var empty) }
       else { conjs = LLL.singleton Subst.Binding.{ var; term }; wcs = VarSet.empty } *)
 
+    (**
+      Converts bindings and FD constraints to a conjunction of inequalities.
+      During this construction all sensible FD constraints are propagated to FD ones.
+      And if something fails, the fold is being interrupted.
+    **)
     let of_bindings bnds extra0 =
       (* assert ([] <> bnds); *)
       (* let exception ToRemove in *)
-      try
-        Stdlib.List.fold_left
-          (fun ({ wcs; conjs }, extra) bnd ->
-            (* log "%d %a" __LINE__ Subst.pp_binding_list [ bnd ]; *)
-            match classify bnd with
-            | WcNVar var when FDC.is_interesting_var var extra ->
-              (* log "is interesting"; *)
-              { wcs = VarSet.add var wcs; conjs }, extra
-            | WcNVar var -> { conjs; wcs = VarSet.add var wcs }, extra
-            | WcNSmth term ->
-              (* log "WcNSmth"; *)
-              { wcs; conjs }, extra
-            | VarNTerm (var, term) ->
-              (* log "VarNTerm"; *)
-              (* need to check finite domain constraints too *)
-              (match FDC.neq (Obj.magic var) (Obj.magic term) extra with
-              | None -> raise Violated
-              | Some e ->
-                let __ _ =
-                  log
-                    "Successfully added new  FD constraint %s=/=%s"
-                    (Term.show !!!var)
-                    (Term.show term)
-                in
-                { conjs = LLL.cons Subst.Binding.{ var; term } conjs; wcs }, e))
-          (empty, extra0)
-          bnds
-        |> Stdlib.Result.ok
-      with
-      (* | ToRemove -> Stdlib.Result.error `ToRemove *)
-      | Violated -> Stdlib.Result.error `Violated
-    ;;
+      match bnds with
+      | [] -> `ToRemove extra0
+      | _ ->
+        try
+          let next =
+            Stdlib.List.fold_left
+              (fun ({ wcs; conjs }, extra) bnd ->
+                (* log "%d %a" __LINE__ Subst.pp_binding_list [ bnd ]; *)
+                match classify bnd with
+                | WcNVar var when FDC.is_interesting_var var extra ->
+                  (* log "is interesting"; *)
+                  { wcs = VarSet.add var wcs; conjs }, extra
+                | WcNVar var -> { conjs; wcs = VarSet.add var wcs }, extra
+                | WcNSmth term ->
+                  (* log "WcNSmth"; *)
+                  { wcs; conjs }, extra
+                | VarNTerm (var, term) ->
+                  (* log "VarNTerm"; *)
+                  (* need to check finite domain constraints too *)
+                  if FDC.is_interesting_var var extra
+                  then
+                    (match FDC.neq (Obj.magic var) (Obj.magic term) extra with
+                    | None -> raise Violated
+                    | Some e ->
+                      let __ _ =
+                        log
+                          "Successfully added new  FD constraint %s=/=%s"
+                          (Term.show !!!var)
+                          (Term.show term)
+                      in
+                      { conjs = LLL.cons Subst.Binding.{ var; term } conjs; wcs }, e)
+                  else ({ conjs = LLL.cons Subst.Binding.{ var; term } conjs; wcs }, extra))
+              (empty, extra0)
+              bnds
+            in
+            (* TODO: it could be more efficient to perform a fold, and check FD constraints
+              only in the end *)
+            `Meaningful next
+        with
+        (* | ToRemove -> Stdlib.Result.error `ToRemove *)
+        | Violated -> log "Disjunct.of_bindings said Violated"; `Violated
+      ;;
 
     (** Check that every disequality doesn't violate by itself extra constraints
         TODO: Check another half of the constraint of `interesting` variable too.
@@ -461,10 +476,11 @@ module Make (FDC : EXTRA) = struct
     ;;
 
     (** For every conjunct we should check that this conjuct is a sensible constraint in current [subst].
+      Output: Disjunction of conjucts and new FD constraints
         TODO: For every wildcard variable check that it could be inhabited.
 
       *)
-    let recheck_exn env subst _bnds extra { wcs; conjs } =
+    let recheck_exn env subst extra { wcs; conjs } =
       log "recheck_exn of %a" pp { wcs; conjs };
       let exception Early_exit of FDC.t in
       try
@@ -493,16 +509,24 @@ module Make (FDC : EXTRA) = struct
             (LLL.to_seq conjs)
         in
         let new_diseqs =
-          (* A single disjunct has blown up to a pack of disequlaity pair, so we effectively have
+          (* A single disjunct has blown up to a pack of disequlity pairs, so we effectively have
              a disjunction of conjuctions. It should be filtered out:
-              * some may fail, if all fail the disjuncts are violated
+              * some may fail; if all fail the disjuncts are violated
               * if one is empty, then everything could be thrown away
             *)
+          let multiplied = CartesianHacks.cartesian_seq conjs |> List.of_seq in
+          log "Mulitiplied disjuncts length = %d" (List.length multiplied);
           List.filter_map
             (fun conjs ->
               match of_bindings (List.of_seq conjs) extra with
-              | Result.Error `Violated -> None
-              | Ok (sub_disjunct, extra) ->
+              | `Violated ->
+                log "%d" __LINE__;
+                None
+              | `ToRemove e ->
+                log "%d" __LINE__;
+                raise (Early_exit e)
+              | `Meaningful (sub_disjunct, extra) ->
+                log "%d" __LINE__;
                 let sub_disjunct =
                   { sub_disjunct with wcs = VarSet.union wcs sub_disjunct.wcs }
                 in
@@ -511,7 +535,7 @@ module Make (FDC : EXTRA) = struct
                 else if shallow_recheck extra sub_disjunct
                 then Some sub_disjunct
                 else None)
-            (CartesianHacks.cartesian_seq conjs |> List.of_seq)
+            multiplied
         in
         (* assert (not (is_empty new_diseqs)); *)
         (* printf "There are %d new disjuncts\n%!" (List.length new_diseqs); *)
@@ -520,11 +544,11 @@ module Make (FDC : EXTRA) = struct
               if is_empty d then failwith "Empty disjuncts should be filtered out")
         in *)
         match new_diseqs with
-        | _::_ -> Some (new_diseqs, extra)
-        | [] -> raise Violated
+        | _::_ -> `Meaningful (new_diseqs, extra)
+        | [] -> `Violated
       with
-      | Violated -> None
-      | Early_exit e -> Some ([], e)
+      | Violated -> log "Disjunct.recheck_exn said Violated"; `Violated
+      | Early_exit e -> `ToRemove e
     ;;
 
     let propagate_to_fdc cstr extra = shallow_recheck_gen extra cstr
@@ -559,7 +583,11 @@ module Make (FDC : EXTRA) = struct
         xs
     ;;
 
-    let fold_left f i xs = fold (fun x acc -> f acc x) xs i
+    let fold_left f init xs = fold (fun x acc -> f acc x) xs init
+
+    let fold_left_i f init xs =
+      let n = ref (-1) in
+      fold (fun x acc -> incr n; f !n acc x) xs init
 
     let pp ppf xs =
       printf "All disjuncts (%d)\n%!" (cardinal xs);
@@ -602,6 +630,9 @@ module Make (FDC : EXTRA) = struct
       (* printf "DisjSet.union of '%a' and '%a'\nleads to '%a'\n%!" pp l pp r pp ans ; *)
       ans
     ;;
+
+    let union_with_list ~set xs =
+      List.fold_left (fun acc x -> union acc (singleton x)) set xs
 
     let concat_map f xs = fold (fun x acc -> union (f x) acc) xs empty
 
@@ -664,9 +695,9 @@ module Make (FDC : EXTRA) = struct
       List.fold_left
         (fun (acc, e) b ->
           match Disjunct.of_bindings [ b ] e with
-          | Result.Ok (d, e) -> DisjSet.add d acc, e
-          | Result.Error `Violated -> raise Violated
-          | Result.Error `ToRemove -> acc, e)
+          | `Violated -> raise Violated
+          | `Meaningful (d, e) -> DisjSet.add d acc, e
+          | `ToRemove e -> acc, e)
         (DisjSet.empty, e)
         xs
       |> Stdlib.Option.some
@@ -727,29 +758,35 @@ module Make (FDC : EXTRA) = struct
             Some (filtered_set, extra))))
   ;;
 
-  let recheck env subst cs bnds extra =
+  (** Rechecking takes contraints ans output
+    + Some .. if they are not yet violated
+    + None if violated
+    *)
+  let recheck env subst cs (bnds: Subst.Binding.t list) extra =
     log "Disequality2.recheck";
     log "bindings = %d %a" __LINE__ Subst.pp_binding_list bnds;
     log "cs = %a" pp cs;
-    (* For every disjunct we try to simplify it using [bnds].
-    If it simplifies to empty disjunct, then we simplify it to False.
-    If all disjuncts has been simpifies to False, then constraint is violated *)
+    let exception Early_exit of FDC.t in
+    (* We have a disjunction of conjuctions of pairs.
+      For every conjunct we try to simplify it using [bnds].
+      - If it simplifies to empty conjunct, then we simplify it to False (abandone it). ???
+        - If all disjuncts has been simpifies to False, then constraint is violated
+      - It if is always not equal, then all disjunction could be simplified to True
+      - Conjunct could
+     *)
     let simplify store =
-      DisjSet.fold_left
-        (fun (extra, acc) hc ->
-          match Disjunct.recheck_exn env subst bnds extra hc with
+      DisjSet.fold_left_i
+        (fun i (extra, acc) hc ->
+          match Disjunct.recheck_exn env subst extra hc with
+          | `Violated
           | exception Violated ->
             (* TODO: no model doesn't necessary mean violated *)
-            log "rechecking disjunct failed %s %d" __FILE__ __LINE__;
-            (* extra, acc *)
-            raise Violated
-          | None ->
-            log "rechecking disjunct failed %s %d" __FILE__ __LINE__;
-            (* extra, acc *)
-            raise Violated
-          | Some (d, extra) ->
+            log "rechecking disjunct %d '%a' failed %d" i Disjunct.pp hc  __LINE__;
+            extra, acc
+          | `ToRemove e -> raise (Early_exit e)
+          | `Meaningful (d, extra) ->
             (* We have an updated disjunct *)
-            let dset = List.fold_left (fun acc x -> DisjSet.add x acc) acc d in
+            let dset = DisjSet.union_with_list ~set:acc d in
             log "Updated disjunct %s %d: `%a`" __FILE__ __LINE__ pp dset;
             extra, dset)
         (extra, DisjSet.empty)
@@ -763,33 +800,29 @@ module Make (FDC : EXTRA) = struct
         Some (cs, extra))
       else (
         let newc = simplify cs in
-        (*
-        if DisjSet.is_empty newc
-        then (
-          log "%s %d" __FILE__ __LINE__;
-          raise Violated)
-        else*)
-        let () = log "recheck successful %s %d" __FILE__ __LINE__ in
+        let card = DisjSet.cardinal newc in
+        let () = log "recheck successful with card=%d on line  %d" card __LINE__ in
         let __ () =
           log "New FDC constraints:";
           FDC.trace extra
         in
-        let extra =
-          if DisjSet.cardinal newc = 1
-          then (
+
+        match card with
+        | 0 -> raise Violated
+        | 1 -> (
             let disjunct = DisjSet.min_elt newc in
             match Disjunct.shallow_recheck_gen extra disjunct with
             | None -> raise Violated
-            | Some extra -> extra)
-          else (
+            | Some extra -> Some (newc, extra))
+        | _ -> (
             let __ () =
               print_endline "shallow_recheck_gen is not applicable ";
               Format.printf "%a\n%!" pp newc
             in
-            extra)
-        in
-        Some (newc, extra))
+            Some (newc, extra))
+        )
     with
+    | Early_exit e -> Some (DisjSet.empty, e)
     | Violated ->
       log "got exception Violated %s %d" __FILE__ __LINE__;
       None

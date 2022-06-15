@@ -31,6 +31,14 @@ let run_pair_bool eta =
     eta
 ;;
 
+let run_pair_int eta =
+  runR
+    (Pair.reify OCanren.reify OCanren.reify)
+    ([%show: GT.int * GT.int] ())
+    ([%show: (GT.int OCanren.logic, GT.int OCanren.logic) Std.Pair.logic] ())
+    eta
+;;
+
 let run_list eta =
   runR
     (List.reify OCanren.reify)
@@ -153,11 +161,52 @@ let __ _ =
 let _ =
   [%tester
     run_pair_bool (-1) (fun q ->
-        fresh
-          ()
-          (q =/= Std.pair !!true __)
-          trace_diseq_constraints
-          (q === Std.pair !!false !!true))]
+        fresh () (q =/= Std.pair !!true __) (q === Std.pair !!false !!true))]
 ;;
 
-let _ = exit 0
+let __ _ =
+  [%tester
+    run_list (-1) (fun q -> fresh (x y) (!![ x; !!1 ] =/= !![ !!2; y ]) (x === !!2))]
+;;
+
+let _ =
+  [%tester
+    run_list (-1) (fun q ->
+        fresh
+          (x y)
+          (* TODO: document that using logic lists is not strongly required *)
+          (!![ x; !!1 ] =/= !![ !!2; y ])
+          (* trace_diseq_constraints *)
+          (y === !!1)
+          success)]
+;;
+
+let () = OCanren.set_diseq_logging false
+
+let _ =
+  [%tester
+    run_pair_int (-1) (fun q ->
+        fresh
+          (x y)
+          (Std.pair x !!1 =/= Std.pair !!2 y)
+          (x === !!2)
+          (* (debug_var x OCanren.reify (fun _ ->
+               let () = OCanren.set_diseq_logging true in
+               trace_diseq_constraints)) *)
+          (y === !!9)
+          (Std.pair x y === q))]
+;;
+
+let () = OCanren.set_diseq_logging false
+
+let _ =
+  [%tester
+    run_int (-1) (fun q ->
+        fresh
+          ()
+          (q =/= !!1)
+          (q =/= !!2)
+          (* trace_diseq_constraints *)
+          (FD.domain q [ 1; 2 ])
+          success)]
+;;

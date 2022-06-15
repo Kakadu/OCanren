@@ -75,3 +75,5 @@ module Std =
 
     let trace_domain_constraints = Core.trace_domain_constraints
   end
+
+let set_diseq_logging = Disequality2.set_logging

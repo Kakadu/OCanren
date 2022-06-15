@@ -84,10 +84,18 @@
   q=(false, true);
   }
   fun q ->
-    fresh () (q =/= (Std.pair (!! true) __)) trace_diseq_constraints
+    fresh () (q =/= (Std.pair (!! true) __))
       (q === (Std.pair (!! false) (!! true))), all answers {
-  All disjuncts (1)
-  	0: [ { _.10 <> 'boxed 0 <int<1>, _.-42>' } ] {| |}
-  
   q=(false, true);
+  }
+  fun q ->
+    fresh (x y) ((!! [x; !! 1]) =/= (!! [!! 2; y])) (y === (!! 1)) success, all answers {
+  q=_.10;
+  }
+  fun q ->
+    fresh (x y) ((Std.pair x (!! 1)) =/= (Std.pair (!! 2) y)) (x === (!! 2))
+      (y === (!! 9)) ((Std.pair x y) === q), all answers {
+  q=(2, 9);
+  }
+  fun q -> fresh () (q =/= (!! 1)) (q =/= (!! 2)) (FD.domain q [1; 2]) success, all answers {
   }
