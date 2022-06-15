@@ -84,8 +84,17 @@ let _ = [%tester run_int (-1) (fun q -> pair q !!1 =/= pair !!1 __)]
 let _ =
   [%tester
     run_pair (-1) (fun q ->
-        fresh (a b) (q === pair a b) (q =/= pair !!1 __) (q === pair __ !!1))]
+        fresh
+          (a b)
+          (q === pair a b)
+          (* (debug_var a OCanren.reify (fun _ ->
+               let () = OCanren.set_diseq_logging true in
+               success)) *)
+          (q =/= pair !!1 __)
+          (q === pair __ !!1))]
 ;;
+
+let () = OCanren.set_diseq_logging false
 
 let _ =
   [%tester

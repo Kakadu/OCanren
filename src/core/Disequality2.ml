@@ -251,6 +251,7 @@ module Make (FDC : EXTRA) = struct
     val recheck_exn
       :  Env.t
       -> Subst.t
+      -> bnds: Subst.Binding.t list
       -> extra
       -> t
       -> [ `Meaningful of (t list * extra) | `Violated | `ToRemove of extra ]
@@ -480,10 +481,16 @@ module Make (FDC : EXTRA) = struct
         TODO: For every wildcard variable check that it could be inhabited.
 
       *)
-    let recheck_exn env subst extra { wcs; conjs } =
+    let recheck_exn env subst ~bnds extra { wcs; conjs } =
       log "recheck_exn of %a" pp { wcs; conjs };
       let exception Early_exit of FDC.t in
       try
+        (* In fresh bindings we should not concretize variables from 'wcs'*)
+        bnds |> List.iter (fun Subst.Binding.{var; term} ->
+          (* TODO: check term too; *)
+          if VarSet.mem var wcs then raise Violated;
+          ());
+
         (* Every conjunct could blowup to many coinjuncts because of recent unifications,
            so we need two Seq's here *)
         let conjs : LLL.elt Seq.t Seq.t =
@@ -765,7 +772,7 @@ module Make (FDC : EXTRA) = struct
   let recheck env subst cs (bnds: Subst.Binding.t list) extra =
     log "Disequality2.recheck";
     log "bindings = %d %a" __LINE__ Subst.pp_binding_list bnds;
-    log "cs = %a" pp cs;
+    log "%a" pp cs;
     let exception Early_exit of FDC.t in
     (* We have a disjunction of conjuctions of pairs.
       For every conjunct we try to simplify it using [bnds].
@@ -777,7 +784,7 @@ module Make (FDC : EXTRA) = struct
     let simplify store =
       DisjSet.fold_left_i
         (fun i (extra, acc) hc ->
-          match Disjunct.recheck_exn env subst extra hc with
+          match Disjunct.recheck_exn env subst ~bnds extra hc with
           | `Violated
           | exception Violated ->
             (* TODO: no model doesn't necessary mean violated *)
