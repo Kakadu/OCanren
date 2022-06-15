@@ -678,8 +678,6 @@ let trace = Store.trace
 let empty () = Store.empty ()
 
 let recheck_helper op (store : Store.t) (_prefix : Subst.Binding.t list) =
-  Some store
-  (*
   (* printf "FM.recheck\n%!"; *)
   match Store.extend_list store _prefix with
   | Store.UnsatFound -> None
@@ -688,7 +686,7 @@ let recheck_helper op (store : Store.t) (_prefix : Subst.Binding.t list) =
     (match Store.check store with
     | false -> None
     | true -> Some store)
-    *)
+
 ;;
 
 let recheck _env _subst (store : Store.t) (_prefix : Subst.Binding.t list) =
@@ -696,8 +694,9 @@ let recheck _env _subst (store : Store.t) (_prefix : Subst.Binding.t list) =
   recheck_helper fmeq store _prefix
 ;;
 
-let check store = Some store
-  (* if Store.check store then Some store else None *)
+let check store =
+  if Store.check store then Some store else None
+
 let neq eta = Store.extend_and_check ~clone:true fmneq eta
 let eq eta = Store.extend_and_check ~clone:true fmeq eta
 
