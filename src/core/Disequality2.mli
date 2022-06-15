@@ -15,3 +15,5 @@ module Make : functor (E : EXTRA) -> sig
 
   val cut_off_wc_without_domain: t -> t option
 end
+
+val set_logging : bool -> unit
