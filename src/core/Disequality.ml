@@ -425,7 +425,7 @@ let recheck env subst cstore bs =
             | Some u -> helper u cstore
             | None -> cstore)
     in
-    Some cstore
+    Some (cstore, extra, [])
   with
   | Disequality_violated -> None
 ;;

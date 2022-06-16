@@ -343,14 +343,32 @@ module State = struct
 
   let check_diseqs st =
     Disequality.recheck (env st) (subst st) (constraints st) [] (fds st)
-    >>=? fun (ctrs, fd) -> Some { st with ctrs; fd }
+    >>=? fun (ctrs, fd, _) -> Some { st with ctrs; fd }
+    (* TODO: Don't ignore new bindings *)
   ;;
 
   let unify x y ({ env; subst; ctrs; scope; fd } as st) =
-    Subst.unify ~scope env subst x y
+    let rec loop_unify_diseq term_a term_b subst ctrs ~fd =
+      Subst.unify ~scope env subst term_a term_b
+      >>=? fun (prefix, subst) ->
+      Disequality.recheck env subst ctrs prefix fd
+      >>=? function
+        | (ctrs, fd, []) -> Some (prefix, ctrs, fd)
+        | (ctrs, fd, new_binds) ->
+          (* TODO: it's better to introduce unificagion of a binding list *)
+          let (new_a, new_b) =
+            List.fold_left (fun (a,b) Subst.Binding.{var;term} ->
+                (Obj.repr var :: a, term::b)
+              )
+              ([Obj.repr term_a], [Obj.repr term_b]) new_binds
+          in
+          loop_unify_diseq (Obj.magic new_a) (Obj.magic new_b) subst ctrs ~fd
+    in
+    loop_unify_diseq x y subst ctrs ~fd
+    (* Subst.unify ~scope env subst x y
     >>=? fun (prefix, subst) ->
-    Disequality.recheck env subst ctrs prefix fd
-    >>=? fun (ctrs, fd) ->
+    Disequality.recheck env subst ctrs prefix fd *)
+    >>=? fun (prefix, ctrs, fd) ->
     FM.recheck env subst fd prefix
     >>=? fun fd ->
     let next_state = { st with subst; ctrs; fd } in
@@ -967,8 +985,10 @@ module Unique = struct
 
   let unique_answers g (rez : _ ilogic) =
     is_free rez (fun st ->
+      Format.printf "free variable detected %s %d\n" __FILE__ __LINE__;
       let v = State.fresh st in
       let stream = g (Obj.magic v) st in
+
       if Stream.is_empty stream
       then ( === ) rez (Obj.magic NoAnswer) st
       else (
@@ -977,6 +997,7 @@ module Unique = struct
           |> List.map (fun st0 -> Subst.reify (State.env st0) (State.subst st0) v)
         in
         let first = List.hd xs in
+        Format.printf "first answer is %a\n" Term.pp first;
         let ( >>=? ) = Stdlib.Option.bind in
         let result =
           List.fold_left

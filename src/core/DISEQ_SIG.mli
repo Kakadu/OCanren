@@ -29,11 +29,22 @@ module type S = sig
   val add : Env.t -> Subst.t -> t -> 'a -> 'a -> extra -> (t * extra) option
 
   (* [recheck env subst diseq bindings] - checks that disequality is not violated in refined substitution.
-  *   [bindings] is a substitution prefix, i.e. new bindings obtained during unification.
-  *   This function may rebuild internal representation of constraints and thus it returns new object.
-  *   If constraint is violated then [None] is returned.
-  *)
-  val recheck : Env.t -> Subst.t -> t -> Subst.Binding.t list -> extra -> (t * extra) option
+   *   [bindings] is a substitution prefix, i.e. new bindings obtained during unification.
+   *   This function may rebuild internal representation of constraints and thus it returns new object.
+   *   If constraint is violated then [None] is returned.
+   *)
+  val recheck
+    :  Env.t
+    -> Subst.t
+    -> t
+    -> Subst.Binding.t list
+    -> extra
+    -> (t * extra * Subst.Binding.t list) option
+
+  (* If disequality constraints states that wildcard is _not_ equal a variable, we
+     consider these variables to have non-empty domain and mark constraints as violated.
+     *)
+  val cut_off_wc_without_domain : t -> t option
 
   (* [project env subst diseq fv] - projects [diseq] into the set of free-variables [fv],
   *   i.e. it extracts only those constraints that are relevant to variables from [fv]

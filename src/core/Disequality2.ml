@@ -266,7 +266,10 @@ module Make (FDC : EXTRA) = struct
     val is_violated_rigorously : t -> bool
     val subsumes : t -> t -> subsumes_rez
 
+    (* TODO: remove from interface *)
     val fold_bindings: ('a -> Subst.Binding.t -> 'a) -> 'a -> t -> 'a
+
+    val try_enrich : t -> FDC.t -> Subst.Binding.t list
   end = struct
     module LLL = struct
       include Set.Make (Conjunct)
@@ -581,6 +584,19 @@ module Make (FDC : EXTRA) = struct
       in
       helper [] conjs
     ;;
+    let try_enrich t extra : Subst.Binding.t list =
+      let new_bindings = fold_bindings
+        (fun acc (Subst.Binding.{var; term} as b) ->
+          let dom = FDC.get_domain_size var extra in
+          match (Term.is_var term), dom with
+          | false, Some [v1; v2] ->
+            let next_val = if Obj.repr v1 = Obj.repr term then v2 else v1 in
+            (* printf "Found a candidate for simplifying: %a to be %d\n" Term.pp (Obj.magic var) next_val; *)
+            { b with term = Obj.magic next_val } :: acc
+          | _ -> acc
+        ) [] t
+      in
+      new_bindings
   end
 
   module DisjSet = struct
@@ -721,7 +737,9 @@ module Make (FDC : EXTRA) = struct
     (* we do something only we have single disjunct *)
     if DisjSet.cardinal t <> 1 then ()
     else
-      let new_ones = (DisjSet.min_elt t) |> Disjunct.fold_bindings
+      let _new_ones =
+        Disjunct.try_enrich (DisjSet.min_elt t) extra
+        (* |> Disjunct.fold_bindings
         (fun acc Subst.Binding.{var; term} ->
           let dom = FDC.get_domain_size var extra in
           let () =
@@ -732,7 +750,7 @@ module Make (FDC : EXTRA) = struct
             | _ -> ()
           in
           acc
-        ) []
+        ) [] *)
       in
       ()
 
@@ -824,11 +842,12 @@ module Make (FDC : EXTRA) = struct
         store
       |> snd
     in
+    let answer ?(bnds=[]) newc extra = Some (newc, extra, bnds) in
     try
       if DisjSet.is_empty cs
       then (
         log "%s %d" __FILE__ __LINE__;
-        Some (cs, extra))
+        answer cs extra)
       else (
         let newc = simplify cs in
         let card = DisjSet.cardinal newc in
@@ -844,16 +863,20 @@ module Make (FDC : EXTRA) = struct
             let disjunct = DisjSet.min_elt newc in
             match Disjunct.shallow_recheck_gen extra disjunct with
             | None -> raise Violated
-            | Some extra -> Some (newc, extra))
+            | Some extra ->
+                match Disjunct.try_enrich disjunct extra with
+                | [] -> answer newc extra
+                | new_bindings -> answer newc extra ~bnds:new_bindings
+                )
         | _ -> (
             let __ () =
               print_endline "shallow_recheck_gen is not applicable ";
               Format.printf "%a\n%!" pp newc
             in
-            Some (newc, extra))
+            answer newc extra)
         )
     with
-    | Early_exit e -> Some (DisjSet.empty, e)
+    | Early_exit e -> Some (DisjSet.empty, e, [])
     | Violated ->
       log "got exception Violated %s %d" __FILE__ __LINE__;
       None
