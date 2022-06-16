@@ -21,6 +21,9 @@ module Binding : sig
     { var : Term.Var.t
     ; term : Term.t
     }
+  (* TODO: It would be great to have
+    type t = TwoVars of var * var | VarNTerm of var * Term.t
+  *)
 
   val is_relevant : Env.t -> Term.VarSet.t -> t -> bool
   val equal : t -> t -> bool

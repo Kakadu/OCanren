@@ -37,8 +37,11 @@ module type S = sig
     -> t
     -> Subst.Binding.t list
     -> extra
-    -> (t * extra) option
+    -> (t * extra * Subst.Binding.t list) option
 
+  (* If disequality constraints states that wildcard is _not_ equal a variable, we
+     consider these variables to have non-empty domain and mark constraints as violated.
+     *)
   val cut_off_wc_without_domain : t -> t option
 
   (* [project env subst diseq fv] - projects [diseq] into the set of free-variables [fv],

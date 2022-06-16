@@ -130,6 +130,24 @@ let _ =
 ;;
 
 let _ =
+  (* In this case a variable [v] could have different domains:
+     + empty domain should lead to simplification of constraint
+       + Currently the query will give an answer
+       + TODO: we could check that not values could inhabit q and return empty stream
+       +
+     *)
+  [%tester run_pair (-1) (fun q -> fresh v (q === pair !!1 v) (q =/= pair !!1 __))]
+;;
+
+(* we could enforce that domain is not empty which will lead to empty result for previous query *)
+let _ =
+  [%tester
+    run_pair (-1) (fun q ->
+        fresh v (q === pair !!1 v) (q =/= pair !!1 __) cut_off_wc_diseq_without_domain)]
+;;
+
+(* A more complicated version of two previous ones *)
+let _ =
   [%tester
     run_pair (-1) (fun q ->
         fresh
@@ -138,7 +156,8 @@ let _ =
           (_11 =/= !!2)
           (* trace_domain_constraints *)
           (q === pair _11 __)
-          (q =/= pair !!1 __))]
+          (q =/= pair !!1 __)
+          cut_off_wc_diseq_without_domain)]
 ;;
 
 let _ =
