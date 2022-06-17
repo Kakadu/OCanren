@@ -70,7 +70,7 @@ let%test _ =
   let ans =
     a_la_cartesian_seq [ SS.of_list [ 1; 2 ]; SS.of_list [ 3; 4 ] ] |> List.map SS.to_list
   in
-  print_endline @@ GT.show GT.list (GT.show GT.list @@ GT.show GT.int) ans;
+  (* print_endline @@ GT.show GT.list (GT.show GT.list @@ GT.show GT.int) ans; *)
   ans = [ [ 1; 3 ]; [ 1; 4 ]; [ 2; 3 ]; [ 2; 4 ] ]
 ;;
 
