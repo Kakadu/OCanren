@@ -34,6 +34,8 @@ end
 
 type t
 
+val pp: Format.formatter -> t -> unit
+
 val empty : t
 val of_list : Binding.t list -> t
 val of_map : Term.t Term.VarMap.t -> t

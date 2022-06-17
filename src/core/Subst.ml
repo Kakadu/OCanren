@@ -76,6 +76,11 @@ let pp_binding_list ppf xs =
 
 type t = Term.t Term.VarMap.t
 
+let pp ppf (s: t) =
+  Format.fprintf ppf "{subst| ";
+  Term.VarMap.iter (fun var term -> Format.fprintf ppf "%a |- %a; " Term.pp (Obj.repr var) Term.pp term) s;
+  Format.fprintf ppf "|subst}"
+
 let empty = Term.VarMap.empty
 
 let of_list =
@@ -105,9 +110,9 @@ let walk env subst x =
     if Term.Var.is_wildcard v
     then WC v
     else (
-      match v.Term.Var.subst with
+      (*match v.Term.Var.subst with
       | Some term -> walkt env subst (Obj.magic term)
-      | None ->
+      | None ->*)
         (try walkt env subst (Term.VarMap.find v subst) with
         | Not_found -> Var v))
 
@@ -170,7 +175,7 @@ let extend ~scope env subst var term =
   (* if occurs env subst var term then raise Occurs_check *)
   if Runconf.do_occurs_check () then occurs env subst var term;
   (* assert (VarEnv.var env var <> VarEnv.var env term); *)
-  occurs env subst var term;
+  (* occurs env subst var term; *)
   (* It is safe to modify variables destructively if the case of scopes match.
    * There are two cases:
    * 1) If we do unification just after a conde, then the scope is already incremented and nothing goes into
@@ -178,11 +183,12 @@ let extend ~scope env subst var term =
    * 2) If we do unification after a fresh, then in case of failure it doesn't matter if
    *    the variable is be distructively substituted: we will not look on it in future.
    *)
-  if scope = var.Term.Var.scope && scope <> Term.Var.non_local_scope
+  (* if scope = var.Term.Var.scope && scope <> Term.Var.non_local_scope
   then (
     var.subst <- Some (Obj.repr term);
     subst)
-  else Term.VarMap.add var (Term.repr term) subst
+  else  *)
+    Term.VarMap.add var (Term.repr term) subst
 ;;
 
 exception Unification_failed
@@ -278,3 +284,14 @@ end
 let reify env subst x =
   map env subst (Term.repr x) ~fvar:(fun v -> Term.repr v) ~fval:(fun x -> Term.repr x)
 ;;
+
+
+[@@@ocaml.warning "-partial-match"]
+
+let%expect_test _ =
+  let subst = empty  in
+  let e = Env.empty () in
+  let v= Env.fresh ~scope:Term.Var.non_local_scope e in
+  let Some (_,st2) = unify ~scope:Term.Var.non_local_scope e subst v (Obj.repr 1) in
+  Format.printf "%a\n%!" pp st2;
+  [%expect{|{subst| _.10 |- int<1>; |subst} |}]

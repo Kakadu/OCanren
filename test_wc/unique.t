@@ -9,8 +9,7 @@
   q=Unique (1);
   }
   fun q ->
-    let g x = conde [x === (!! 1); x === (!! 2)] in Unique.unique_answers g q, all answers {
-  v=int<2>, first = int<1>
+    let g x = conde [x === (!! 3); x === (!! 4)] in Unique.unique_answers g q, all answers {
   q=DifferentAnswers;
   }
   fun q -> fresh u (is_free u (q === (!! "free")) (q === (!! "nonfree"))), all answers {
@@ -23,20 +22,17 @@
     let g1 q = q === (!! 1) in
     let g2 q = conde [q === (!! 1); q === (!! 1)] in
     all_give_same_answer_or_fail q [g1; g2], all answers {
-  v=int<1>, first = int<1>
   q=1;
   }
   fun q ->
     let g1 q = q === (!! 1) in
     let g2 q = conde [q === (!! 1); q === (!! 2)] in
     all_give_same_answer_or_fail q [g1; g2], all answers {
-  v=int<2>, first = int<1>
   }
   fun q ->
     let g1 q = q === (!! 1) in
     let g2 q = conde [q === (!! 1); q === (!! 1)] in
     let g3 _ = failure in all_give_same_answer_or_fail q [g1; g2; g3], all answers {
-  v=int<1>, first = int<1>
   q=1;
   }
   fun q ->

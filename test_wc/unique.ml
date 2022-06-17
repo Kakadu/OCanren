@@ -74,6 +74,7 @@ let _ =
         Unique.unique_answers g q)]
 ;;
 
+(* TODO: hacking with unique answers may contradict set-var-val optimization. Investigate this *)
 let _ =
   [%tester
     run_unique (-1) (fun q ->
@@ -84,7 +85,9 @@ let _ =
 let _ =
   [%tester
     run_unique (-1) (fun q ->
-        let g x = conde [ x === !!1; x === !!2 ] in
+        let g x =
+          conde [ x === !!3 (*&&& debug_int x*); x === !!4 (*&&& debug_int x*) ]
+        in
         Unique.unique_answers g q)]
 ;;
 
