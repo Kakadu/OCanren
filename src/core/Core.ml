@@ -808,7 +808,7 @@ module Unique = struct
   let noanswer = Obj.magic (inj @@ F.distrib NoAnswer)
   let different = Obj.magic (inj @@ F.distrib DifferentAnswers)
 
-  let unique_answers g (rez : (_, _) injected) =
+  let unique_answers ?debug g (rez : (_, _) injected) =
     let exception Distinct in
     (*
     let wrap v stream ~noanswer ~sk ~distinct =
@@ -878,7 +878,15 @@ module Unique = struct
                 (* QUESTION: Is it correct to pass u to g? we could get additional information,
                    which may filter out some wrong states... *)
                 let ethalon =
+                  let n = ref 0 in
                   Stream.fold (fun ethalon st ->
+                    incr n;
+                    Format.printf "== Current ethalon is '%a' on iteration %d\n%!" Term.pp ethalon !n;
+                    let () =
+                      match debug with
+                      | Some debug -> Stream.take (debug st) |> ignore
+                      | None -> ()
+                    in
                     match State.unify (Obj.magic ethalon) (Obj.magic v) st with
                     | None -> raise Distinct
                     | Some st0 -> Subst.reify (State.env st0) (State.subst st0) ethalon
