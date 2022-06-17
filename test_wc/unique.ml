@@ -141,3 +141,24 @@ let _ =
         let g x = conde [ x === !!1; x === !!2 ] in
         q === Unique.unique !!2 &&& Unique.unique_answers g q)]
 ;;
+
+let _ =
+  [%tester
+    run_unique (-1) (fun q ->
+        let g x = conde [ x === !!1; x === !!2 ] in
+        q === Unique.unique !!2 &&& Unique.unique_answers g q)]
+;;
+
+let _ =
+  [%tester
+    run_unique (-1) (fun q ->
+        let rec g x = conde [ x === !!1; x === !!2; delay (fun () -> g x) ] in
+        Unique.unique_answers g q)]
+;;
+
+let _ =
+  [%tester
+    run_unique (-1) (fun q ->
+        let rec g x = conde [ x === !!1; x === !!2; delay (fun () -> g x) ] in
+        q === Unique.unique !!1 &&& Unique.unique_answers g q)]
+;;
