@@ -41,6 +41,8 @@ val of_list : 'a list -> 'a t
 (** Emptiness test *)
 val is_empty : 'a t -> bool
 
+val is_nonempty : 'a t -> bool
+
 (** [map f s] maps function [f] over the stream [s] *)
 val map : ('a -> 'b) -> 'a t -> 'b t
 
@@ -98,3 +100,5 @@ val from_fun_counter         : unit -> int
 val bind_counter             : unit -> int
 val mplus_counter            : unit -> int
 [%%endif]
+
+val force_all : 'a t -> 'a t
