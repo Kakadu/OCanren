@@ -348,7 +348,7 @@ module Unique : sig
   val unique : 'a -> 'a injected
   val noanswer : unit -> 'a injected
   val different : unit -> 'a injected
-  val unique_answers : ('a Logic.ilogic -> goal) -> 'a Logic.ilogic injected -> goal
+  val unique_answers : ?debug:goal -> ('a Logic.ilogic -> goal) -> 'a Logic.ilogic injected -> goal
 end
 
 val trace_domain_constraints : goal
