@@ -983,6 +983,28 @@ module Unique = struct
       ))
 
   let unique_answers g (rez : _ ilogic) =
+    let exception Distinct in
+    (*
+    let wrap v stream ~noanswer ~sk ~distinct =
+        try
+          let verdict = Stream.fold (fun acc st ->
+            Format.printf "next = %a\n" Term.pp (Subst.reify (State.env st) (State.subst st) v);
+            match acc with
+            | `NoAnswer ->
+              let su = State.subst st in
+              `Ok (Subst.reify (State.env st) su v)
+            | `Ok first ->
+                match State.unify (Obj.magic v) (Obj.magic first) st with
+                | None -> raise Distinct
+                | Some _ -> acc
+            ) `NoAnswer stream
+          in
+          match verdict with
+          | `NoAnswer -> noanswer()
+          | `Ok first ->  sk first
+        with
+          Distinct -> distinct ()
+    in*)
     is_free rez (fun st ->
       (* Format.printf "free variable detected %s %d\n" __FILE__ __LINE__; *)
       let v = State.fresh st in
@@ -991,31 +1013,24 @@ module Unique = struct
       if Stream.is_empty stream
       then ( === ) rez (Obj.magic NoAnswer) st
       else (
-        (* TODO: taking a whole stream immediately is bad idea. REWRITE *)
-        let xs =
-          Stream.take stream
-          |> List.map (fun st0 ->
-            let su = State.subst st0 in
-            (* Format.printf "su = %a\n%!" Subst.pp su; *)
-            Subst.reify (State.env st0) su v)
-        in
-        let first = List.hd xs in
-        (* Format.printf "first answer is %a, there are %d answers.\n%!" Term.pp first (List.length xs); *)
-        let ( >>=? ) = Stdlib.Option.bind in
-        let result =
-          List.fold_left
-            (fun stacc v ->
-              stacc
-              >>=? fun st ->
-              (* Format.printf "v=%a, first = %a\n%!" Term.pp v Term.pp first; *)
-              State.unify (Obj.magic v) (Obj.magic first) st)
-            (Some st)
-            (List.tl xs)
-        in
-        (* Format.printf "result is %a\n" Term.pp (Obj.repr result); *)
-        match result with
-        | None -> ( === ) rez (Obj.magic DifferentAnswers) st
-        | Some st -> ( === ) rez (Obj.magic (Unique first)) st)
+        try
+          let verdict = Stream.fold (fun acc st ->
+            match acc with
+            | `NoAnswer ->
+              let su = State.subst st in
+              `Ok (Subst.reify (State.env st) su v)
+            | `Ok first ->
+                match State.unify (Obj.magic v) (Obj.magic first) st with
+                | None -> raise Distinct
+                | Some _ -> acc
+            ) `NoAnswer stream
+          in
+          match verdict with
+          | `NoAnswer -> unify rez (Obj.magic NoAnswer) st
+          | `Ok first ->  unify rez (Obj.magic (Unique first)) st
+        with
+          Distinct -> unify rez (Obj.magic DifferentAnswers) st
+        )
       )
     (conde
       [
@@ -1025,35 +1040,34 @@ module Unique = struct
           if Stream.is_empty stream
           then success st
           else failure st)
-      ; (rez === different ()) &&& failure
+      ; (rez === different ()) &&& delay (fun () -> failwith "Not implemented")
       ; Fresh.one (fun u -> (rez === unique u) &&&
           (fun st ->
-              let stream = g (Obj.magic u) st in
-              let answer_states = Stream.take stream in
-              (match answer_states with
-              | [] -> failure st
-              | [h] -> success h
-              | h::tl ->
-                let first = Subst.reify (State.env h) (State.subst h) u in
-                let rec loop tl =
-                  match tl with
-                  | [] -> success
-                  | s::sss ->
-                      let candidate = Subst.reify (State.env s) (State.subst s) u in
-                      match State.unify (Obj.magic candidate) (Obj.magic first) s with
-                      | None -> failure
-                      | Some _ -> loop sss
+              (* Format.printf "Checking for unique answer '%a'\n" Term.pp (Obj.repr u); *)
+              (* rez is not free, u may be free *)
+              let v = State.fresh st in
+              let stream = g (Obj.magic v) st in
+              try
+                (* We want all answers be unifiable with u *)
+                (* QUESTION: Is it correct to pass u to g? we could get additional information,
+                   which may filter out some wrong states... *)
+                let ethalon =
+                  Stream.fold (fun ethalon st ->
+                    match State.unify (Obj.magic ethalon) (Obj.magic v) st with
+                    | None -> raise Distinct
+                    | Some st0 -> Subst.reify (State.env st0) (State.subst st0) ethalon
+                  ) (Obj.repr u) stream
                 in
-                loop tl h)
-          )
-        )
+                (u === (Obj.magic ethalon)) st
+              with
+                Distinct -> failure st
+          ))
       ])
    ;;
 
   let%test _ =
     let goal x = Fresh.two (fun u v -> conde [ x === u; x === v ]) in
-    not
-    @@ Stream.is_empty
+    Stream.is_nonempty
     @@ run
          q
          (fun q -> Fresh.one (fun rez -> unique_answers goal rez))
