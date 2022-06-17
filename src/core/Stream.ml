@@ -110,7 +110,7 @@ let rec force_all x =
   | Thunk zz -> force_all (zz ())
   | Nil -> Nil
   | Cons (h, t) -> Cons (h, force_all t)
-  | _ -> assert false 
+  | _ -> assert false
 ;;
 
 
@@ -197,6 +197,8 @@ let is_empty s =
   | Some _ -> false
   | None -> true
 ;;
+
+let is_nonempty s = not (is_empty s)
 
 let rec map f = function
   | Nil -> Nil
