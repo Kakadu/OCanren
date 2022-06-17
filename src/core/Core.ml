@@ -333,7 +333,7 @@ module State = struct
   let scope { scope } = scope
   let prunes { prunes } = prunes
   let fds { fd } = fd
-  let fresh { env; scope } = Env.fresh ~scope env
+  let fresh { env; scope } = Env.fresh ~scope:Term.Var.non_local_scope env
   let named_fresh name { env; scope } = Env.fresh ~name:(Some name) ~scope env
   let wc { env; scope } = Env.wc ~scope env
   let named_wc name { env; scope } = Env.wc ~name:(Some name) ~scope env
@@ -350,10 +350,11 @@ module State = struct
   let unify x y ({ env; subst; ctrs; scope; fd } as st) =
     let rec loop_unify_diseq term_a term_b subst ctrs ~fd =
       Subst.unify ~scope env subst term_a term_b
-      >>=? fun (prefix, subst) ->
-      Disequality.recheck env subst ctrs prefix fd
+      >>=? fun (prefix, subst_new) ->
+      Disequality.recheck env subst_new ctrs prefix fd
       >>=? function
-        | (ctrs, fd, []) -> Some (prefix, ctrs, fd)
+        | (ctrs, fd, []) ->
+          Some (prefix, subst_new, ctrs, fd)
         | (ctrs, fd, new_binds) ->
           (* TODO: it's better to introduce unificagion of a binding list *)
           let (new_a, new_b) =
@@ -365,10 +366,7 @@ module State = struct
           loop_unify_diseq (Obj.magic new_a) (Obj.magic new_b) subst ctrs ~fd
     in
     loop_unify_diseq x y subst ctrs ~fd
-    (* Subst.unify ~scope env subst x y
-    >>=? fun (prefix, subst) ->
-    Disequality.recheck env subst ctrs prefix fd *)
-    >>=? fun (prefix, ctrs, fd) ->
+    >>=? fun (prefix, subst, ctrs, fd) ->
     FM.recheck env subst fd prefix
     >>=? fun fd ->
     let next_state = { st with subst; ctrs; fd } in
@@ -638,7 +636,7 @@ let disj f g st =
 let ( ||| ) = disj
 
 let ( ?| ) gs st =
-  let st = State.new_scope st in
+  (* let st = State.new_scope st in *)
   let rec inner = function
     | [ g ] -> g
     | g :: gs -> disj_base g (inner gs)
@@ -812,30 +810,35 @@ module Unique = struct
 
   let unique_answers g (rez : (_, _) injected) =
     is_free rez (fun st ->
-      Format.printf "free variable detected %s %d\n" __FILE__ __LINE__;
+      (* Format.printf "free variable detected %s %d\n" __FILE__ __LINE__; *)
       let v = State.fresh st in
       let stream = g (Obj.magic v) st in
 
       if Stream.is_empty stream
       then ( === ) rez (Obj.magic NoAnswer) st
       else (
+        (* TODO: taking a whole stream immediately is bad idea. REWRITE *)
         let xs =
           Stream.take stream
-          |> List.map (fun st0 -> Subst.reify (State.env st0) (State.subst st0) v)
+          |> List.map (fun st0 ->
+            let su = State.subst st0 in
+            (* Format.printf "su = %a\n%!" Subst.pp su; *)
+            Subst.reify (State.env st0) su v)
         in
         let first = List.hd xs in
-        Format.printf "first answer is %a\n" Term.pp first;
+        (* Format.printf "first answer is %a, there are %d answers.\n%!" Term.pp first (List.length xs); *)
         let ( >>=? ) = Stdlib.Option.bind in
         let result =
           List.fold_left
             (fun stacc v ->
               stacc
               >>=? fun st ->
-              Format.printf "v=%a, first = %a\n%!" Term.pp v Term.pp first;
+              (* Format.printf "v=%a, first = %a\n%!" Term.pp v Term.pp first; *)
               State.unify (Obj.magic v) (Obj.magic first) st)
             (Some st)
             (List.tl xs)
         in
+        (* Format.printf "result is %a\n" Term.pp (Obj.repr result); *)
         match result with
         | None -> ( === ) rez (Obj.magic DifferentAnswers) st
         | Some st -> ( === ) rez (Obj.magic (Unique first)) st)
@@ -857,7 +860,6 @@ module Unique = struct
               | [] -> failure st
               | [h] -> success h
               | h::tl ->
-                (* failure st *)
                 let first = Subst.reify (State.env h) (State.subst h) u in
                 let rec loop tl =
                   match tl with
@@ -869,14 +871,10 @@ module Unique = struct
                       | Some _ -> loop sss
                 in
                 loop tl h
-                (* List.fold_left (fun acc st ->
-                  (first  =/= Subst.reify (State.env st) (State.subst st) u) &&& acc
-                ) success tl h *)
                 )
           )
         )
       ])
-    (* *)
   ;;
 
   let%test _ =
@@ -911,3 +909,12 @@ let cut_off_wc_diseq_without_domain st =
 let debug_enriching_subst st =
   State.Disequality.debug_enriching_subst (State.constraints st) (State.fds st);
   success st
+
+[@@@ocaml.warning "-partial-match"]
+
+let%expect_test _ =
+  let st = State.empty () in
+  let v = State.fresh st in
+  let [st2] = (v === !!1) st |> Stream.take in
+  Format.printf "%a\n%!" Subst.pp (State.subst st2);
+  [%expect{| {subst| _.10 |- int<1>; |subst} |}]
