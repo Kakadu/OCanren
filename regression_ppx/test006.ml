@@ -21,4 +21,16 @@ module Gresult = struct
     (GT.string, Gterm.ground, (GT.string, ground) Std.Pair.ground Std.List.ground) t]
 end
 
+module _ = struct
+  [%%distrib
+  type nonrec t =
+    | T of
+        { x : int
+        ; y : int
+        }
+  [@@deriving gt ~options:{ gmap }]
+
+  type ground = t]
+end
+
 let () = print_endline "test006"
