@@ -28,9 +28,8 @@ let run_pair_bool eta =
 ;;
 
 let run_pair_int eta =
-  runR
+  run_r
     (Pair.reify OCanren.reify OCanren.reify)
-    ([%show: GT.int * GT.int] ())
     ([%show: (GT.int OCanren.logic, GT.int OCanren.logic) Std.Pair.logic] ())
     eta
 ;;

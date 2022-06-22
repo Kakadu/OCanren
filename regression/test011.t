@@ -72,8 +72,8 @@
     OCanren.Fresh.two
       (fun x y ->
          delay (fun () -> conj (!![x; !1] =/= !![!2; y]) (!![x; y] === q))), all answers {
-  q=[_.11; _.12 [=/= 1]];
   q=[_.11 [=/= 2]; _.12];
+  q=[_.11; _.12 [=/= 1]];
   }
   fun q ->
     OCanren.Fresh.two
@@ -118,7 +118,7 @@
   }
   fun x ->
     OCanren.Fresh.one (fun y -> delay (fun () -> !![x; y] =/= !![!5; !6])), all answers {
-  q=_.10;
+  q=_.10 [=/= 5];
   }
   fun q ->
     OCanren.Fresh.three
@@ -162,11 +162,11 @@
   fun q ->
     OCanren.Fresh.two
       (fun x y -> delay (fun () -> conj (!![x; y] === q) (x =/= y))), all answers {
-  q=[_.11 [=/= _.12]; _.12];
+  q=[_.11 [=/= _.12]; _.12 [=/= _.11]];
   }
   fun q -> Fresh.two (fun a d -> ?&[!![a; d] === q; q =/= !![!5; !6]]), all answers {
-  q=[_.11; _.12 [=/= 6]];
   q=[_.11 [=/= 5]; _.12];
+  q=[_.11; _.12 [=/= 6]];
   }
   fun q -> Fresh.two (fun a d -> ?&[!![a; d] === q; q =/= !![!5; !6]; a === !3]), all answers {
   q=[3; _.12];
@@ -174,19 +174,19 @@
   fun q ->
     OCanren.Fresh.two
       (fun x y -> delay (fun () -> conj (!![x; y] === q) (y =/= x))), all answers {
-  q=[_.11; _.12 [=/= _.11]];
+  q=[_.11 [=/= _.12]; _.12 [=/= _.11]];
   }
   fun q ->
     OCanren.Fresh.two
       (fun x y ->
          delay (fun () -> conj (conj (!![x; y] === q) (x =/= y)) (y =/= x))), all answers {
-  q=[_.11 [=/= _.12]; _.12];
+  q=[_.11 [=/= _.12; =/= _.12]; _.12 [=/= _.11; =/= _.11]];
   }
   fun q ->
     OCanren.Fresh.two
       (fun x y ->
          delay (fun () -> conj (conj (!![x; y] === q) (x =/= y)) (x =/= y))), all answers {
-  q=[_.11 [=/= _.12]; _.12];
+  q=[_.11 [=/= _.12]; _.12 [=/= _.11]];
   }
   fun q -> (q =/= !5) &&& (!5 =/= q), all answers {
   q=_.10 [=/= 5];
@@ -242,7 +242,8 @@
          delay
            (fun () ->
               conj (conj (x % y === q) (x % y =/= !![!1; x])) (y === !![!2]))), all answers {
-  q=[_.11; 2];
+  q=[_.11 [=/= 1]; 2];
+  q=[_.11 [=/= 2]; 2];
   }
   fun x ->
     OCanren.Fresh.two
