@@ -47,7 +47,7 @@ module Answer = struct
     | Not_found -> []
   ;;
 
-  let subsumed env t t' =
+  (* let subsumed env t t' =
     (* we should check that for each binding from [t'] there is
      * a binding in [t] that subsumes it;
      * Examples:
@@ -65,7 +65,7 @@ module Answer = struct
         with
         | Not_found -> false)
       t'
-  ;;
+  ;; *)
 end
 
 exception Disequality_violated
@@ -280,7 +280,7 @@ end = struct
 
   let merge_disjoint env subst =
     M.union (fun _ _ _ ->
-        invalid_arg "OCanren fatal (Conjunct.merge_disjoint): conjuncts intersect")
+      invalid_arg "OCanren fatal (Conjunct.merge_disjoint): conjuncts intersect")
   ;;
 
   let diff env subst t' t =
@@ -309,9 +309,7 @@ end = struct
           acc
         else (
           (* otherwise we should remove all disjuncts that subsume the newly added disjunct *)
-          let acc =
-            M.filter (fun _ disj' -> not (Disjunct.subsumed env subst disj disj')) acc
-          in
+          let acc = M.filter (fun _ disj' -> not (Disjunct.subsumed env subst disj disj')) acc in
           M.add id disj acc))
       cs
       M.empty
@@ -362,18 +360,18 @@ end = struct
          * then we `concat` these lists into single list
          *)
         ListLabels.map acc ~f:(fun answ ->
-            let open Subst.Binding in
-            (* it might be the case that some atom in the disjunct
-             * is a duplicate of some other disequality in the answer;
-             * in this case we can throw away the whole disjunct (and keep only original answer)
-             * because it would not produce new extended answers;
-             * i.g. answer is [(x =/= 1) /\ (y =/= 2)] and the disjunct is [(x =/= 1) \/ (z =/= 3)],
-             * then extended answers are [(x =/= 1) /\ (y =/= 2)] and [(x =/= 1) /\ (y =/= 2) /\ (z =/= 3)],
-             * but the second one is subsumed by the first one and can be thrown away
-             *)
-            if List.exists (fun { var; term } -> Answer.mem env answ var term) bs
-            then [ answ ]
-            else List.map (fun { var; term } -> Answer.add env answ var term) bs)
+          let open Subst.Binding in
+          (* it might be the case that some atom in the disjunct
+           * is a duplicate of some other disequality in the answer;
+           * in this case we can throw away the whole disjunct (and keep only original answer)
+           * because it would not produce new extended answers;
+           * i.g. answer is [(x =/= 1) /\ (y =/= 2)] and the disjunct is [(x =/= 1) \/ (z =/= 3)],
+           * then extended answers are [(x =/= 1) /\ (y =/= 2)] and [(x =/= 1) /\ (y =/= 2) /\ (z =/= 3)],
+           * but the second one is subsumed by the first one and can be thrown away
+           *)
+          if List.exists (fun { var; term } -> Answer.mem env answ var term) bs
+          then [ answ ]
+          else List.map (fun { var; term } -> Answer.add env answ var term) bs)
         |> List.concat)
       t
       [ Answer.empty ]
@@ -391,8 +389,8 @@ let combine env subst cstore =
 
 let merge_disjoint env subst =
   Term.VarMap.union (fun _ c1 c2 ->
-      let c = Conjunct.merge_disjoint env subst c1 c2 in
-      if Conjunct.is_empty c then None else Some c)
+    let c = Conjunct.merge_disjoint env subst c1 c2 in
+    if Conjunct.is_empty c then None else Some c)
 ;;
 
 let update env subst conj = merge_disjoint env subst (Conjunct.split conj)

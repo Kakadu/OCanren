@@ -1,6 +1,6 @@
 (*
   Going to implement very naive disequality constraints
-  which will be stored internally as disjunction of conjunctions (DNF)
+  which will be stored internally as a CNF
 *)
 
 open Format
@@ -378,12 +378,12 @@ module Make (FDC : EXTRA) = struct
       | Some v2 ->
         (* let () = log "%s %d" __FILE__ __LINE__ in *)
         (match Term.Var.(is_wildcard var, is_wildcard v2) with
-        | true, true -> failwith "We should not get two wildcards from unification"
-        | false, false ->
-          (* log "%s %d" __FILE__ __LINE__; *)
-          VarNTerm (var, term)
-        | false, true -> WcNVar var
-        | true, false -> WcNVar v2)
+         | true, true -> failwith "We should not get two wildcards from unification"
+         | false, false ->
+           (* log "%s %d" __FILE__ __LINE__; *)
+           VarNTerm (var, term)
+         | false, true -> WcNVar var
+         | true, false -> WcNVar v2)
     ;;
 
     let singleton : Term.Var.t -> _ -> t =
@@ -449,10 +449,10 @@ module Make (FDC : EXTRA) = struct
               only in the end *)
            `Meaningful next
          with
-        (* | ToRemove -> Stdlib.Result.error `ToRemove *)
-        | Violated ->
-          log "Disjunct.of_bindings said Violated";
-          `Violated)
+         (* | ToRemove -> Stdlib.Result.error `ToRemove *)
+         | Violated ->
+           log "Disjunct.of_bindings said Violated";
+           `Violated)
     ;;
 
     (** Check that every disequality doesn't violate by itself extra constraints
@@ -491,7 +491,7 @@ module Make (FDC : EXTRA) = struct
 
       *)
     let recheck_exn env subst ~bnds extra ({ wcs; conjs = pairs } as d) =
-      log "recheck_exn of %a" pp d;
+      log "Disjunct.recheck_exn of %a" pp d;
       let exception Early_exit of FDC.t in
       try
         (* In fresh bindings we should not concretize variables from 'wcs'*)
@@ -665,7 +665,7 @@ module Make (FDC : EXTRA) = struct
     ;;
 
     let pp ppf xs =
-      printf "All disjuncts (%d)\n%!" (cardinal xs);
+      printf "The CNF (%d)\n%!" (cardinal xs);
       iteri (fun i -> fprintf ppf "\t%d: %a\n%!" i Disjunct.pp) xs
     ;;
 
@@ -740,7 +740,7 @@ module Make (FDC : EXTRA) = struct
     (* printf "Disjunct.conj '%a' and '%a'\n" pp l pp r; *)
     l
     |> DisjSet.concat_map (fun (c1 : Disjunct.t) ->
-           DisjSet.map (fun (c2 : Disjunct.t) -> Disjunct.conj c1 c2) r (* |> DisjSet.dedup *))
+         DisjSet.map (fun (c2 : Disjunct.t) -> Disjunct.conj c1 c2) r (* |> DisjSet.dedup *))
  ;;
 
   let disequality_of_terms l r : t =
@@ -808,9 +808,9 @@ module Make (FDC : EXTRA) = struct
     | Some (bnds, _subst) ->
       log "%d %a" __LINE__ Subst.pp_binding_list bnds;
       (match Disjunct.of_bindings bnds extra with
-      | `Violated -> None
-      | `Meaningful (d, e) -> Some (DisjSet.add d cstrs, e)
-      | `ToRemove e -> Some (cstrs, e))
+       | `Violated -> None
+       | `Meaningful (d, e) -> Some (DisjSet.add d cstrs, e)
+       | `ToRemove e -> Some (cstrs, e))
   ;;
 
   (** Rechecking takes contraints ans output
@@ -836,8 +836,10 @@ module Make (FDC : EXTRA) = struct
           | `Violated | (exception Violated) ->
             (* TODO: no model doesn't necessary mean violated *)
             log "rechecking disjunct %d '%a' failed %d" i Disjunct.pp d __LINE__;
-            extra, acc
-          | `ToRemove e -> raise (Early_exit e)
+            (* In CNF mode it means global failure, in DNF -- simplification *)
+            (* extra, acc *)
+            raise Violated
+          | `ToRemove e -> extra, acc (* raise (Early_exit e) *)
           | `Meaningful (d, extra) ->
             (* We have an updated disjunct *)
             let dset = DisjSet.add d acc in
@@ -890,17 +892,65 @@ module Make (FDC : EXTRA) = struct
 
   let merge_disjoint _ = failwith "merge_disjoint is not implemented"
 
+  module Var_multi_map (El : Map.OrderedType) = struct
+    module El_set = struct
+      include Set.Make (El)
+
+      let subset ~small big = subset small big
+    end
+
+    type t = El_set.t Term.VarMap.t
+
+    let empty : t = Term.VarMap.empty
+
+    let add key v mapa =
+      match Term.VarMap.find key mapa with
+      | xs -> Term.VarMap.add key (El_set.add v xs) mapa
+      | exception Not_found -> Term.VarMap.add key (El_set.singleton v) mapa
+    ;;
+
+    let merge = Term.VarMap.merge
+    let find_and_to_list_exn key mapa = Term.VarMap.find key mapa |> El_set.to_seq |> List.of_seq
+  end
+
   module Answer = struct
-    type t = Obj.t Term.VarMap.t
+    module M = Var_multi_map (struct
+      type t = Obj.t
+
+      let compare = compare
+    end)
+
+    type t = M.t (*  conjunction of inequalites *)
+
+    let empty = M.empty
 
     let extract (map : t) v =
       (* Format.printf "Extracting from %a\n%!" Disjunct.pp d; *)
-      try Term.VarMap.find v map with
-      | Not_found -> Obj.repr v
+      try M.find_and_to_list_exn v map with
+      | Not_found -> []
     ;;
 
     (* let subsumed _env c1 c2 = false *)
-    let subsumed _env c1 c2 = Stdlib.compare c1 c2 = 0
+    let subsumed _env c1 (c2 as _by) =
+      (* if A has strictly more constraints then B, then A could be removed *)
+      (* let exception  *)
+      (* Var_multi_map.ke *)
+      let exception No_subsumption in
+      try
+        let _ =
+          M.merge
+            (fun acc left right ->
+              match left, right with
+              | None, None -> failwith "Should not happen"
+              | None, Some _ | Some _, None -> raise No_subsumption
+              | Some l, Some r -> if M.El_set.subset ~small:l r then None else raise No_subsumption)
+            c1
+            c2
+        in
+        true
+      with
+      | No_subsumption -> false
+    ;;
   end
 
   let vars_in_term =
@@ -922,16 +972,19 @@ module Make (FDC : EXTRA) = struct
     fun root -> helper Term.VarSet.empty (Obj.repr root)
   ;;
 
-  let reify env subst cs t =
+  let reify env subst cs t : Answer.t list =
     log "reify: %s %d" __FILE__ __LINE__;
     log "constraints: %a" pp cs;
     (* Format.printf "all : %a\n%!" pp cs; *)
     let t = Subst.reify env subst t in
     let vars = vars_in_term t in
-    let collection =
+    let dnf =
       CartesianHacks.cartesian_seq (DisjSet.to_seq cs |> Seq.map Disjunct.to_seq_without_wcs)
     in
-    let maybe_add k v acc = if VarSet.mem k vars then Term.VarMap.add k v acc else acc in
+    let maybe_add k v acc = if VarSet.mem k vars then Answer.M.add k v acc else acc in
+    let ll_dnf = Seq.map List.of_seq dnf |> List.of_seq in
+    log "ll_dng = %a" (GT.fmt GT.list (GT.fmt GT.list Conjunct.pp)) ll_dnf;
+    (* TODO: call Answer.subsumed to remove duplicates *)
     Seq.map
       (Seq.fold_left
          (fun acc { Subst.Binding.var; term } ->
@@ -940,8 +993,8 @@ module Make (FDC : EXTRA) = struct
            match Term.var term with
            | None -> acc
            | Some v2 -> maybe_add v2 (Obj.repr var) acc)
-         Term.VarMap.empty)
-      collection
+         Answer.empty)
+      dnf
     |> List.of_seq
   ;;
 

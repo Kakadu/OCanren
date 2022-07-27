@@ -13,6 +13,8 @@
   instrumentalization.cfg
   instrumentalization_ppx.cfg
   package-doc.cfg)
+ (deps
+  (package GT))
  (action
   (run ./discover.exe -all-flags)))
 

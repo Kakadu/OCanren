@@ -122,3 +122,21 @@ let () =
    in
    run_r (List.prj_exn prj_exn) show_int_list (-1) q qh (REPR (fun q -> rembero !1 (!1 % (!2 % (!1 %< !3))) q          ));
    runInt                (-1) q qh (REPR (fun q -> rembero !1 (!1 % (!2 %< !3)) (!1 % (!2 %< !3)) ))
+
+
+
+let _ = runInt        (-1) q qh (REPR (fun x -> conde [ x  =/= !5; x  =/= !6; ]) )
+let () = OCanren.set_diseq_logging true
+let __ _ =
+  run_r prj_exn GT.(show int) (-1) q qh (REPR (fun q -> ((!5 =/= q) &&& (!6 =/= q) &&& trace_diseq_constraints &&& (q === !5))               ))
+let _ = runInt   (-1) q qh (REPR (fun x -> fresh (y) (!![x; y] =/= !![!5; !6]) ))
+let _ = runIList (-1) q qh (REPR (fun q ->
+    fresh (x y)
+      (!5 =/= x)
+      (!![x; y] =/= !![!5; !6])
+      (!![x; y] === q)
+      trace_diseq_constraints
+      ))
+
+let __ _ =
+  runInt (-1) q qh (REPR (fun q -> ((!5 =/= q) &&& (!6 =/= q))               ))
