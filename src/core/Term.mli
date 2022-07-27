@@ -114,7 +114,7 @@ val fold2
 
 val show : t -> string
 val describe_var : Format.formatter -> Var.t -> unit
-val pp : Format.formatter -> t -> unit
+val pp : Format.formatter -> 'a -> unit
 val equal : t -> t -> bool
 val compare : t -> t -> int
 val hash : t -> int

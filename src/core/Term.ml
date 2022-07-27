@@ -71,11 +71,7 @@ module Var = struct
   ;;
 
   let valid_anchor anchor = anchor == global_anchor
-
-  let reify r { index; constraints } =
-    index, List.map (fun x -> r @@ Obj.obj x) constraints
-  ;;
-
+  let reify r { index; constraints } = index, List.map (fun x -> r @@ Obj.obj x) constraints
   let equal x y = x.index = y.index && x.env = y.env
   let compare x y = if x.index <> y.index then x.index - y.index else x.env - y.env
   let hash x = Hashtbl.hash (x.env, x.index)
@@ -83,6 +79,7 @@ end
 
 module VarSet = struct
   include Set.Make (Var)
+
   let iteri f set =
     let (_ : int) =
       fold
@@ -101,6 +98,7 @@ module VarSet = struct
     Format.fprintf ppf " |}"
   ;;
 end
+
 module VarTbl = Hashtbl.Make (Var)
 
 module VarMap = struct
@@ -110,7 +108,7 @@ module VarMap = struct
     match
       f
         (try Some (find k m) with
-        | Not_found -> None)
+         | Not_found -> None)
     with
     | Some x -> add k x m
     | None -> remove k m
@@ -136,8 +134,7 @@ let has_var_structure tx sx x =
 ;;
 
 let is_box t =
-  if t <= Obj.last_non_constant_constructor_tag
-     && t >= Obj.first_non_constant_constructor_tag
+  if t <= Obj.last_non_constant_constructor_tag && t >= Obj.first_non_constant_constructor_tag
   then true
   else false
 ;;
@@ -148,16 +145,13 @@ let is_var x =
   is_box tx && has_var_structure tx (Obj.size x) x
 ;;
 
-
 let is_int = ( = ) Obj.int_tag
 let is_str = ( = ) Obj.string_tag
 let is_dbl = ( = ) Obj.double_tag
 let is_valid_tag t = is_int t || is_str t || is_dbl t
 
 let is_valid_tag_exn t =
-  if is_valid_tag t
-  then ()
-  else failwith (sprintf "OCanren fatal: invalid value tag (%d)" t)
+  if is_valid_tag t then () else failwith (sprintf "OCanren fatal: invalid value tag (%d)" t)
 ;;
 
 let var x =
@@ -203,6 +197,7 @@ let rec iter ~fvar ~fval x =
     is_valid_tag_exn tx;
     fval x)
 ;;
+
 (*
 let describe_var ppf Var.{ index; name } =
   Format.fprintf ppf "_.%d" index;
@@ -211,9 +206,7 @@ let describe_var ppf Var.{ index; name } =
   | Some s -> Format.fprintf ppf "「%s」" s
 ;;
 *)
-let describe_var ppf Var.{ index } =
-  Format.fprintf ppf "_.%d" index
-;;
+let describe_var ppf Var.{ index } = Format.fprintf ppf "_.%d" index
 
 let pp =
   let open Format in
@@ -256,7 +249,7 @@ let pp =
       then fprintf ppf "double<%e>" @@ Obj.magic x
       else failwith "Dynamic pretty printing of some special tags is not supported")
   in
-  helper
+  fun ppf x -> helper ppf (Obj.repr x)
 ;;
 
 let show x = Format.asprintf "%a" pp x
@@ -294,30 +287,34 @@ let rec fold2 ~fvar ~fval ~fk ~init x y =
   | true, true ->
     let sx, sy = Obj.size x, Obj.size y in
     (match has_var_structure tx sx x, has_var_structure ty sy y with
-    | true, true -> fvar init (Obj.magic x) (Obj.magic y)
-    | true, false -> fk init L (Obj.magic x) y
-    | false, true -> fk init R (Obj.magic y) x
-    | false, false ->
-      if tx = ty && sx = sy
-      then (
-        let fx, fy = Obj.field x, Obj.field y in
-        let rec inner i acc =
-          if i < sx
-          then (
-            let acc = fold2 ~fvar ~fval ~fk ~init:acc (fx i) (fy i) in
-            inner (i + 1) acc)
-          else acc
-        in
-        inner 0 init)
-      else raise (Different_shape (tx, ty)))
+     | true, true -> fvar init (Obj.magic x) (Obj.magic y)
+     | true, false -> fk init L (Obj.magic x) y
+     | false, true -> fk init R (Obj.magic y) x
+     | false, false ->
+       if tx = ty && sx = sy
+       then (
+         let fx, fy = Obj.field x, Obj.field y in
+         let rec inner i acc =
+           if i < sx
+           then (
+             let acc = fold2 ~fvar ~fval ~fk ~init:acc (fx i) (fy i) in
+             inner (i + 1) acc)
+           else acc
+         in
+         inner 0 init)
+       else raise (Different_shape (tx, ty)))
   | true, false ->
     is_valid_tag_exn ty;
     let sx = Obj.size x in
-    if has_var_structure tx sx x then fk init L (Obj.magic x) y else raise (Different_shape (tx, ty))
+    if has_var_structure tx sx x
+    then fk init L (Obj.magic x) y
+    else raise (Different_shape (tx, ty))
   | false, true ->
     is_valid_tag_exn tx;
     let sy = Obj.size y in
-    if has_var_structure ty sy y then fk init R (Obj.magic y) x else raise (Different_shape (tx, ty))
+    if has_var_structure ty sy y
+    then fk init R (Obj.magic y) x
+    else raise (Different_shape (tx, ty))
   | false, false ->
     is_valid_tag_exn tx;
     is_valid_tag_exn ty;
@@ -374,12 +371,9 @@ let rec hash x =
     ~init:1
     ~fvar:(fun acc v ->
       Hashtbl.hash
-        ( Var.hash v
-        , List.fold_left (fun acc x -> Hashtbl.hash (acc, hash x)) acc v.Var.constraints
-        ))
+        (Var.hash v, List.fold_left (fun acc x -> Hashtbl.hash (acc, hash x)) acc v.Var.constraints))
     ~fval:(fun acc x -> Hashtbl.hash (acc, Hashtbl.hash x))
 ;;
-
 
 external unsafe_cast_to_var : 'a -> Var.t = "%identity"
 
@@ -389,34 +383,30 @@ let rec fold_monoid ~fvar ~fval ~fk ~join ~empty x y =
   | true, true ->
     let sx, sy = Obj.size x, Obj.size y in
     (match has_var_structure tx sx x, has_var_structure ty sy y with
-    | true, true -> fvar (unsafe_cast_to_var x) (unsafe_cast_to_var y)
-    | true, false -> fk L (unsafe_cast_to_var x) y
-    | false, true -> fk R (unsafe_cast_to_var y) x
-    | false, false ->
-      if tx = ty && sx = sy
-      then (
-        let fx, fy = Obj.field x, Obj.field y in
-        let rec inner i acc =
-          if i < sx
-          then (
-            let acc = join acc (fold_monoid ~join ~empty ~fvar ~fval ~fk (fx i) (fy i)) in
-            inner (i + 1) acc)
-          else acc
-        in
-        inner 0 empty)
-      else raise (Different_shape (tx, ty)))
+     | true, true -> fvar (unsafe_cast_to_var x) (unsafe_cast_to_var y)
+     | true, false -> fk L (unsafe_cast_to_var x) y
+     | false, true -> fk R (unsafe_cast_to_var y) x
+     | false, false ->
+       if tx = ty && sx = sy
+       then (
+         let fx, fy = Obj.field x, Obj.field y in
+         let rec inner i acc =
+           if i < sx
+           then (
+             let acc = join acc (fold_monoid ~join ~empty ~fvar ~fval ~fk (fx i) (fy i)) in
+             inner (i + 1) acc)
+           else acc
+         in
+         inner 0 empty)
+       else raise (Different_shape (tx, ty)))
   | true, false ->
     is_valid_tag_exn ty;
     let sx = Obj.size x in
-    if has_var_structure tx sx x
-    then fk L (Obj.magic x) y
-    else raise (Different_shape (tx, ty))
+    if has_var_structure tx sx x then fk L (Obj.magic x) y else raise (Different_shape (tx, ty))
   | false, true ->
     is_valid_tag_exn tx;
     let sy = Obj.size y in
-    if has_var_structure ty sy y
-    then fk R (Obj.magic y) x
-    else raise (Different_shape (tx, ty))
+    if has_var_structure ty sy y then fk R (Obj.magic y) x else raise (Different_shape (tx, ty))
   | false, false ->
     is_valid_tag_exn tx;
     is_valid_tag_exn ty;

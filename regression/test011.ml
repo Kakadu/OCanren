@@ -125,17 +125,17 @@ let () =
 
 
 
-let _ = runInt        (-1) q qh (REPR (fun x -> conde [ x  =/= !5; x  =/= !6; ]) )
-let () = OCanren.set_diseq_logging true
+let __ _ = runInt        (-1) q qh (REPR (fun x -> conde [ x  =/= !5; x  =/= !6; ]) )
+(* let () = OCanren.set_diseq_logging true *)
 let __ _ =
   run_r prj_exn GT.(show int) (-1) q qh (REPR (fun q -> ((!5 =/= q) &&& (!6 =/= q) &&& trace_diseq_constraints &&& (q === !5))               ))
-let _ = runInt   (-1) q qh (REPR (fun x -> fresh (y) (!![x; y] =/= !![!5; !6]) ))
-let _ = runIList (-1) q qh (REPR (fun q ->
+let __ _ = runInt   (-1) q qh (REPR (fun x -> fresh (y) (!![x; y] =/= !![!5; !6]) ))
+let __ _ = runIList (-1) q qh (REPR (fun q ->
     fresh (x y)
       (!5 =/= x)
       (!![x; y] =/= !![!5; !6])
       (!![x; y] === q)
-      trace_diseq_constraints
+      (* trace_diseq_constraints *)
       ))
 
 let __ _ =

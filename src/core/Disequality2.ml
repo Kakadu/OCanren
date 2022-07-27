@@ -892,11 +892,22 @@ module Make (FDC : EXTRA) = struct
 
   let merge_disjoint _ = failwith "merge_disjoint is not implemented"
 
-  module Var_multi_map (El : Map.OrderedType) = struct
+  module Var_multi_map (El : sig
+    include Map.OrderedType
+
+    val pp : Format.formatter -> t -> unit
+  end) =
+  struct
     module El_set = struct
       include Set.Make (El)
 
       let subset ~small big = subset small big
+
+      let pp ppf set =
+        Format.fprintf ppf "[ ";
+        iter (El.pp ppf) set;
+        Format.fprintf ppf " ]"
+      ;;
     end
 
     type t = El_set.t Term.VarMap.t
@@ -911,13 +922,20 @@ module Make (FDC : EXTRA) = struct
 
     let merge = Term.VarMap.merge
     let find_and_to_list_exn key mapa = Term.VarMap.find key mapa |> El_set.to_seq |> List.of_seq
+
+    let pp ppf x =
+      Format.fprintf ppf "{vmm| ";
+      Term.VarMap.iter (fun k v -> Format.fprintf ppf "%d -> %a; " k.Var.index El_set.pp v) x;
+      Format.fprintf ppf "|vmm}"
+    ;;
   end
 
   module Answer = struct
     module M = Var_multi_map (struct
-      type t = Obj.t
+      type t = Term.t
 
-      let compare = compare
+      let compare l r = compare (Obj.repr l) (Obj.repr r)
+      let pp = Term.pp
     end)
 
     type t = M.t (*  conjunction of inequalites *)
@@ -930,11 +948,10 @@ module Make (FDC : EXTRA) = struct
       | Not_found -> []
     ;;
 
-    (* let subsumed _env c1 c2 = false *)
+    (* The logic about checking subsumption is kind of tricky *)
     let subsumed _env c1 (c2 as _by) =
+      log "subsumed of \nleft: %a\n  by: %a\n" M.pp c1 M.pp c2;
       (* if A has strictly more constraints then B, then A could be removed *)
-      (* let exception  *)
-      (* Var_multi_map.ke *)
       let exception No_subsumption in
       try
         let _ =
@@ -942,7 +959,8 @@ module Make (FDC : EXTRA) = struct
             (fun acc left right ->
               match left, right with
               | None, None -> failwith "Should not happen"
-              | None, Some _ | Some _, None -> raise No_subsumption
+              | None, Some _ -> raise No_subsumption
+              | Some _, None -> None
               | Some l, Some r -> if M.El_set.subset ~small:l r then None else raise No_subsumption)
             c1
             c2
@@ -955,7 +973,6 @@ module Make (FDC : EXTRA) = struct
 
   let vars_in_term =
     let rec helper acc x =
-      (* Format.printf "%a\n%!" Term.pp (Obj.repr x); *)
       if Obj.is_block x
       then (
         match Term.var x with
@@ -982,9 +999,24 @@ module Make (FDC : EXTRA) = struct
       CartesianHacks.cartesian_seq (DisjSet.to_seq cs |> Seq.map Disjunct.to_seq_without_wcs)
     in
     let maybe_add k v acc = if VarSet.mem k vars then Answer.M.add k v acc else acc in
-    let ll_dnf = Seq.map List.of_seq dnf |> List.of_seq in
-    log "ll_dng = %a" (GT.fmt GT.list (GT.fmt GT.list Conjunct.pp)) ll_dnf;
-    (* TODO: call Answer.subsumed to remove duplicates *)
+    (* let ll_dnf = Seq.map List.of_seq dnf |> List.of_seq in *)
+    (* log "ll_dng = %a" (GT.fmt GT.list (GT.fmt GT.list Conjunct.pp)) ll_dnf; *)
+    let add_to_list newx xs =
+      log "add_to_list hERR";
+      let exception Early_exit of Answer.t list in
+      try
+        List.fold_left
+          (fun acc e ->
+            if Answer.subsumed () newx e
+            then raise (Early_exit xs)
+            else if Answer.subsumed () e newx
+            then acc
+            else e :: acc)
+          [ newx ]
+          xs
+      with
+      | Early_exit xs -> xs
+    in
     Seq.map
       (Seq.fold_left
          (fun acc { Subst.Binding.var; term } ->
@@ -995,12 +1027,8 @@ module Make (FDC : EXTRA) = struct
            | Some v2 -> maybe_add v2 (Obj.repr var) acc)
          Answer.empty)
       dnf
-    |> List.of_seq
+    |> Seq.fold_left (fun acc x -> add_to_list x acc) []
   ;;
-
-  (* |> DisjSet.to_seq
-    |> Seq.filter_map (fun d -> if Disjunct.intersects_with ~set:vars d then Some d else None)
-    |> List.of_seq *)
 
   let project _ _ = failwith "not implemented"
 end
