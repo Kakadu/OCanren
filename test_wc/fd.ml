@@ -4,33 +4,27 @@ open Tester
 
 let lino f c =
   debug_var !!1 OCanren.reify (function
-      | [ Value 1 ] ->
-        Format.printf "%s %d\n%!" f c;
-        success
-      | _ -> assert false)
+    | [ Value 1 ] ->
+      Format.printf "%s %d\n%!" f c;
+      success
+    | _ -> assert false)
 ;;
 
 let debug_int n =
   debug_var n OCanren.reify (function
-      | [ Value n ] ->
-        Format.printf "%d\n%!" n;
-        success
-      | [ Var (n, []) ] ->
-        Format.printf "_.%d\n%!" n;
-        success
-      | _ -> assert false)
+    | [ Value n ] ->
+      Format.printf "%d\n%!" n;
+      success
+    | [ Var (n, []) ] ->
+      Format.printf "_.%d\n%!" n;
+      success
+    | _ -> assert false)
 ;;
 
 let show_int = GT.show GT.int
 let show_intl = GT.show logic (GT.show GT.int)
-
-let run_bool eta =
-  run_r OCanren.reify (GT.show logic @@ GT.show GT.bool) eta
-;;
-
-let run_int eta =
-  run_r OCanren.reify (GT.show logic @@ GT.show GT.int) eta
-;;
+let run_bool eta = run_r OCanren.reify (GT.show logic @@ GT.show GT.bool) eta
+let run_int eta = run_r OCanren.reify (GT.show logic @@ GT.show GT.int) eta
 
 let run_option eta =
   run_r
@@ -77,23 +71,19 @@ let _ =
 let _ =
   [%tester
     run_option (-1) (fun q ->
-        fresh
-          x
-          (q =/= Option.some __)
-          (q === Option.some x)
-          cut_off_wc_diseq_without_domain)]
+      fresh x (q =/= Option.some __) (q === Option.some x) cut_off_wc_diseq_without_domain)]
 ;;
 
 let _ =
   [%tester
     run_option (-1) (fun q ->
-        fresh
-          x
-          (q =/= Option.some __)
-          (FD.domain x [ 1; 2 ])
-          (x =/= !!1)
-          (x =/= !!2)
-          (q === Option.some x))]
+      fresh
+        x
+        (q =/= Option.some __)
+        (FD.domain x [ 1; 2 ])
+        (x =/= !!1)
+        (x =/= !!2)
+        (q === Option.some x))]
 ;;
 
 let () =
@@ -105,25 +95,25 @@ let () =
 let _ =
   [%tester
     run_option (-1) (fun q ->
-        fresh
-          x
-          (q =/= Option.some __)
-          (FD.domain x [ 1; 2; 3 ])
-          (x =/= !!1)
-          (x =/= !!2)
-          (q === Option.some x))]
+      fresh
+        x
+        (q =/= Option.some __)
+        (FD.domain x [ 1; 2; 3 ])
+        (x =/= !!1)
+        (x =/= !!2)
+        (q === Option.some x))]
 ;;
 
 let _ =
   [%tester
     run_pair (-1) (fun q ->
-        fresh
-          _11
-          (FD.domain _11 [ 1; 2 ])
-          (_11 =/= !!2)
-          (* trace_domain_constraints *)
-          (q =/= pair _11 __)
-          (q === pair !!1 !!1))]
+      fresh
+        _11
+        (FD.domain _11 [ 1; 2 ])
+        (_11 =/= !!2)
+        (* trace_domain_constraints *)
+        (q =/= pair _11 __)
+        (q === pair !!1 !!1))]
 ;;
 
 let _ =
@@ -140,48 +130,54 @@ let _ =
 let _ =
   [%tester
     run_pair (-1) (fun q ->
-        fresh v (q === pair !!1 v) (q =/= pair !!1 __) cut_off_wc_diseq_without_domain)]
+      fresh v (q === pair !!1 v) (q =/= pair !!1 __) cut_off_wc_diseq_without_domain)]
 ;;
 
 (* A more complicated version of two previous ones *)
 let _ =
   [%tester
     run_pair (-1) (fun q ->
-        fresh
-          _11
-          (FD.domain _11 [ 1; 2 ])
-          (_11 =/= !!2)
-          (* trace_domain_constraints *)
-          (q === pair _11 __)
-          (q =/= pair !!1 __)
-          cut_off_wc_diseq_without_domain)]
+      fresh
+        _11
+        (FD.domain _11 [ 1; 2 ])
+        (_11 =/= !!2)
+        (* trace_domain_constraints *)
+        (q === pair _11 __)
+        (q =/= pair !!1 __)
+        cut_off_wc_diseq_without_domain)]
 ;;
 
 let _ =
   [%tester
     run_pair (-1) (fun q ->
-        fresh
-          _11
-          (FD.domain _11 [ 1; 2 ])
-          (q =/= pair _11 __)
-          (q === pair !!1 !!1)
-          (_11 =/= !!2))]
+      fresh
+        _11
+        (FD.domain _11 [ 1; 2 ])
+        (q =/= pair _11 __)
+        (q === pair !!1 !!1)
+        (_11 =/= !!2))]
 ;;
 
 let _ =
   [%tester
     run_int (-1) (fun q ->
-        fresh
-          ()
-          (q =/= !!1)
-          (FD.domain q [ 1; 2 ])
-          trace_domain_constraints
-          (q =/= !!2)
-          success)]
+      fresh
+        ()
+        (q =/= !!1)
+        (FD.domain q [ 1; 2 ])
+        trace_domain_constraints
+        (q =/= !!2)
+        success)]
 ;;
 
 let _ =
   [%tester
     run_int (-1) (fun q ->
-        fresh () (q =/= !!1) (q =/= !!2) (FD.domain q [ 1; 2 ]) success)]
+      fresh () (q =/= !!1) (q =/= !!2) (FD.domain q [ 1; 2 ]) success)]
+;;
+
+let _ =
+  [%tester
+    run_int (-1) (fun q ->
+      fresh () (q =/= !!1) (q =/= !!2) (FD.domain q [ 1; 2 ]) success)]
 ;;

@@ -123,11 +123,11 @@ end = struct
         ~fval:(fun acc _ -> acc)
         ~fvar:(fun acc var ->
           ListLabels.fold_left var.Term.Var.constraints ~init:acc ~f:(fun acc ctr_term ->
-              let ctr_term = Term.repr ctr_term in
-              let var = { var with Term.Var.constraints = [] } in
-              let term = unctr_term @@ (env, ctr_term) in
-              let acc = Subst.(Binding.{ var; term }) :: acc in
-              helper acc ctr_term))
+            let ctr_term = Term.repr ctr_term in
+            let var = { var with Term.Var.constraints = [] } in
+            let term = unctr_term @@ (env, ctr_term) in
+            let acc = Subst.(Binding.{ var; term }) :: acc in
+            helper acc ctr_term))
     in
     helper [] t
   ;;
@@ -147,8 +147,7 @@ end = struct
             Term.VarTbl.add vartbl v new_var;
             { new_var with
               Term.Var.constraints =
-                List.map (fun x -> helper x) v.Term.Var.constraints
-                |> List.sort Term.compare
+                List.map (fun x -> helper x) v.Term.Var.constraints |> List.sort Term.compare
             })
     in
     env', helper t
@@ -219,9 +218,9 @@ end = struct
     try
       ps
       |> List.iter (fun (k, (reifier, checker)) ->
-             let reifier : (_, _) Reifier.t = Obj.obj reifier in
-             let reified = reifier env (Obj.magic @@ Subst.apply env s k) in
-             if not (checker reified) then raise Fail);
+           let reifier : (_, _) Reifier.t = Obj.obj reifier in
+           let reified = reifier env (Obj.magic @@ Subst.apply env s k) in
+           if not (checker reified) then raise Fail);
       NonViolated
     with
     | Fail -> Violated
@@ -241,11 +240,7 @@ type prines_control =
   }
 
 let prunes_control =
-  { pc_checks_skipped = 10
-  ; pc_do_skip = false
-  ; pc_max_to_skip = 11
-  ; pc_skipped_prunes_total = 0
-  }
+  { pc_checks_skipped = 10; pc_do_skip = false; pc_max_to_skip = 11; pc_skipped_prunes_total = 0 }
 ;;
 
 module PrunesControl = struct
@@ -339,14 +334,14 @@ module State = struct
   let named_fresh name { env; scope } = Env.fresh ~scope env
   let wc { env; scope } = Env.wc ~scope env
   let new_scope st = { st with scope = Term.Var.new_scope () }
-
   let ( >>=? ) = Stdlib.Option.bind
 
   let check_diseqs st =
     Disequality.recheck (env st) (subst st) (constraints st) [] (fds st)
     >>=? fun (ctrs, fd, _) -> Some { st with ctrs; fd }
-    (* TODO: Don't ignore new bindings *)
   ;;
+
+  (* TODO: Don't ignore new bindings *)
 
   let unify x y ({ env; subst; ctrs; scope; fd } as st) =
     let rec loop_unify_diseq term_a term_b subst ctrs ~fd =
@@ -354,17 +349,16 @@ module State = struct
       >>=? fun (prefix, subst_new) ->
       Disequality.recheck env subst_new ctrs prefix fd
       >>=? function
-        | (ctrs, fd, []) ->
-          Some (prefix, subst_new, ctrs, fd)
-        | (ctrs, fd, new_binds) ->
-          (* TODO: it's better to introduce unificagion of a binding list *)
-          let (new_a, new_b) =
-            List.fold_left (fun (a,b) Subst.Binding.{var;term} ->
-                (Obj.repr var :: a, term::b)
-              )
-              ([Obj.repr term_a], [Obj.repr term_b]) new_binds
-          in
-          loop_unify_diseq (Obj.magic new_a) (Obj.magic new_b) subst ctrs ~fd
+      | ctrs, fd, [] -> Some (prefix, subst_new, ctrs, fd)
+      | ctrs, fd, new_binds ->
+        (* TODO: it's better to introduce unificagion of a binding list *)
+        let new_a, new_b =
+          List.fold_left
+            (fun (a, b) Subst.Binding.{ var; term } -> Obj.repr var :: a, term :: b)
+            ([ Obj.repr term_a ], [ Obj.repr term_b ])
+            new_binds
+        in
+        loop_unify_diseq (Obj.magic new_a) (Obj.magic new_b) subst ctrs ~fd
     in
     loop_unify_diseq x y subst ctrs ~fd
     >>=? fun (prefix, subst, ctrs, fd) ->
@@ -385,10 +379,10 @@ module State = struct
   let diseq x y ({ env; subst; ctrs; scope; fd } as st) =
     match Disequality.add env subst ctrs x y fd with
     | None -> None
-    | Some (ctrs,fd) ->
+    | Some (ctrs, fd) ->
       (match Prunes.recheck (prunes st) env subst with
-      | Prunes.Violated -> None
-      | NonViolated -> Some { st with ctrs; fd })
+       | Prunes.Violated -> None
+       | NonViolated -> Some { st with ctrs; fd })
   ;;
 
   (* returns always non-empty list *)
@@ -406,9 +400,9 @@ module State = struct
               Term.Var.constraints =
                 Disequality.Answer.extract diseq v
                 |> List.filter (fun dt ->
-                        match Env.var env dt with
-                        | Some u -> not (List.mem u.Term.Var.index forbidden)
-                        | None -> true)
+                     match Env.var env dt with
+                     | Some u -> not (List.mem u.Term.Var.index forbidden)
+                     | None -> true)
                 |> List.map (fun x -> helper diseq (v.Term.Var.index :: forbidden) x)
                 (* TODO: represent [Var.constraints] as [Set];
                   * TODO: hide all manipulations on [Var.t] inside [Var] module;
@@ -420,8 +414,7 @@ module State = struct
     match Disequality.reify env subst ctrs x with
     | [] -> [ Answer.make env val_in_subst ]
     | diseqs ->
-      ListLabels.map diseqs ~f:(fun diseq ->
-          Answer.make env (helper diseq [] val_in_subst))
+      ListLabels.map diseqs ~f:(fun diseq -> Answer.make env (helper diseq [] val_in_subst))
   ;;
 
   let cut_off_wc_diseq_without_domain st =
@@ -465,8 +458,8 @@ module FD = struct
       (* Format.printf "%s: Domain added successfully to %s\n%!" __FILE__ (Term.show (Obj.repr v)); *)
       let st = { st with State.fd } in
       (match State.check_diseqs st with
-      | None -> failure
-      | Some st -> success)
+       | None -> failure
+       | Some st -> success)
         st
   ;;
 end
@@ -527,7 +520,8 @@ let conj f g st =
 let debug_var v reifier call st =
   let xs =
     List.map
-      (fun answ -> (Logic.make_rr (Answer.env answ) (Obj.magic @@ Answer.ctr_term answ))#reify reifier)
+      (fun answ ->
+        (Logic.make_rr (Answer.env answ) (Obj.magic @@ Answer.ctr_term answ))#reify reifier)
       (State.reify v st)
   in
   call xs st
@@ -723,9 +717,7 @@ module NUMERAL_TYPS = struct
     -> (('a Logic.ilogic -> 'b Logic.ilogic -> goal)
         -> State.t
         -> 'a Logic.ilogic * ('b Logic.ilogic * State.t Stream.t))
-       * ('c Logic.ilogic * 'd Logic.ilogic
-          -> Env.t
-          -> 'c Logic.reified * 'd Logic.reified)
+       * ('c Logic.ilogic * 'd Logic.ilogic -> Env.t -> 'c Logic.reified * 'd Logic.reified)
        * ('e * ('f * 'g) -> ('e * 'f) * 'g)
        * (('h -> 'i -> 'j) -> 'h * 'i -> 'j)
 
@@ -734,9 +726,7 @@ module NUMERAL_TYPS = struct
     -> (('a ilogic -> 'c ilogic -> 'e ilogic -> goal)
         -> State.t
         -> 'a ilogic * ('c ilogic * ('e ilogic * State.t Stream.t)))
-       * ('g ilogic * ('i ilogic * 'k ilogic)
-          -> Env.t
-          -> 'g reified * ('i reified * 'k reified))
+       * ('g ilogic * ('i ilogic * 'k ilogic) -> Env.t -> 'g reified * ('i reified * 'k reified))
        * ('m * ('n * ('o * 'p)) -> ('m * ('n * 'o)) * 'p)
        * (('q -> 'r -> 's -> 't) -> 'q * ('r * 's) -> 't)
 
@@ -776,7 +766,7 @@ let run n g h =
   let args, stream = ext @@ adder g @@ State.empty () in
   Stream.bind stream (fun st -> Stream.of_list @@ State.reify args st)
   |> Stream.map (fun answ ->
-         uncurr h @@ reifier (Obj.magic @@ Answer.ctr_term answ) (Answer.env answ))
+       uncurr h @@ reifier (Obj.magic @@ Answer.ctr_term answ) (Answer.env answ))
 ;;
 
 (** ************************************************************************* *)
@@ -968,21 +958,21 @@ module Unique = struct
   let noanswer () = inj NoAnswer
   let different () = inj DifferentAnswers
 
-  let reify : ('a, 'b) Reifier.t -> ('a injected, 'b logic) Reifier.t = fun ra ->
+  let reify : ('a, 'b) Reifier.t -> ('a injected, 'b logic) Reifier.t =
+   fun ra ->
     let open Env.Monad.Syntax in
     Reifier.fix (fun _self ->
-    Reifier.compose Reifier.reify
-        (
-          let* fa = ra in
-          let rec foo = function
-            | Var (v, xs) ->
-              Var (v, Stdlib.List.map foo xs)
-            | Value x -> Value (GT.gmap t fa x)
-          in
-          Env.Monad.return foo
-      ))
+      Reifier.compose
+        Reifier.reify
+        (let* fa = ra in
+         let rec foo = function
+           | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
+           | Value x -> Value (GT.gmap t fa x)
+         in
+         Env.Monad.return foo))
+ ;;
 
-  let unique_answers ?(debug) g (rez : _ ilogic) =
+  let unique_answers ?debug g (rez : _ ilogic) =
     let exception Distinct in
     (*
     let wrap v stream ~noanswer ~sk ~distinct =
@@ -1005,73 +995,77 @@ module Unique = struct
         with
           Distinct -> distinct ()
     in*)
-    is_free rez (fun st ->
-      (* Format.printf "free variable detected %s %d\n" __FILE__ __LINE__; *)
-      let v = State.fresh st in
-      let stream = g (Obj.magic v) st in
-
-      if Stream.is_empty stream
-      then ( === ) rez (Obj.magic NoAnswer) st
-      else (
-        try
-          let verdict = Stream.fold (fun acc st ->
-            match acc with
-            | `NoAnswer ->
-              let su = State.subst st in
-              `Ok (Subst.reify (State.env st) su v)
-            | `Ok first ->
-                match State.unify (Obj.magic v) (Obj.magic first) st with
-                | None -> raise Distinct
-                | Some _ -> acc
-            ) `NoAnswer stream
-          in
-          match verdict with
-          | `NoAnswer -> unify rez (Obj.magic NoAnswer) st
-          | `Ok first ->  unify rez (Obj.magic (Unique first)) st
-        with
-          Distinct -> unify rez (Obj.magic DifferentAnswers) st
-        )
-      )
-    (conde
-      [
-        (rez === noanswer ()) &&& (fun st ->
-          let v = State.fresh st in
-          let stream = g (Obj.magic v) st in
-          if Stream.is_empty stream
-          then success st
-          else failure st)
-      ; (rez === different ()) &&& delay (fun () -> failwith "Not implemented")
-      ; Fresh.one (fun u -> (rez === unique u) &&&
-          (fun st ->
-              (* Format.printf "Checking for unique answer '%a'\n" Term.pp (Obj.repr u); *)
-              (* rez is not free, u may be free *)
-              let v = State.fresh st in
-              let stream = g (Obj.magic v) st in
-              try
-                (* We want all answers be unifiable with u *)
-                (* QUESTION: Is it correct to pass u to g? we could get additional information,
+    is_free
+      rez
+      (fun st ->
+        (* Format.printf "free variable detected %s %d\n" __FILE__ __LINE__; *)
+        let v = State.fresh st in
+        let stream = g (Obj.magic v) st in
+        if Stream.is_empty stream
+        then ( === ) rez (Obj.magic NoAnswer) st
+        else (
+          try
+            let verdict =
+              Stream.fold
+                (fun acc st ->
+                  match acc with
+                  | `NoAnswer ->
+                    let su = State.subst st in
+                    `Ok (Subst.reify (State.env st) su v)
+                  | `Ok first ->
+                    (match State.unify (Obj.magic v) (Obj.magic first) st with
+                     | None -> raise Distinct
+                     | Some _ -> acc))
+                `NoAnswer
+                stream
+            in
+            match verdict with
+            | `NoAnswer -> unify rez (Obj.magic NoAnswer) st
+            | `Ok first -> unify rez (Obj.magic (Unique first)) st
+          with
+          | Distinct -> unify rez (Obj.magic DifferentAnswers) st))
+      (conde
+         [ (rez
+           === noanswer ()
+           &&& fun st ->
+           let v = State.fresh st in
+           let stream = g (Obj.magic v) st in
+           if Stream.is_empty stream then success st else failure st)
+         ; rez === different () &&& delay (fun () -> failwith "Not implemented")
+         ; Fresh.one (fun u ->
+             rez
+             === unique u
+             &&& fun st ->
+             (* Format.printf "Checking for unique answer '%a'\n" Term.pp (Obj.repr u); *)
+             (* rez is not free, u may be free *)
+             let v = State.fresh st in
+             let stream = g (Obj.magic v) st in
+             try
+               (* We want all answers be unifiable with u *)
+               (* QUESTION: Is it correct to pass u to g? we could get additional information,
                    which may filter out some wrong states... *)
-                let ethalon =
-                  let n = ref 0 in
-                  Stream.fold (fun ethalon st ->
-                    incr n;
-                    Format.printf "== Current ethalon is '%a' on iteration %d\n%!" Term.pp ethalon !n;
-                    let () =
-                      match debug with
-                      | Some debug -> Stream.take (debug st) |> ignore
-                      | None -> ()
-                    in
-                    match State.unify (Obj.magic ethalon) (Obj.magic v) st with
-                    | None -> raise Distinct
-                    | Some st0 -> Subst.reify (State.env st0) (State.subst st0) ethalon
-                  ) (Obj.repr u) stream
-                in
-                (u === (Obj.magic ethalon)) st
-              with
-                Distinct -> failure st
-          ))
-      ])
-   ;;
+               let ethalon =
+                 let n = ref 0 in
+                 Stream.fold
+                   (fun ethalon st ->
+                     incr n;
+                     (* Format.printf "== Current ethalon is '%a' on iteration %d\n%!" Term.pp ethalon !n; *)
+                     let () =
+                       match debug with
+                       | Some debug -> Stream.take (debug st) |> ignore
+                       | None -> ()
+                     in
+                     match State.unify (Obj.magic ethalon) (Obj.magic v) st with
+                     | None -> raise Distinct
+                     | Some st0 -> Subst.reify (State.env st0) (State.subst st0) ethalon)
+                   (Obj.repr u)
+                   stream
+               in
+               (u === Obj.magic ethalon) st
+             with
+             | Distinct -> failure st)
+         ])
+  ;;
 
   let%test _ =
     let goal x = Fresh.two (fun u v -> conde [ x === u; x === v ]) in
@@ -1081,8 +1075,8 @@ module Unique = struct
          (fun q -> Fresh.one (fun rez -> unique_answers goal rez))
          (fun rr -> rr#reify Logic.reify)
   ;;
-
 end
+
 let unif_hack x y rez st =
   match State.unify (Obj.magic x) (Obj.magic y) st with
   | Some _ -> ( === ) rez !!true st
@@ -1108,12 +1102,14 @@ let cut_off_wc_diseq_without_domain st =
 let debug_enriching_subst st =
   State.Disequality.debug_enriching_subst (State.constraints st) (State.fds st);
   success st
+;;
 
 [@@@ocaml.warning "-partial-match"]
 
 let%expect_test _ =
   let st = State.empty () in
   let v = State.fresh st in
-  let [st2] = (v === !!1) st |> Stream.take in
+  let [ st2 ] = (v === !!1) st |> Stream.take in
   Format.printf "%a\n%!" Subst.pp (State.subst st2);
-  [%expect{| {subst| _.10 |- int<1>; |subst} |}]
+  [%expect {| {subst| _.10 |- int<1>; |subst} |}]
+;;

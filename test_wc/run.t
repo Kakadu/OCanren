@@ -3,7 +3,6 @@
   q=_.11;
   }
   fun q -> q =/= __, all answers {
-  q=_.10;
   }
   fun q -> (!! 5) =/= __, all answers {
   }
@@ -19,6 +18,9 @@
   q=(1, 1);
   }
   fun q -> (pair (!! 1) __) =/= (pair __ (!! 1)), all answers {
+  }
+  fun q -> (pair (!! 1) __) =/= (pair (!! 2) __), all answers {
+  q=_.10;
   }
   fun q -> (triple q (!! 2) __) =/= (triple (!! 1) __ (!! 2)), all answers {
   q=_.10 [=/= 1];
@@ -38,7 +40,7 @@
   q=(_.11 [=/= 1], _.12);
   }
   fun q -> fresh () (q =/= (pair (!! 1) __)) (q =/= (pair __ (!! 1))), all answers {
-  q=_.10 [=/= (_.-42, 1); =/= (1, _.-42)];
+  q=_.10 [=/= (1, _.-42); =/= (_.-42, 1)];
   }
   fun q ->
     fresh (a b) (q =/= (pair (!! 1) __)) (q === (pair __ (!! 1)))
@@ -97,5 +99,11 @@
       (y === (!! 9)) ((Std.pair x y) === q), all answers {
   q=(2, 9);
   }
-  fun q -> fresh () (q =/= (!! 1)) (q =/= (!! 2)) (FD.domain q [1; 2]) success, all answers {
+  fun q -> fresh (a b) (q === (pair a b)) (q =/= (pair (!! 1) __)), all answers {
+  q=(_.11 [=/= 1], _.12);
+  }
+  fun q ->
+    fresh (a b) (q === (pair a b)) (q =/= (pair (!! 1) __))
+      (q === (pair __ (!! 1))), all answers {
+  q=(_.13 [=/= 1], 1);
   }

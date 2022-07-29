@@ -407,6 +407,9 @@ module Make (FDC : EXTRA) = struct
       During this construction all sensible FD constraints are propagated to FD ones.
       And if something fails, the fold is being interrupted.
     **)
+
+    (* Old implementation with DNF *)
+    (*
     let of_bindings bnds extra0 =
       (* assert ([] <> bnds); *)
       (* let exception ToRemove in *)
@@ -448,6 +451,39 @@ module Make (FDC : EXTRA) = struct
            (* TODO: it could be more efficient to perform a fold, and check FD constraints
               only in the end *)
            `Meaningful next
+         with
+         (* | ToRemove -> Stdlib.Result.error `ToRemove *)
+         | Violated ->
+           log "Disjunct.of_bindings said Violated";
+           `Violated)
+    ;;*)
+
+    (* Implementation for CNF *)
+    let of_bindings bnds extra0 =
+      (* assert ([] <> bnds); *)
+      (* let exception ToRemove in *)
+      match bnds with
+      | [] -> `ToRemove extra0
+      | _ ->
+        (try
+           let next, extra =
+             Stdlib.List.fold_left
+               (fun (({ wcs; conjs }, extra) as acc) bnd ->
+                 (* log "%d %a" __LINE__ Subst.pp_binding_list [ bnd ]; *)
+                 match classify bnd with
+                 | WcNVar var ->
+                   (* wildcards and fresh variables are always unifieable and can't give an inequality *)
+                   acc
+                 | WcNSmth term ->
+                   (* the same for wildcard and term *)
+                   acc
+                 | VarNTerm (var, term) ->
+                   (* We are not going to think about finite domain constraints here *)
+                   { conjs = LLL.cons Subst.Binding.{ var; term } conjs; wcs }, extra)
+               (empty, extra0)
+               bnds
+           in
+           if is_empty next then raise Violated else `Meaningful (next, extra)
          with
          (* | ToRemove -> Stdlib.Result.error `ToRemove *)
          | Violated ->
@@ -806,6 +842,7 @@ module Make (FDC : EXTRA) = struct
     | None -> Some (cstrs, extra)
     | Some ([], _) -> None
     | Some (bnds, _subst) ->
+      (* In CNF mode, if we get a binding that something is not equal wildcard, it could be immediately removed. *)
       log "%d %a" __LINE__ Subst.pp_binding_list bnds;
       (match Disjunct.of_bindings bnds extra with
        | `Violated -> None
@@ -1054,7 +1091,7 @@ module _ = struct
     let v1 = make_var 1 in
     Format.printf "%a" pp (disequality_of_terms v1 v1);
     [%expect {xxx|
-      All disjuncts (1)
+      The CNF (1)
       	0: [ { _.1 <> '_.1' } ] {| |}
     |xxx}]
   ;;
@@ -1065,7 +1102,7 @@ module _ = struct
     Format.printf "%a" pp (disequality_of_terms !!!(1, 2) !!!(v1, v2));
     [%expect
       {xxx|
-      All disjuncts (2)
+      The CNF (2)
       	0: [ { _.1 <> 'int<1>' } ] {| |}
       	1: [ { _.2 <> 'int<2>' } ] {| |}
     |xxx}]
@@ -1076,7 +1113,7 @@ module _ = struct
     let v2 = make_var 2 in
     Format.printf "%a" pp (disequality_of_terms !!!(1, v1) !!!(2, v2));
     [%expect {xxx|
-      All disjuncts (1)
+      The CNF (1)
       	0: [ { _.1 <> '_.2' } ] {| |}
     |xxx}]
   ;;
@@ -1086,7 +1123,7 @@ module _ = struct
     let v2 = make_var 2 in
     Format.printf "%a" pp (disequality_of_terms !!!(1, v1) !!!(2, v2));
     [%expect {xxx|
-      All disjuncts (1)
+      The CNF (1)
       	0: [ { _.1 <> '_.2' } ] {| |}
     |xxx}]
   ;;
@@ -1104,15 +1141,15 @@ module _ = struct
     Format.printf "%a" pp d3;
     [%expect
       {xxx|
-      All disjuncts (2)
+      The CNF (2)
       	0: [ { _.1 <> 'int<1>' } ] {| |}
       	1: [ { _.2 <> 'int<2>' } ] {| |}
 
-      All disjuncts (2)
+      The CNF (2)
       	0: [ { _.3 <> 'int<3>' } ] {| |}
       	1: [ { _.4 <> 'int<4>' } ] {| |}
 
-      All disjuncts (4)
+      The CNF (4)
       	0: [ { _.1 <> 'int<1>' }{ _.3 <> 'int<3>' } ] {| |}
       	1: [ { _.1 <> 'int<1>' }{ _.4 <> 'int<4>' } ] {| |}
       	2: [ { _.2 <> 'int<2>' }{ _.3 <> 'int<3>' } ] {| |}
@@ -1133,14 +1170,14 @@ module _ = struct
     Format.printf "%a" pp d3;
     [%expect
       {xxx|
-        All disjuncts (1)
+        The CNF (1)
         	0: [ { _.1 <> '_.2' } ] {| |}
 
-        All disjuncts (2)
+        The CNF (2)
         	0: [ { _.1 <> '_.2' } ] {| |}
         	1: [ { _.3 <> '_.4' } ] {| |}
 
-        All disjuncts (2)
+        The CNF (2)
         	0: [ { _.1 <> '_.2' } ] {| |}
         	1: [ { _.1 <> '_.2' }{ _.3 <> '_.4' } ] {| |}
 
