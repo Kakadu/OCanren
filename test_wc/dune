@@ -1,6 +1,6 @@
 (executables
- (names main unique debug_var fd cut_off peano)
- (modules main unique debug_var fd cut_off peano)
+ (names main unique debug_var fd cut_off match peano)
+ (modules main unique debug_var fd cut_off match peano)
  (preprocess
   (pps
    OCanren-ppx.ppx_wildcard
@@ -15,6 +15,7 @@
   ./main.exe
   ./unique.exe
   ./debug_var.exe
+  ./match.exe
   ./peano.exe
   ;./fd.exe
   ;./cut_off.exe
