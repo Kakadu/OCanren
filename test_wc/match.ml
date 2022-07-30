@@ -3,6 +3,7 @@ open Tester
 open OCanren.Std
 
 let bool_dom l = conde [ l === !!false; l === !!true ]
+let run_int eta = run_r OCanren.reify ([%show: GT.int logic] ()) eta
 
 module _ = struct
   let source = {|
@@ -107,15 +108,58 @@ module _ = struct
       ; fresh
           ()
           (rez === !!4)
-          (q === w __ __ _T)
           (q =/= w __ _F _T)
           (q =/= w _F _T __)
           (q =/= w __ __ _F)
+          (q === w __ __ _T)
       ]
   ;;
 
   let () =
     print_endline "With wildcards: ";
     test smart_rel
+  ;;
+
+  let () =
+    [%tester
+      run_int (-1) (fun rhs -> fresh s (s === Std.triple !!true __ __) (smart_rel s rhs))]
+  ;;
+
+  let hack q rez =
+    let _T = !!true in
+    let _F = !!false in
+    let w = Std.triple in
+    conde
+      [ failure
+        (* ; fresh () (rez === !!1) (q === w __ _F _T) *)
+        (* ; fresh () (rez === !!2) (q === w _F _T __) (q =/= w __ _F _T) *)
+        (* ; fresh () (rez === !!3) (q === w __ __ _F) (q =/= w __ _F _T) (q =/= w _F _T __) *)
+      ; fresh
+          ()
+          (rez === !!4)
+          (* (q === w __ __ __) *)
+          (q =/= w __ _F _T)
+          (q =/= w _F _T __)
+          (q =/= w __ __ _F)
+          (debug_var !!1 OCanren.reify (fun _ ->
+             (* OCanren.set_diseq_logging true; *)
+             success))
+          (q === w __ __ _T)
+      ]
+  ;;
+
+  let () =
+    print_endline "HACK";
+    [%tester
+      run_m (-1) (fun q ->
+        fresh
+          (scru rhs l m r)
+          (q === pair scru rhs)
+          (* (scru === Std.triple l m r) *)
+          (hack scru rhs)
+          (* (bool_dom l) *)
+          (* (bool_dom m) *)
+          (* (bool_dom r) *)
+          success)]
   ;;
 end
