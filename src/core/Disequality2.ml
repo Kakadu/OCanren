@@ -566,9 +566,11 @@ module Make (FDC : EXTRA) = struct
             (LLL.empty, new_wcs)
             pairs
         in
-        if LLL.is_empty new_pairs && VarSet.is_empty new_wcs
+        if LLL.is_empty new_pairs (* && VarSet.is_empty new_wcs *)
         then raise Violated
-        else `Meaningful ({ wcs = new_wcs; conjs = new_pairs }, extra)
+        else
+          (* We beleive that fresh variables always inequal to wilcards, so we ignore them *)
+          `Meaningful ({ wcs = VarSet.empty; conjs = new_pairs }, extra)
         (*
 
         (* Every conjunct could blowup to many coinjuncts because of recent unifications,
@@ -876,11 +878,13 @@ module Make (FDC : EXTRA) = struct
             (* In CNF mode it means global failure, in DNF -- simplification *)
             (* extra, acc *)
             raise Violated
-          | `ToRemove e -> extra, acc (* raise (Early_exit e) *)
+          | `ToRemove e ->
+            log "Disjunct removed: %a" Disjunct.pp d;
+            extra, acc (* raise (Early_exit e) *)
           | `Meaningful (d, extra) ->
             (* We have an updated disjunct *)
             let dset = DisjSet.add d acc in
-            log "Updated disjunct %s %d: `%a`" __FILE__ __LINE__ pp dset;
+            log "Updated disjunct %s %d: %a" __FILE__ __LINE__ pp dset;
             extra, dset)
         (extra, DisjSet.empty)
         store
@@ -1036,8 +1040,8 @@ module Make (FDC : EXTRA) = struct
       CartesianHacks.cartesian_seq (DisjSet.to_seq cs |> Seq.map Disjunct.to_seq_without_wcs)
     in
     let maybe_add k v acc = if VarSet.mem k vars then Answer.M.add k v acc else acc in
-    (* let ll_dnf = Seq.map List.of_seq dnf |> List.of_seq in *)
-    (* log "ll_dng = %a" (GT.fmt GT.list (GT.fmt GT.list Conjunct.pp)) ll_dnf; *)
+    let ll_dnf = Seq.map List.of_seq dnf |> List.of_seq in
+    log "ll_dng = %a" (GT.fmt GT.list (GT.fmt GT.list Conjunct.pp)) ll_dnf;
     let add_to_list newx xs =
       log "add_to_list hERR";
       let exception Early_exit of Answer.t list in
@@ -1054,6 +1058,7 @@ module Make (FDC : EXTRA) = struct
       with
       | Early_exit xs -> xs
     in
+    let check_subsumptions = false in
     Seq.map
       (Seq.fold_left
          (fun acc { Subst.Binding.var; term } ->
@@ -1064,7 +1069,10 @@ module Make (FDC : EXTRA) = struct
            | Some v2 -> maybe_add v2 (Obj.repr var) acc)
          Answer.empty)
       dnf
-    |> Seq.fold_left (fun acc x -> add_to_list x acc) []
+    |> fun pre_answer ->
+    if check_subsumptions
+    then Seq.fold_left (fun acc x -> add_to_list x acc) [] pre_answer
+    else List.of_seq pre_answer
   ;;
 
   let project _ _ = failwith "not implemented"
