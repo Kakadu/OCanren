@@ -316,13 +316,13 @@ module MYZ3 = struct
       Format.printf "{| ";
       dom_to_vars
       |> IntListMap.iter (fun d vars ->
-             let open Format in
-             printf
-               "{%a} ∈ {%a}"
-               (pp_print_list ~pp_sep:pp_print_comma pp_print_int)
-               vars
-               (pp_print_list ~pp_sep:pp_print_comma pp_print_int)
-               d);
+           let open Format in
+           printf
+             "{%a} ∈ {%a}"
+             (pp_print_list ~pp_sep:pp_print_comma pp_print_int)
+             vars
+             (pp_print_list ~pp_sep:pp_print_comma pp_print_int)
+             d);
       Format.printf " |}.\n%!"
     in
     Format.printf "%a\n%!" (GT.fmt GT.list pp_phormula)
@@ -330,8 +330,8 @@ module MYZ3 = struct
     @@ PhSet.to_seq
     @@ PhSet.filter
          (function
-           | FMDom _ -> false
-           | _ -> true)
+          | FMDom _ -> false
+          | _ -> true)
          phs;
     Format.printf "\027[0m"
   ;;
@@ -353,10 +353,7 @@ module MYZ3 = struct
   module Layer = struct
     let mk_sort ctx name ints =
       (* printf "\t\tEnumeration.mk_sort '%s' <domain>\n%!" name; *)
-      Enumeration.mk_sort
-        ctx
-        (Symbol.mk_string ctx name)
-        (Caml.List.map (Symbol.mk_int ctx) ints)
+      Enumeration.mk_sort ctx (Symbol.mk_string ctx name) (Caml.List.map (Symbol.mk_int ctx) ints)
     ;;
 
     let mk_fresh_const ctx name sort =
@@ -377,37 +374,35 @@ module MYZ3 = struct
     match Layer.check solver with
     | Z3.Solver.SATISFIABLE ->
       (match Z3.Solver.get_model solver with
-      | None ->
-        Format.printf "SAT but can't get a model\n%!";
-        true
-      | Some m ->
-        let () =
-          if trace_models
-          then
-            trace_a_model m (fun m ->
-                Format.printf "\027[%dm" 36;
-                Format.printf "model =";
-                IntMap.iter
-                  (fun k (ve, _) ->
-                    Format.printf
-                      "%s -> %s "
-                      (Z3.Expr.to_string ve)
-                      (Z3.Model.eval m ve false |> Stdlib.Option.get |> Z3.Expr.to_string))
-                  vars;
-                Format.printf "\027[0m";
-                Format.printf "\n%!")
-          else ()
-        in
-        true)
+       | None ->
+         Format.printf "SAT but can't get a model\n%!";
+         true
+       | Some m ->
+         let () =
+           if trace_models
+           then
+             trace_a_model m (fun m ->
+               Format.printf "\027[%dm" 36;
+               Format.printf "model =";
+               IntMap.iter
+                 (fun k (ve, _) ->
+                   Format.printf
+                     "%s -> %s "
+                     (Z3.Expr.to_string ve)
+                     (Z3.Model.eval m ve false |> Stdlib.Option.get |> Z3.Expr.to_string))
+                 vars;
+               Format.printf "\027[0m";
+               Format.printf "\n%!")
+           else ()
+         in
+         true)
     | Z3.Solver.UNSATISFIABLE ->
       (* Format.printf "UNSAT\n%!"; *)
       false
     | Z3.Solver.UNKNOWN -> assert false
   ;;
 
-  let make () =
-    mk (Z3.Solver.mk_simple_solver ctx) IntMap.empty IntListMap.empty PhSet.empty
-  ;;
+  let make () = mk (Z3.Solver.mk_simple_solver ctx) IntMap.empty IntListMap.empty PhSet.empty
 
   let clone { solver; vars; sorts; phs } =
     (* TODO: maybe we neeed a new context here *)
@@ -441,47 +436,44 @@ module MYZ3 = struct
       | FMDom (vidx, ints) ->
         (* printf "\tTrying to add domain\n%!"; *)
         (match IntMap.find vidx vars with
-        | vexpr, None ->
-          let sort =
-            try IntListMap.find ints sorts with
-            | Not_found -> Layer.mk_sort ctx (Printf.sprintf "sort_%d" vidx) ints
-          in
-          mk
-            solver
-            (IntMap.add vidx (vexpr, Some ints) vars)
-            (IntListMap.add ints sort sorts)
-            phs
-        | _, Some ints_old when ints_old = ints -> _s
-        | _, Some ints_old ->
-          failwith
-            Format.(
-              asprintf
-                "Trying to assign domain %a to var _.%d when domain %a is already \
-                 assigned"
-                (pp_print_list ~pp_sep:pp_print_space pp_print_int)
-                ints
-                vidx
-                (pp_print_list ~pp_sep:pp_print_space pp_print_int)
-                ints_old)
-        | exception Not_found ->
-          let sort =
-            try IntListMap.find ints sorts with
-            | Not_found -> Layer.mk_sort ctx (Printf.sprintf "sort_%d" vidx) ints
-          in
-          let v = Layer.mk_fresh_const ctx (sprintf "v%d" vidx) sort in
-          let __ () =
-            Format.(
-              printf
-                "Assigning domain %a to variable _.%d\n%!"
-                (pp_print_list ~pp_sep:pp_print_space pp_print_int)
-                ints
-                vidx)
-          in
-          mk
-            solver
-            (IntMap.add vidx (v, Some ints) vars)
-            (IntListMap.add ints sort sorts)
-            (PhSet.add ph0 phs))
+         | vexpr, None ->
+           let sort =
+             try IntListMap.find ints sorts with
+             | Not_found -> Layer.mk_sort ctx (Printf.sprintf "sort_%d" vidx) ints
+           in
+           mk solver (IntMap.add vidx (vexpr, Some ints) vars) (IntListMap.add ints sort sorts) phs
+         | _, Some ints_old when ints_old = ints -> _s
+         | _, Some ints_old ->
+           failwith
+             Format.(
+               let pp_sep ppf () = fprintf ppf " " in
+               let pp_dom = pp_print_list ~pp_sep pp_print_int in
+               asprintf
+                 "Trying to assign domain %a to var _.%d when domain %a is already assigned"
+                 pp_dom
+                 ints
+                 vidx
+                 pp_dom
+                 ints_old)
+         | exception Not_found ->
+           let sort =
+             try IntListMap.find ints sorts with
+             | Not_found -> Layer.mk_sort ctx (Printf.sprintf "sort_%d" vidx) ints
+           in
+           let v = Layer.mk_fresh_const ctx (sprintf "v%d" vidx) sort in
+           let __ () =
+             Format.(
+               printf
+                 "Assigning domain %a to variable _.%d\n%!"
+                 (pp_print_list ~pp_sep:pp_print_space pp_print_int)
+                 ints
+                 vidx)
+           in
+           mk
+             solver
+             (IntMap.add vidx (v, Some ints) vars)
+             (IntListMap.add ints sort sorts)
+             (PhSet.add ph0 phs))
       | FMBinop (op, Var v1, Var v2) as ph ->
         let new_vars =
           match IntMap.find_opt v1 vars, IntMap.find_opt v2 vars with
@@ -632,38 +624,34 @@ module Store = struct
   let extend_list store prefix =
     let exception Unsat in
     try
-      ListLabels.fold_left
-        prefix
-        ~init:(false, store)
-        ~f:(fun ((was_extended, store) as acc) bin ->
-          let a = bin.Subst.Binding.var in
-          let b = bin.Subst.Binding.term in
-          match Term.(var a, var b) with
-          | None, None when !!!a = !!!b -> acc
-          | None, None -> raise Unsat
-          | Some v1, Some v2 ->
-            let idx1 = v1.Term.Var.index in
-            let idx2 = v2.Term.Var.index in
-            if MYSOLVER.is_interesting_var store idx1
-               || MYSOLVER.is_interesting_var store idx2
-            then (
-              let store = if was_extended then store else MYSOLVER.clone store in
-              true, MYSOLVER.extend store (fmeq (Var idx1) (Var idx2)))
-            else false, store
-          | Some v, _ ->
-            let idx = v.Term.Var.index in
-            if MYSOLVER.is_interesting_var store idx
-            then (
-              let store = if was_extended then store else MYSOLVER.clone store in
-              true, MYSOLVER.extend store (fmeq (Var idx) (Const !!!b)))
-            else false, store
-          | _, Some v ->
-            let idx = v.Term.Var.index in
-            if MYSOLVER.is_interesting_var store idx
-            then (
-              let store = if was_extended then store else MYSOLVER.clone store in
-              true, MYSOLVER.extend store (fmeq (Var idx) (Const !!!a)))
-            else false, store)
+      ListLabels.fold_left prefix ~init:(false, store) ~f:(fun ((was_extended, store) as acc) bin ->
+        let a = bin.Subst.Binding.var in
+        let b = bin.Subst.Binding.term in
+        match Term.(var a, var b) with
+        | None, None when !!!a = !!!b -> acc
+        | None, None -> raise Unsat
+        | Some v1, Some v2 ->
+          let idx1 = v1.Term.Var.index in
+          let idx2 = v2.Term.Var.index in
+          if MYSOLVER.is_interesting_var store idx1 || MYSOLVER.is_interesting_var store idx2
+          then (
+            let store = if was_extended then store else MYSOLVER.clone store in
+            true, MYSOLVER.extend store (fmeq (Var idx1) (Var idx2)))
+          else false, store
+        | Some v, _ ->
+          let idx = v.Term.Var.index in
+          if MYSOLVER.is_interesting_var store idx
+          then (
+            let store = if was_extended then store else MYSOLVER.clone store in
+            true, MYSOLVER.extend store (fmeq (Var idx) (Const !!!b)))
+          else false, store
+        | _, Some v ->
+          let idx = v.Term.Var.index in
+          if MYSOLVER.is_interesting_var store idx
+          then (
+            let store = if was_extended then store else MYSOLVER.clone store in
+            true, MYSOLVER.extend store (fmeq (Var idx) (Const !!!a)))
+          else false, store)
       |> function
       | true, store -> Extended store
       | false, store -> Old
@@ -684,9 +672,8 @@ let recheck_helper op (store : Store.t) (_prefix : Subst.Binding.t list) =
   | Store.Old -> Some store
   | Store.Extended store ->
     (match Store.check store with
-    | false -> None
-    | true -> Some store)
-
+     | false -> None
+     | true -> Some store)
 ;;
 
 let recheck _env _subst (store : Store.t) (_prefix : Subst.Binding.t list) =
@@ -694,9 +681,7 @@ let recheck _env _subst (store : Store.t) (_prefix : Subst.Binding.t list) =
   recheck_helper fmeq store _prefix
 ;;
 
-let check store =
-  if Store.check store then Some store else None
-
+let check store = if Store.check store then Some store else None
 let neq eta = Store.extend_and_check ~clone:true fmneq eta
 let eq eta = Store.extend_and_check ~clone:true fmeq eta
 
@@ -704,6 +689,7 @@ let eq eta = Store.extend_and_check ~clone:true fmeq eta
 let ( =/= ) = neq
 
 let domain (v : inti) ints store =
+  assert (ints <> []);
   let v =
     match Term.var !!!v with
     | None -> failwith "should not happen"
@@ -712,28 +698,13 @@ let domain (v : inti) ints store =
   Store.add_domain v ints store
 ;;
 
-(*
-  try
-    fold_cps ~init:[] store ~f:(fun acc (set,is) tl k ->
-      if VarSet.mem v set
-      then begin
-        let d = FMDom (v.Term.Var.index, ints) in
-        let is = d::is in
-        if Store.check_item_list is
-        then (VarSet.add v set, is) :: (acc @ tl)
-        else raise Bad
-      end else
-        k ((set,is)::acc)
-    ) |> (fun x -> Some x)
-  with Bad -> None *)
-
 let is_interesting_var v store = MYSOLVER.is_interesting_var store v.Term.Var.index
 
 let get_domain_size term t =
   match Term.var term with
   | None -> None
   | Some v ->
-    match MYZ3.IntMap.find v.Var.index t.MYSOLVER.vars with
-    | (_, None)
-    | exception Not_found -> None
-    | (_, Some dom) -> Some dom
+    (match MYZ3.IntMap.find v.Var.index t.MYSOLVER.vars with
+     | _, None | (exception Not_found) -> None
+     | _, Some dom -> Some dom)
+;;

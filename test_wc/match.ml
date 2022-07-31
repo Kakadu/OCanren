@@ -160,6 +160,7 @@ module _ = struct
           (* (bool_dom l) *)
           (* (bool_dom m) *)
           (* (bool_dom r) *)
+          trace_diseq_constraints
           success)]
   ;;
 end

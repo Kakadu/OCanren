@@ -478,8 +478,25 @@ module Make (FDC : EXTRA) = struct
                    (* the same for wildcard and term *)
                    acc
                  | VarNTerm (var, term) ->
-                   (* We are not going to think about finite domain constraints here *)
-                   { conjs = LLL.cons Subst.Binding.{ var; term } conjs; wcs }, extra)
+                   let try_genative_to_positive = true in
+                   if try_genative_to_positive
+                   then
+                     if FDC.is_interesting_var var extra
+                     then (
+                       match FDC.neq (Obj.magic var) (Obj.magic term) extra with
+                       | None -> raise Violated
+                       | Some e ->
+                         let __ _ =
+                           log
+                             "Successfully added new  FD constraint %s=/=%s"
+                             (Term.show !!!var)
+                             (Term.show term)
+                         in
+                         { conjs = LLL.cons Subst.Binding.{ var; term } conjs; wcs }, e)
+                     else { conjs = LLL.cons Subst.Binding.{ var; term } conjs; wcs }, extra
+                   else
+                     (* We are not going to think about finite domain constraints here *)
+                     { conjs = LLL.cons Subst.Binding.{ var; term } conjs; wcs }, extra)
                (empty, extra0)
                bnds
            in
@@ -969,6 +986,8 @@ module Make (FDC : EXTRA) = struct
       Term.VarMap.iter (fun k v -> Format.fprintf ppf "%d -> %a; " k.Var.index El_set.pp v) x;
       Format.fprintf ppf "|vmm}"
     ;;
+
+    let compare = Term.VarMap.compare El_set.compare
   end
 
   module Answer = struct
@@ -1030,6 +1049,14 @@ module Make (FDC : EXTRA) = struct
     fun root -> helper Term.VarSet.empty (Obj.repr root)
   ;;
 
+  type subsumptions_mode =
+    [ `Dont_check
+    | `Only_copies
+    | `Complicated
+    ]
+
+  let subsumptions_mode : subsumptions_mode = `Only_copies
+
   let reify env subst cs t : Answer.t list =
     log "reify: %s %d" __FILE__ __LINE__;
     log "constraints: %a" pp cs;
@@ -1058,7 +1085,6 @@ module Make (FDC : EXTRA) = struct
       with
       | Early_exit xs -> xs
     in
-    let check_subsumptions = false in
     Seq.map
       (Seq.fold_left
          (fun acc { Subst.Binding.var; term } ->
@@ -1070,9 +1096,10 @@ module Make (FDC : EXTRA) = struct
          Answer.empty)
       dnf
     |> fun pre_answer ->
-    if check_subsumptions
-    then Seq.fold_left (fun acc x -> add_to_list x acc) [] pre_answer
-    else List.of_seq pre_answer
+    match subsumptions_mode with
+    | `Dont_check -> List.of_seq pre_answer
+    | `Complicated -> Seq.fold_left (fun acc x -> add_to_list x acc) [] pre_answer
+    | `Only_copies -> Base.List.dedup_and_sort (List.of_seq pre_answer) ~compare:Answer.M.compare
   ;;
 
   let project _ _ = failwith "not implemented"
