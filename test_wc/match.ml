@@ -12,7 +12,16 @@ module _ = struct
     | _,_ -> 2
   |}
 
-  let () = Printf.printf "Pseudecode:\n%s\n" source
+  let%expect_test " " =
+    Printf.printf "Pseudecode:\n%s\n" source;
+    [%expect
+      {|
+      Pseudecode:
+
+          match ... with
+          | t,_ -> 1
+          | _,_ -> 2 |}]
+  ;;
 
   let run_m eta =
     run_r
@@ -23,14 +32,17 @@ module _ = struct
       eta
   ;;
 
-  let test rel =
+  let test ?(explicit = true) rel =
     [%tester
       run_m (-1) (fun q ->
         fresh
           (scru rhs)
           (q === pair scru rhs)
           (rel scru rhs)
-          (fresh (l r) (scru === Std.pair l r) (bool_dom l) (bool_dom r)))]
+          (fresh
+             (l r)
+             (scru === Std.pair l r)
+             (if explicit then bool_dom l &&& bool_dom r else success)))]
   ;;
 
   let naive_rel q rez =
@@ -40,9 +52,23 @@ module _ = struct
       ]
   ;;
 
-  let () =
+  let%expect_test " " =
     print_endline "Naive with diseq constraints (6 answers instead of 4): ";
-    test naive_rel
+    test naive_rel;
+    [%expect
+      {|
+      Naive with diseq constraints (6 answers instead of 4):
+      fun q ->
+        fresh (scru rhs) (q === (pair scru rhs)) (rel scru rhs)
+          (fresh (l r) (scru === (Std.pair l r))
+             (if explicit then (bool_dom l) &&& (bool_dom r) else success)), all answers {
+      q=((true, false), 1);
+      q=((true, true), 1);
+      q=((false, false), 2);
+      q=((true, false), 2);
+      q=((false, true), 2);
+      q=((true, true), 2);
+      } |}]
   ;;
 
   let smart_rel q rez =
@@ -52,15 +78,36 @@ module _ = struct
       ]
   ;;
 
-  let () =
-    print_endline "With wildcards: ";
-    test smart_rel
+  let%expect_test " " =
+    print_endline "With wildcards (explicit domain):";
+    test smart_rel;
+    [%expect
+      {|
+      With wildcards (explicit domain):
+      fun q ->
+        fresh (scru rhs) (q === (pair scru rhs)) (rel scru rhs)
+          (fresh (l r) (scru === (Std.pair l r))
+             (if explicit then (bool_dom l) &&& (bool_dom r) else success)), all answers {
+      q=((true, false), 1);
+      q=((false, false), 2);
+      q=((true, true), 1);
+      q=((false, true), 2);
+      } |}];
+    print_endline "With wildcards (no domain):";
+    test ~explicit:false smart_rel;
+    [%expect {|
+      With wildcards (no domain):
+      fun q ->
+        fresh (scru rhs) (q === (pair scru rhs)) (rel scru rhs)
+          (fresh (l r) (scru === (Std.pair l r))
+             (if explicit then (bool_dom l) &&& (bool_dom r) else success)), all answers {
+      q=((true, _.15), 1);
+      q=((_.16 [=/= true], _.17), 2);
+      } |}]
   ;;
 end
 
 module _ = struct
-  let () = Printf.printf "*******\n\nLonger example for Luc's Maranget paper\n"
-
   let source =
     {|
     match ... with
@@ -71,7 +118,22 @@ module _ = struct
   |}
   ;;
 
-  let () = Printf.printf "Pseudecode:\n%s\n" source
+  let%expect_test " " =
+    Printf.printf "*******\n\nLonger example for Luc's Maranget paper\n";
+    Printf.printf "Pseudecode:\n%s\n" source;
+    [%expect
+      {|
+      *******
+
+      Longer example for Luc's Maranget paper
+      Pseudecode:
+
+          match ... with
+          | _,f,t -> 1
+          | f,t,_ -> 2
+          | _,_,f -> 3
+          | _,_,t -> 4 |}]
+  ;;
 
   let run_m eta =
     run_r
@@ -84,7 +146,7 @@ module _ = struct
       eta
   ;;
 
-  let test rel =
+  let test ?(explicit = true) rel =
     [%tester
       run_m (-1) (fun q ->
         fresh
@@ -92,9 +154,7 @@ module _ = struct
           (q === pair scru rhs)
           (rel scru rhs)
           (scru === Std.triple l m r)
-          (bool_dom l)
-          (bool_dom m)
-          (bool_dom r))]
+          (if explicit then bool_dom l &&& bool_dom m &&& bool_dom r else success))]
   ;;
 
   let smart_rel q rez =
@@ -115,14 +175,57 @@ module _ = struct
       ]
   ;;
 
-  let () =
-    print_endline "With wildcards: ";
-    test smart_rel
+  let%expect_test " " =
+    print_endline "With wildcards (explicit domain): ";
+    test smart_rel;
+    [%expect
+      {|
+      With wildcards (explicit domain):
+      fun q ->
+        fresh (scru rhs l m r) (q === (pair scru rhs)) (rel scru rhs)
+          (scru === (Std.triple l m r))
+          (if explicit
+           then ((bool_dom l) &&& (bool_dom m)) &&& (bool_dom r)
+           else success), all answers {
+      q=((false, false, true), 1);
+      q=((true, false, true), 1);
+      q=((false, true, false), 2);
+      q=((false, true, true), 2);
+      q=((true, true, true), 4);
+      q=((false, false, false), 3);
+      q=((true, false, false), 3);
+      q=((true, true, false), 3);
+      } |}];
+    print_endline "With wildcards (no explicit domain): ";
+    test ~explicit:false smart_rel;
+    [%expect
+      {|
+      With wildcards (no explicit domain):
+      fun q ->
+        fresh (scru rhs l m r) (q === (pair scru rhs)) (rel scru rhs)
+          (scru === (Std.triple l m r))
+          (if explicit
+           then ((bool_dom l) &&& (bool_dom m)) &&& (bool_dom r)
+           else success), all answers {
+      q=((_.13, false, true), 1);
+      q=((false, true, _.15), 2);
+      q=((_.13 [=/= false], _.14, false), 3);
+      q=((_.13 [=/= false], _.14 [=/= false], true), 4);
+      q=((_.13, _.14 [=/= true], false), 3);
+      q=((_.13, _.14 [=/= false; =/= true], true), 4);
+      } |}]
   ;;
 
-  let () =
+  let%expect_test " " =
     [%tester
-      run_int (-1) (fun rhs -> fresh s (s === Std.triple !!true __ __) (smart_rel s rhs))]
+      run_int (-1) (fun rhs -> fresh s (s === Std.triple !!true __ __) (smart_rel s rhs))];
+    [%expect
+      {|
+      fun rhs -> fresh s (s === (Std.triple (!! true) __ __)) (smart_rel s rhs), all answers {
+      q=1;
+      q=3;
+      q=4;
+      } |}]
   ;;
 
   let hack q rez =
@@ -148,8 +251,7 @@ module _ = struct
       ]
   ;;
 
-  let () =
-    print_endline "HACK";
+  let%expect_test " " =
     [%tester
       run_m (-1) (fun q ->
         fresh
@@ -160,7 +262,14 @@ module _ = struct
           (* (bool_dom l) *)
           (* (bool_dom m) *)
           (* (bool_dom r) *)
-          trace_diseq_constraints
-          success)]
+          (* trace_diseq_constraints *)
+          success)];
+    [%expect
+      {|
+      fun q ->
+        fresh (scru rhs l m r) (q === (pair scru rhs)) (hack scru rhs) success, all answers {
+      q=((_.16 [=/= false], _.17 [=/= false], true), 4);
+      q=((_.16, _.17 [=/= false; =/= true], true), 4);
+      } |}]
   ;;
 end
