@@ -95,7 +95,8 @@ module _ = struct
       } |}];
     print_endline "With wildcards (no domain):";
     test ~explicit:false smart_rel;
-    [%expect {|
+    [%expect
+      {|
       With wildcards (no domain):
       fun q ->
         fresh (scru rhs) (q === (pair scru rhs)) (rel scru rhs)
@@ -212,6 +213,48 @@ module _ = struct
       q=((_.13 [=/= false], _.14, false), 3);
       q=((_.13 [=/= false], _.14 [=/= false], true), 4);
       q=((_.13, _.14 [=/= true], false), 3);
+      q=((_.13, _.14 [=/= false; =/= true], true), 4);
+      } |}]
+  ;;
+
+  let naive_rel q rez =
+    let _T = !!true in
+    let _F = !!false in
+    let w = Std.triple in
+    conde
+      [ fresh () (rez === !!1) (q === w __ _F _T)
+      ; fresh x (rez === !!2) (q === w _F _T __) (q =/= w x _F _T)
+      ; fresh (x y z) (rez === !!3) (q === w __ __ _F) (q =/= w x _F _T) (q =/= w _F _T z)
+      ; fresh
+          (x y z x2 y2)
+          (rez === !!4)
+          (q =/= w x _F _T)
+          (q =/= w _F _T z)
+          (q =/= w x y _F)
+          (q === w x2 y2 _T)
+      ]
+  ;;
+
+  let%expect_test " " =
+    test ~explicit:false naive_rel;
+    [%expect
+      {|
+      fun q ->
+        fresh (scru rhs l m r) (q === (pair scru rhs)) (rel scru rhs)
+          (scru === (Std.triple l m r))
+          (if explicit
+           then ((bool_dom l) &&& (bool_dom m)) &&& (bool_dom r)
+           else success), all answers {
+      q=((_.13, false, true), 1);
+      q=((false, true, _.15), 2);
+      q=((_.13, _.14, false), 3);
+      q=((_.13 [=/= false; =/= _.22], _.14, true), 4);
+      q=((_.13 [=/= false], _.14, false), 3);
+      q=((_.13 [=/= _.22], _.14, true), 4);
+      q=((_.13, _.14 [=/= true], false), 3);
+      q=((_.13 [=/= _.22], _.14 [=/= true], true), 4);
+      q=((_.13 [=/= false], _.14 [=/= false], true), 4);
+      q=((_.13, _.14 [=/= false], true), 4);
       q=((_.13, _.14 [=/= false; =/= true], true), 4);
       } |}]
   ;;
