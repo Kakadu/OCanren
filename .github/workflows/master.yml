@@ -3,14 +3,14 @@ name: Build master
 on:
   push:
     paths-ignore:
-      - 'papers/**'
+      - "papers/**"
       # do not run CI if we are writing a paper
       # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#example-ignoring-paths
     branches:
-      - 'master'
+      - "master"
   #schedule:
   #  - cron: "0 13 * * 1"
-    # https://jasonet.co/posts/scheduled-actions/
+  # https://jasonet.co/posts/scheduled-actions/
 
 jobs:
   build:
@@ -23,9 +23,8 @@ jobs:
           - 4.10.1
 
     env:
-      OCANREN_STATS: yes
+      #OCANREN_STATS: yes
       OCANREN_DOCS: yes
-
 
     runs-on: ${{ matrix.os }}
 
@@ -65,7 +64,6 @@ jobs:
       - run: opam install . --deps-only --with-test
       - run: opam exec -- make #dune build
       - run: opam exec -- make test # dune runtest
-
 
       #### API documentation
       - name: Build API documentation
