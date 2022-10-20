@@ -81,3 +81,5 @@ let _ = Peep.unification_counter
 [%%endif]
 let set_diseq_logging = Disequality2.set_logging
 let debug_enriching_subst = Core.debug_enriching_subst
+
+let no_longer_than = Core.no_longer_than

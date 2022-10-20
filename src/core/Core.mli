@@ -152,8 +152,7 @@ val delay : (unit -> goal) -> goal
 
 (** Successor function *)
 val succ
-  :  (unit
-      -> ('a -> State.t -> 'b) * ('c -> Env.t -> 'd) * ('e -> 'f * 'g) * ('h -> 'i -> 'j))
+  :  (unit -> ('a -> State.t -> 'b) * ('c -> Env.t -> 'd) * ('e -> 'f * 'g) * ('h -> 'i -> 'j))
   -> unit
   -> (('k ilogic -> 'a) -> State.t -> 'k ilogic * 'b)
      * ('m ilogic * 'c -> Env.t -> 'm reified * 'd)
@@ -173,9 +172,7 @@ module NUMERAL_TYPS : sig
     -> (('a Logic.ilogic -> 'b Logic.ilogic -> goal)
         -> State.t
         -> 'a Logic.ilogic * ('b Logic.ilogic * State.t Stream.t))
-       * ('c Logic.ilogic * 'd Logic.ilogic
-          -> Env.t
-          -> 'c Logic.reified * 'd Logic.reified)
+       * ('c Logic.ilogic * 'd Logic.ilogic -> Env.t -> 'c Logic.reified * 'd Logic.reified)
        * ('e * ('f * 'g) -> ('e * 'f) * 'g)
        * (('h -> 'i -> 'j) -> 'h * 'i -> 'j)
 
@@ -184,9 +181,7 @@ module NUMERAL_TYPS : sig
     -> (('a ilogic -> 'c ilogic -> 'e ilogic -> goal)
         -> State.t
         -> 'a ilogic * ('c ilogic * ('e ilogic * State.t Stream.t)))
-       * ('g ilogic * ('i ilogic * 'k ilogic)
-          -> Env.t
-          -> 'g reified * ('i reified * 'k reified))
+       * ('g ilogic * ('i ilogic * 'k ilogic) -> Env.t -> 'g reified * ('i reified * 'k reified))
        * ('m * ('n * ('o * 'p)) -> ('m * ('n * 'o)) * 'p)
        * (('q -> 'r -> 's -> 't) -> 'q * ('r * 's) -> 't)
 
@@ -344,7 +339,6 @@ module Unique : sig
   type nonrec 'a injected = 'a t Logic.ilogic
 
   val reify : ('a, 'b) Reifier.t -> ('a injected, 'b logic) Reifier.t
-
   val unique : 'a -> 'a injected
   val noanswer : unit -> 'a injected
   val different : unit -> 'a injected
@@ -354,6 +348,6 @@ end
 val trace_domain_constraints : goal
 val trace_diseq_constraints : goal
 val cut_off_wc_diseq_without_domain : goal
-
 val unif_hack : 'a ilogic -> 'a ilogic -> bool ilogic -> goal
-val debug_enriching_subst: goal
+val debug_enriching_subst : goal
+val no_longer_than : int -> goal -> goal

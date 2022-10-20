@@ -943,6 +943,8 @@ let is_free var gthen gelse st =
   | _ -> gelse st
 ;;
 
+let no_longer_than n goal st = Stream.no_longer_than n (goal st)
+
 module Unique = struct
   type 'a t =
     | NoAnswer
@@ -1000,7 +1002,7 @@ module Unique = struct
       (fun st ->
         (* Format.printf "free variable detected %s %d\n" __FILE__ __LINE__; *)
         let v = State.fresh st in
-        let stream = g (Obj.magic v) st in
+        let stream = no_longer_than 1 (g (Obj.magic v)) st in
         if Stream.is_empty stream
         then ( === ) rez (Obj.magic NoAnswer) st
         else (
@@ -1029,7 +1031,7 @@ module Unique = struct
            === noanswer ()
            &&& fun st ->
            let v = State.fresh st in
-           let stream = g (Obj.magic v) st in
+           let stream = no_longer_than 1 (g (Obj.magic v)) st in
            if Stream.is_empty stream then success st else failure st)
          ; rez === different () &&& delay (fun () -> failwith "Not implemented")
          ; Fresh.one (fun u ->

@@ -114,7 +114,6 @@ let rec force_all x =
   | _ -> assert false
 ;;
 
-
 let rec mplus xs ys =
   let module _ = struct
     [%%if defined stats]
@@ -132,13 +131,13 @@ let rec mplus xs ys =
     let ys = force ys in
     (* handling waiting streams is tricky *)
     (match unwrap_suspended ss, ys with
-    (* if [xs] has no ready streams and [ys] is also a waiting stream then we merge them  *)
-    | Waiting ss, Waiting ss' -> Waiting (ss @ ss')
-    (* if [xs] has no ready streams but [ys] is not a waiting stream then we swap them,
+     (* if [xs] has no ready streams and [ys] is also a waiting stream then we merge them  *)
+     | Waiting ss, Waiting ss' -> Waiting (ss @ ss')
+     (* if [xs] has no ready streams but [ys] is not a waiting stream then we swap them,
        pushing waiting stream to the back of the new stream *)
-    | Waiting ss, _ -> mplus ys @@ from_fun (fun () -> xs)
-    (* if [xs] has ready streams then [xs'] contains some lazy stream that is ready to produce new answers *)
-    | xs', _ -> mplus xs' ys)
+     | Waiting ss, _ -> mplus ys @@ from_fun (fun () -> xs)
+     (* if [xs] has ready streams then [xs'] contains some lazy stream that is ready to produce new answers *)
+     | xs', _ -> mplus xs' ys)
 
 and unwrap_suspended ss =
   let module _ = struct
@@ -151,9 +150,7 @@ and unwrap_suspended ss =
   in
   let rec find_ready prefix = function
     | ({ is_ready; zz } as s) :: ss ->
-      if is_ready ()
-      then Some (from_fun zz), List.rev prefix @ ss
-      else find_ready (s :: prefix) ss
+      if is_ready () then Some (from_fun zz), List.rev prefix @ ss else find_ready (s :: prefix) ss
     | [] -> None, List.rev prefix
   in
   match find_ready [] ss with
@@ -177,10 +174,10 @@ let rec bind s f =
   | Thunk zz -> from_fun (fun () -> bind (zz ()) f)
   | Waiting ss ->
     (match unwrap_suspended ss with
-    | Waiting ss ->
-      let helper ({ zz } as s) = { s with zz = (fun () -> bind (zz ()) f) } in
-      Waiting (List.map helper ss)
-    | s -> bind s f)
+     | Waiting ss ->
+       let helper ({ zz } as s) = { s with zz = (fun () -> bind (zz ()) f) } in
+       Waiting (List.map helper ss)
+     | s -> bind s f)
 ;;
 
 let rec msplit = function
@@ -189,8 +186,20 @@ let rec msplit = function
   | Thunk zz -> msplit @@ zz ()
   | Waiting ss ->
     (match unwrap_suspended ss with
-    | Waiting _ -> None
-    | xs -> msplit xs)
+     | Waiting _ -> None
+     | xs -> msplit xs)
+;;
+
+let no_longer_than =
+  let rec helper n stream : _ t =
+    if n <= 0
+    then nil
+    else (
+      match msplit stream with
+      | None -> nil
+      | Some (h, tl) -> Cons (h, Thunk (fun () -> helper (n - 1) tl)))
+  in
+  fun n ss -> Thunk (fun () -> helper n ss)
 ;;
 
 let is_empty s =
