@@ -1,6 +1,6 @@
 (*
  * OCanren. PPX suntax extensions.
- * Copyright (C) 2015-2019
+ * Copyright (C) 2015-2022
  * Dmitri Boulytchev, Dmitry Kosarev, Alexey Syomin, Evgeny Moiseenko
  * St.Petersburg State University, JetBrains Research
  *
@@ -130,19 +130,21 @@ let reconstruct_args e =
       Some
         (List.map xs ~f:(fun (_, e) ->
              match e.pexp_desc with
-             | Pexp_ident { txt = Longident.Lident i; _ } -> i
+             | Pexp_ident { txt = Longident.Lident i; loc } -> i, loc
              | _ -> raise Not_an_ident))
     with
     | Not_an_ident -> None
   in
   match e.pexp_desc with
-  | Pexp_apply ({ pexp_desc = Pexp_ident { txt = Longident.Lident arg1; _ } }, ys) ->
+  | Pexp_construct ({ txt = Lident "()" }, None) ->
+    (* no fresh variables: just for geting rid of &&&  *)
+    Some []
+  | Pexp_apply ({ pexp_desc = Pexp_ident { txt = Longident.Lident arg1; loc } }, ys) ->
     (* fresh (var1 var2 var3) body *)
-    option_map (are_all_idents ys) ~f:(fun xs -> arg1 :: xs)
-  (* no fresh variables: just for geting rid of &&&  *)
-  | Pexp_construct ({ txt = Lident "()" }, None) -> Some []
-  (* [fresh arg0 body] -- single fresh variable  *)
-  | Pexp_ident { txt = Lident arg1; _ } -> Some [ arg1 ]
+    option_map (are_all_idents ys) ~f:(fun xs -> (arg1, loc) :: xs)
+  | Pexp_ident { txt = Lident arg1; loc } ->
+    (* [fresh arg0 body] -- single fresh variable  *)
+    Some [ arg1, loc ]
   | _ -> None
 ;;
 
@@ -180,66 +182,46 @@ let mapper =
     inherit Ast_traverse.map as super
 
     method! expression e =
-      let loc = e.pexp_loc in
       match e.pexp_desc with
-      | Pexp_apply (_, []) -> e
-      | Pexp_apply (e1, (_, alist) :: args) when is_conj_list e1 ->
-        let clauses : expression list = parse_to_list alist in
-        let ans =
-          list_fold_right0
-            clauses
-            ~initer:(fun x -> x)
-            ~f:(fun x acc -> [%expr [%e x] &&& [%e acc]])
-        in
-        super#expression ans
-      | Pexp_apply (e1, (_, alist) :: otherargs) when is_conde e1 ->
-        [%expr conde [%e self#expression alist]]
       | Pexp_apply (e1, [ args ]) when is_fresh e1 ->
         (* bad syntax -- no body*)
-        e
+        super#expression e
+      | Pexp_apply (e1, (Nolabel, args) :: []) when is_fresh e1 ->
+        (* (fresh (a b c )) doesn't look like OCanren stuff *)
+        super#expression e
       | Pexp_apply (e1, (Nolabel, args) :: body) when is_fresh e1 ->
-        assert (List.length body > 0);
-        let body = List.map ~f:snd body in
-        let new_body : expression =
-          match body with
-          | [] -> assert false
-          | [ body ] -> self#expression body
-          | body ->
-            let xs = List.map ~f:self#expression body in
-            [%expr ?&[%e my_list ~loc xs]]
-        in
         (match reconstruct_args args with
-        | Some (xs : string list) ->
-          let ans =
-            List.fold_right
-              xs
-              ~f:(fun ident acc ->
-                [%expr
-                  Fresh.one
-                    (fun [%p Pat.var ~loc (Ast_builder.Default.Located.mk ident ~loc)] ->
-                      [%e acc])])
-              ~init:[%expr delay (fun () -> [%e new_body])]
-          in
-          ans
-        | None ->
-          Caml.Format.eprintf "Can't reconstruct args of 'fresh'";
-          { e with pexp_desc = Pexp_apply (e1, [ Nolabel, new_body ]) })
+         | Some (xs : (string * Location.t) list) ->
+           let init =
+             let new_body =
+               match List.map ~f:snd body with
+               | [] -> assert false
+               | [ body ] -> self#expression body
+               | body ->
+                 let xs = List.map ~f:self#expression body in
+                 let loc = e.pexp_loc in
+                 [%expr ?&[%e my_list ~loc xs]]
+             in
+             let loc = e.pexp_loc in
+             [%expr delay (fun () -> [%e new_body])]
+           in
+           List.fold_right xs ~init ~f:(fun (ident, loc) acc ->
+               let p = Pat.var ~loc (Ast_builder.Default.Located.mk ident ~loc) in
+               let loc = e.pexp_loc in
+               [%expr Fresh.one (fun [%p p] -> [%e acc])])
+         | None ->
+           Caml.Format.eprintf "Can't reconstruct args of 'fresh'";
+           super#expression e)
       | Pexp_apply (d, [ (_, body) ]) when is_defer d ->
-        let ans = [%expr delay (fun () -> [%e self#expression body])] in
-        ans
-      | Pexp_apply (d, body) when is_unif d ->
+        let loc = e.pexp_loc in
+        [%expr delay (fun () -> [%e self#expression body])]
+      (* | Pexp_apply (d, body) when is_unif d ->
         (* let loc_str =
           Caml.Format.asprintf "%a" Selected_ast.Ast.Location.print_compact e.pexp_loc;
         in
         let body = (Labelled "loc", Exp.constant (Pconst_string (loc_str,None))) :: body in *)
-        Exp.apply ~loc:e.pexp_loc d body
-      | Pexp_apply (e, xs) ->
-        let ans =
-          Pexp_apply
-            (self#expression e, List.map ~f:(fun (lbl, e) -> lbl, self#expression e) xs)
-        in
-        let ans = { e with pexp_desc = ans } in
-        ans
+        Exp.apply ~loc:e.pexp_loc d body *)
+      | Pexp_apply (_, xs) -> super#expression e
       | Pexp_fun (l, opt, pat, e) ->
         { e with pexp_desc = Pexp_fun (l, opt, pat, self#expression e) }
       | Pexp_construct (_, None) -> e
