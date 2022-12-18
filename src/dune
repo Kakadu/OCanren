@@ -11,6 +11,7 @@
  (modules
   Logic
   Core
+  ;CoreT
   Stream
   Subst
   Term
@@ -24,13 +25,34 @@
   List
   Timer
   Peep
+  DualPeano
   OCanren)
  (libraries GT)
  (flags
   (:standard -rectypes -short-paths -w -49))
  (preprocess
-  (action
-   (run
-    %{project_root}/camlp5/pp5+gt+plugins+dump.exe
-    %{read-lines:../config/instrumentalization.cfg}
-    %{input-file}))))
+  (per_module
+   ((action
+     (run
+      %{project_root}/camlp5/pp5+gt+plugins+dump.exe
+      %{read-lines:../config/instrumentalization.cfg}
+      %{input-file}))
+    Logic
+    Core
+    ;CoreT
+    Stream
+    Subst
+    Term
+    Env
+    Runconf
+    Disequality
+    Option
+    Bool
+    Nat
+    Pair
+    List
+    Timer
+    Peep
+    OCanren)
+   ((pps ppx_expect ppx_inline_test)
+    DualPeano))))
