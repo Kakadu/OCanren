@@ -5,9 +5,12 @@ let of_int n = (n, Nat.O)
 let core_unify l r : Core.State.t -> Core.State.t Stream.t =
   Obj.magic (Core.unify l r)
 
-let rec unify l r st =
+let rec unify lstart rstart st =
   (* TODO: walk *)
-  match Term.var l, Term.var r with
+  let env = Core.State.env st in
+  let subst  = Core.State.subst st in
+  let iwalk t = Subst.walk env subst (Obj.magic t) in
+  match iwalk lstart, iwalk  rstart with
   | None, None ->
     let (lc, l), (rc, r) = (Obj.magic l, Obj.magic r) in
     let d = lc - rc in

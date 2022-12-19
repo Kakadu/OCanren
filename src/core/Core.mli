@@ -23,6 +23,9 @@ module State :
   sig
     (** @canonical OCanren.State.t *)
     type t
+
+    val env: t -> Env.t
+    val subst: t -> Subst.t
   end
 
 (** Goal is a function that converts a state into a lazy stream of states. *)

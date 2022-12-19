@@ -86,3 +86,7 @@ val reify : Env.t -> t -> 'a -> Answer.t
 
 (** Walk counter *)
 val walk_counter : unit -> int
+
+type lterm = Var of Term.Var.t | Value of Term.t
+
+val walk: Env.t -> t -> Term.Var.t -> lterm

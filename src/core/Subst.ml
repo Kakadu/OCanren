@@ -65,7 +65,7 @@ let split s = Term.VarMap.fold (fun var term xs -> Binding.({var; term})::xs) s 
 
 type lterm = Var of Term.Var.t | Value of Term.t
 
-let walk env subst x =
+let walk env  (subst: t) x =
   (* walk var *)
   let rec walkv env subst v =
     walk_incr ();
