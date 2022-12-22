@@ -90,3 +90,5 @@ val walk_counter : unit -> int
 type lterm = Var of Term.Var.t | Value of Term.t
 
 val walk: Env.t -> t -> Term.Var.t -> lterm
+
+val set : Term.Var.t -> Obj.t -> t -> t

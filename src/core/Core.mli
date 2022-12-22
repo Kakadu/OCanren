@@ -26,6 +26,7 @@ module State :
 
     val env: t -> Env.t
     val subst: t -> Subst.t
+    val modify_subst : (Subst.t -> Subst.t) -> t -> t
   end
 
 (** Goal is a function that converts a state into a lazy stream of states. *)

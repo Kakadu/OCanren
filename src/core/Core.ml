@@ -280,6 +280,7 @@ module State =
     let scope {scope} = scope
     let prunes {prunes} = prunes
 
+    let modify_subst f st = { st with subst = f st.subst }
     let fresh {env; scope} = Env.fresh ~scope env
 
     let new_scope st = {st with scope = Term.Var.new_scope ()}

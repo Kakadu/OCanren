@@ -30,6 +30,7 @@
  (libraries GT)
  (flags
   (:standard -rectypes -short-paths -w -49))
+ (inline_tests)
  (preprocess
   (per_module
    ((action

@@ -51,6 +51,8 @@ type t = Term.t Term.VarMap.t
 
 let empty = Term.VarMap.empty
 
+let set var data (t: t)  = Term.VarMap.add var data t
+
 let of_list =
   ListLabels.fold_left ~init:empty ~f:(let open Binding in fun subst {var; term} ->
     if not @@ Term.VarMap.mem var subst then
