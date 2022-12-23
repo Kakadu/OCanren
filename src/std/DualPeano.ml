@@ -2,6 +2,8 @@
 type ground = int * Nat.ground
 let of_int n = (n, Nat.O)
 
+type injected = (int * Nat.injected) Logic.ilogic
+
 let core_unify l r : Core.State.t -> Core.State.t Stream.t =
   Obj.magic (Core.unify l r)
 
@@ -21,7 +23,7 @@ let normalize v =
   else let (acc, p) = Obj.magic v in
   helper acc p
 
-let rec unify lstart rstart st =
+let rec unify lstart rstart : Core.goal = Obj.magic @@ fun st ->
   (* TODO: walk *)
   let env = Core.State.env st in
   let subst  = Core.State.subst st in
@@ -55,6 +57,11 @@ let rec unify lstart rstart st =
   | `D l, `Var r -> core_unify (Obj.magic l) (Obj.magic r) st
   | `Var l, `Var r -> core_unify (Obj.magic l) (Obj.magic r) st
 
+
+let (===) = unify
+
+let zero : injected = Obj.magic (0, Nat.O)
+let succ n = assert false
 
 let%test _ = true
 
