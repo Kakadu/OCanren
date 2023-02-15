@@ -1,6 +1,6 @@
 (*
  * OCanren. PPX suntax extensions.
- * Copyright (C) 2015-2022
+ * Copyright (C) 2015-2023
  * Dmitri Boulytchev, Dmitry Kosarev, Alexey Syomin, Evgeny Moiseenko
  * St.Petersburg State University, JetBrains Research
  *
@@ -27,6 +27,10 @@
 open Ppxlib
 open Ppxlib.Ast_helper
 open Stdppx
+
+type config = { mutable delay_after_fresh : bool }
+
+let cfg = { delay_after_fresh = true }
 
 let is_state_pattern pat =
   match pat.ppat_desc with
@@ -206,7 +210,10 @@ let mapper =
                    Fresh.one
                      (fun [%p Pat.var ~loc (Ast_builder.Default.Located.mk ident ~loc)] ->
                      [%e acc])])
-               ~init:[%expr delay (fun () -> [%e new_body])]
+               ~init:
+                 (if cfg.delay_after_fresh
+                 then [%expr delay (fun () -> [%e new_body])]
+                 else new_body)
            in
            ans
          | None ->
@@ -323,3 +330,10 @@ let mapper =
 ;;
 
 let () = Ppxlib.Driver.register_transformation ~impl:mapper#structure "pa_minikanren"
+
+let () =
+  Ppxlib.Driver.add_arg
+    "-no-delay-in-fresh"
+    (Stdlib.Arg.Unit (fun () -> cfg.delay_after_fresh <- false))
+    ~doc:" Doc here"
+;;
