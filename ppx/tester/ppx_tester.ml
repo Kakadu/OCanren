@@ -1,24 +1,28 @@
 (*
- * OCanren PPX
- * Copyright (C) 2016-2021
+ * OCanren. PPX syntax extensions.
+ * Copyright (C) 2016-2023
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
 
-(*
+(**
   An extension that allows not to write errornous qh, qrh and stuff like that.
+  It looks at number of lambdas in the last argument, and insert numberals as penultimate argument.
 
   Expands
 
-    let __ _ = [%tester runR OCanren.reify show_int show_intl (fun q -> q === !!1)]
+    {[ let __ _ = [%tester runR OCanren.reify show_int show_intl (fun q -> q === !!1)] ]}
 
   to
 
-    let __ _ = runR OCanren.reify show_int show_intl q qh (fun q -> q === (!! 1))
+  {[
+    let __ _ =
+      runR OCanren.reify show_int show_intl q qh
+        ("<string repr of goal>", (fun q -> q === (!! 1)))
+  ]}
 
 *)
-open Base
-module Format = Caml.Format
+
 open Ppxlib
 
 let string_of_expression e =
@@ -42,10 +46,13 @@ let () =
         pattern
         (fun ~loc ~path:_ f args ->
         let open Ppxlib.Ast_builder.Default in
-        let prefix, last =
+        let rev_prefix, last =
           match args with
           | [] -> failwith "should not happen"
-          | xs -> List.drop_last_exn xs, List.last_exn xs
+          | xs ->
+            (match List.rev xs with
+             | h :: tl -> tl, h
+             | [] -> failwith "should not happen")
         in
         let count =
           let rec helper acc e =
@@ -56,7 +63,7 @@ let () =
           helper 0 (snd last)
         in
         let middle =
-          List.map ~f:(fun e -> Nolabel, e)
+          List.map (fun e -> Nolabel, e)
           @@
           match count with
           | 0 -> failwith "Bad syntax"
@@ -71,7 +78,10 @@ let () =
           let open Ppxlib.Ast_builder.Default in
           [%expr [%e pexp_constant ~loc (Pconst_string (s, loc, None))], [%e snd last]]
         in
-        pexp_apply ~loc f (List.concat [ prefix; middle; [ Nolabel, last ] ]))
+        pexp_apply
+          ~loc
+          f
+          (List.rev_append rev_prefix @@ List.concat [ middle; [ Nolabel, last ] ]))
     ]
   in
   Ppxlib.Driver.register_transformation ~extensions name
