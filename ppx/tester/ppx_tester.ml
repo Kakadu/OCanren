@@ -1,6 +1,10 @@
 (*
  * OCanren. PPX syntax extensions.
+<<<<<<< HEAD
  * Copyright (C) 2016-2024
+=======
+ * Copyright (C) 2016-2023
+>>>>>>> 16f65280 (Fixup ppx_tester)
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
