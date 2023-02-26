@@ -60,7 +60,8 @@ module _ = struct
         ]
     in
     test ~explicit:false xxx;
-    [%expect {|
+    [%expect
+      {|
       fun q ->
         fresh (scru rhs) (q === (pair scru rhs)) (rel scru rhs)
           (fresh (l r) (scru === (Std.pair l r))
@@ -69,7 +70,8 @@ module _ = struct
       q=((_.18, _.19), 2);
       } |}];
     test ~explicit:true xxx;
-    [%expect {|
+    [%expect
+      {|
       fun q ->
         fresh (scru rhs) (q === (pair scru rhs)) (rel scru rhs)
           (fresh (l r) (scru === (Std.pair l r))
@@ -320,7 +322,7 @@ module _ = struct
     [%tester
       run_m (-1) (fun q ->
         fresh
-          (scru rhs l m r)
+          (scru rhs (* l m r*))
           (q === pair scru rhs)
           (* (scru === Std.triple l m r) *)
           (hack scru rhs)
@@ -331,10 +333,9 @@ module _ = struct
           success)];
     [%expect
       {|
-      fun q ->
-        fresh (scru rhs l m r) (q === (pair scru rhs)) (hack scru rhs) success, all answers {
-      q=((_.16, _.17 [=/= false; =/= true], true), 4);
-      q=((_.16 [=/= false], _.17 [=/= false], true), 4);
+      fun q -> fresh (scru rhs) (q === (pair scru rhs)) (hack scru rhs) success, all answers {
+      q=((_.13, _.14 [=/= false; =/= true], true), 4);
+      q=((_.13 [=/= false], _.14 [=/= false], true), 4);
       } |}]
   ;;
 end
