@@ -1,0 +1,51 @@
+(executables
+ (names main debug_var peano)
+ (modules main debug_var peano)
+ (preprocess
+  (pps
+   ppx_expect
+   OCanren-ppx.ppx_wildcard
+   OCanren-ppx.ppx_repr
+   OCanren-ppx.ppx_fresh
+   OCanren-ppx.ppx_tester
+   GT.ppx_all))
+ (libraries OCanren OCanren.tester))
+
+(library
+ (name match)
+ (modules match)
+ (libraries OCanren OCanren.tester)
+ (preprocess
+  (pps
+   ppx_expect
+   OCanren-ppx.ppx_wildcard
+   OCanren-ppx.ppx_repr
+   OCanren-ppx.ppx_fresh
+   OCanren-ppx.ppx_tester
+   GT.ppx_all))
+ (inline_tests))
+
+(cram
+ (deps
+  ./main.exe
+  ;./unique.exe
+  ./debug_var.exe
+  ./peano.exe
+  ;./fd.exe
+  ;./cut_off.exe
+  ;
+  ))
+
+; (library
+;  (name asdf)
+;  (modules asdf)
+;  (preprocess
+;   (pps
+;    ppx_expect
+;    OCanren-ppx.ppx_wildcard
+;    OCanren-ppx.ppx_repr
+;    OCanren-ppx.ppx_fresh
+;    OCanren-ppx.ppx_tester
+;    GT.ppx_all))
+;  (libraries OCanren OCanren.tester)
+;  (inline_tests))
