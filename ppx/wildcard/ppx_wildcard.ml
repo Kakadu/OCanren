@@ -1,6 +1,6 @@
 (*
- * OCanren. PPX suntax extensions.
- * Copyright (C) 2015-2022
+ * OCanren. PPX syntax extensions.
+ * Copyright (C) 2015-2023
  * Dmitri Boulytchev, Dmitry Kosarev, Alexey Syomin, Evgeny Moiseenko
  * St.Petersburg State University, JetBrains Research
  *
@@ -16,14 +16,19 @@
  * (enclosed in the file COPYING).
  *)
 
-(*   Performs expansion of wildcards in unification:
- *  1) (q === __ % __)
- *            to
- *     wc (fun __1 -> wc (fun __2 -> q === __1 % __2))
- *
+(** This extension performs expansion of wildcards in:
+
+  {ul {- Unification
+         {[ (q === __ % __) ]} to {[ Fresh.two (fun __1 __2 -> q === __1 % __2) ]}
+      }
+      {- Disequality
+          {[ (q =/= Std.List.cons __ __) ]}
+             to
+          {[ wc (fun __1 -> wc (fun __2 -> q =/= Std.List.cons __1 __2)) ]}
+      }
+  }
  *)
 
-open Base
 open Ppxlib
 open Ppxlib.Ast_helper
 
@@ -108,8 +113,8 @@ let mapper =
           | Unif -> [%expr [%e l] === [%e r]]
           | Diseq -> [%expr [%e l] =/= [%e r]]
         in
-        let ans1 = List.fold_left ~f ~init accr in
-        List.fold_left ~f ~init:ans1 accl
+        let ans1 = ListLabels.fold_left ~f ~init accr in
+        ListLabels.fold_left ~f ~init:ans1 accl
       in
       Ppxlib.Ast_pattern.parse pat loc e on_unif ~on_error:(fun () -> super#expression e)
   end
