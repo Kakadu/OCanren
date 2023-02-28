@@ -16,13 +16,14 @@
  * See the GNU Library General Public License version 2 for more details
  * (enclosed in the file COPYING).
  *)
-
+IFDEF STATS THEN
 type stat = {mutable walk_count : int}
 
 let stat = {walk_count = 0}
 
 let walk_counter () = stat.walk_count
 let walk_incr () = stat.walk_count <- stat.walk_count + 1
+END
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
 
@@ -68,7 +69,7 @@ type lterm = Var of Term.Var.t | Value of Term.t | WC of Term.Var.t
 let walk env subst x =
   (* walk var *)
   let rec walkv env subst v =
-    walk_incr ();
+    let () = IFDEF STATS THEN walk_incr () ELSE () END in
     Env.check_exn env v;
     if Term.Var.is_wildcard v
     then WC v
@@ -79,7 +80,7 @@ let walk env subst x =
         with Not_found -> Var v
   (* walk term *)
   and walkt env subst t =
-    walk_incr ();
+    let () = IFDEF STATS THEN walk_incr () ELSE () END in
     match Env.var env t with
     | Some v when Term.Var.is_wildcard v -> WC v
     | Some v -> walkv env subst v
