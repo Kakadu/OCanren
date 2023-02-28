@@ -112,3 +112,9 @@
     fresh (a b c) (q === (Expr.make (!! "triple") (a % (b %< c))))
       (q =/= (Expr.make __ __)), all answers {
   }
+  fun _ ->
+    fresh www
+      ((Std.pair (le (!! "one") (!! "x")) (le (!! "one") (!! "x"))) =/=
+         (Std.pair (le __ www) (le __ www))), all answers {
+  q=_.10;
+  }
