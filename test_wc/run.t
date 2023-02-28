@@ -99,3 +99,8 @@
   }
   fun q -> fresh () (q =/= (!! 1)) (q =/= (!! 2)) (FD.domain q [1; 2]) success, all answers {
   }
+  fun prev ->
+    fun h ->
+      fresh (www temp) (prev === (le (!! 1) temp)) (h === (le (!! 1) temp))
+        ((Std.pair prev h) =/= (Std.pair (le __ temp) (le __ temp))), all answers {
+  }

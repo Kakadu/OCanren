@@ -84,14 +84,14 @@ let _ = [%tester run_int (-1) (fun q -> pair q !!1 =/= pair !!1 __)]
 let _ =
   [%tester
     run_pair (-1) (fun q ->
-        fresh
-          (a b)
-          (q === pair a b)
-          (* (debug_var a OCanren.reify (fun _ ->
+      fresh
+        (a b)
+        (q === pair a b)
+        (* (debug_var a OCanren.reify (fun _ ->
                let () = OCanren.set_diseq_logging true in
                success)) *)
-          (q =/= pair !!1 __)
-          (q === pair __ !!1))]
+        (q =/= pair !!1 __)
+        (q === pair __ !!1))]
 ;;
 
 let () = OCanren.set_diseq_logging false
@@ -99,7 +99,7 @@ let () = OCanren.set_diseq_logging false
 let _ =
   [%tester
     run_pair (-1) (fun q ->
-        fresh (a b) (q =/= pair !!1 __) (* (q =/= pair __ !!1)  *) (q === pair a b))]
+      fresh (a b) (q =/= pair !!1 __) (* (q =/= pair __ !!1)  *) (q === pair a b))]
 ;;
 
 let _ =
@@ -109,7 +109,7 @@ let _ =
 let _ =
   [%tester
     run_pair (-1) (fun q ->
-        fresh (a b) (q =/= pair !!1 __) (q === pair __ !!1) (q === pair a b))]
+      fresh (a b) (q =/= pair !!1 __) (q === pair __ !!1) (q === pair a b))]
 ;;
 
 let _ =
@@ -158,19 +158,19 @@ let _ = [%tester run_pair_bool (-1) (fun q -> __ =/= Std.pair __ !!true)]
 let _ =
   [%tester
     run_pair_bool (-1) (fun q ->
-        fresh () (q === Std.pair !!false !!true) (q =/= Std.pair !!true __))]
+      fresh () (q === Std.pair !!false !!true) (q =/= Std.pair !!true __))]
 ;;
 
 let __ _ =
   [%tester
     run_pair_bool (-1) (fun q ->
-        fresh () (Std.pair !!false !!true =/= Std.pair !!true __))]
+      fresh () (Std.pair !!false !!true =/= Std.pair !!true __))]
 ;;
 
 let _ =
   [%tester
     run_pair_bool (-1) (fun q ->
-        fresh () (q =/= Std.pair !!true __) (q === Std.pair !!false !!true))]
+      fresh () (q =/= Std.pair !!true __) (q === Std.pair !!false !!true))]
 ;;
 
 let __ _ =
@@ -181,13 +181,13 @@ let __ _ =
 let _ =
   [%tester
     run_list (-1) (fun q ->
-        fresh
-          (x y)
-          (* TODO: document that using logic lists is not strongly required *)
-          (!![ x; !!1 ] =/= !![ !!2; y ])
-          (* trace_diseq_constraints *)
-          (y === !!1)
-          success)]
+      fresh
+        (x y)
+        (* TODO: document that using logic lists is not strongly required *)
+        (!![ x; !!1 ] =/= !![ !!2; y ])
+        (* trace_diseq_constraints *)
+        (y === !!1)
+        success)]
 ;;
 
 let () = OCanren.set_diseq_logging false
@@ -195,15 +195,15 @@ let () = OCanren.set_diseq_logging false
 let _ =
   [%tester
     run_pair_int (-1) (fun q ->
-        fresh
-          (x y)
-          (Std.pair x !!1 =/= Std.pair !!2 y)
-          (x === !!2)
-          (* (debug_var x OCanren.reify (fun _ ->
+      fresh
+        (x y)
+        (Std.pair x !!1 =/= Std.pair !!2 y)
+        (x === !!2)
+        (* (debug_var x OCanren.reify (fun _ ->
                let () = OCanren.set_diseq_logging true in
                trace_diseq_constraints)) *)
-          (y === !!9)
-          (Std.pair x y === q))]
+        (y === !!9)
+        (Std.pair x y === q))]
 ;;
 
 let () = OCanren.set_diseq_logging false
@@ -211,11 +211,55 @@ let () = OCanren.set_diseq_logging false
 let _ =
   [%tester
     run_int (-1) (fun q ->
-        fresh
-          ()
-          (q =/= !!1)
-          (q =/= !!2)
-          (* trace_diseq_constraints *)
-          (FD.domain q [ 1; 2 ])
-          success)]
+      fresh
+        ()
+        (q =/= !!1)
+        (q =/= !!2)
+        (* trace_diseq_constraints *)
+        (FD.domain q [ 1; 2 ])
+        success)]
 ;;
+
+module _ = struct
+  module Op = struct
+    type nonrec t = LE [@@deriving gt ~options:{ show; fmt; gmap }]
+    type ground = t [@@deriving gt ~options:{ show; fmt; gmap }]
+    type logic = t OCanren.logic [@@deriving gt ~options:{ show; fmt; gmap }]
+    type injected = (ground, logic) OCanren.injected
+
+    let reify = OCanren.reify
+  end
+
+  module T = struct
+    type nonrec ('self, 'binop, 'term) t =
+      | True
+      | Not of 'self
+      | Op of 'binop * 'term * 'term
+    [@@deriving gt ~options:{ show; fmt; gmap }]
+
+    let fmap eta = GT.gmap t eta
+  end
+
+  module X = Fmap3 (T)
+
+  type ground = (ground, Op.ground, GT.int) T.t [@@deriving gt ~options:{ show }]
+
+  type logic = (logic, Op.logic, GT.int OCanren.logic) T.t OCanren.logic
+  [@@deriving gt ~options:{ show }]
+
+  let rec reify eta = X.reify reify Op.reify OCanren.reify eta
+  let run_t eta = Tester.runR reify (GT.show ground) (GT.show logic) eta
+  let le a b = inj @@ X.distrib @@ Op (!!Op.LE, a, b)
+
+  let _ =
+    [%tester
+      run_t (-1) (fun prev h ->
+        fresh
+          (www temp)
+          (prev === le !!1 temp)
+          (h === le !!1 temp)
+          (* forbid 'prev&h' to be 'c1 <= www & c2 <= www' *)
+          (Std.pair prev h =/= Std.pair (le __ temp) (le __ temp))
+        (* trace_diseq_constraints *))]
+  ;;
+end
