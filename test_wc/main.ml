@@ -254,3 +254,35 @@ let _ =
       fresh (a b c) (q === Expr.make !!"triple" (a % (b %< c))) (q =/= Expr.make __ __)
       (* trace_diseq_constraints *))]
 ;;
+
+module _ = struct
+  module Op = struct
+    [%%ocanren
+    type nonrec t = LE [@@deriving gt ~options:{ show; fmt; gmap }]
+    type nonrec ground = t]
+  end
+
+  [%%ocanren
+  type nonrec ('self, 'binop, 'term) t =
+    | True
+    | Not of 'self
+    | Op of 'binop * 'term * 'term
+    | Var of 'term
+  [@@deriving gt ~options:{ show; fmt; gmap }]
+
+  type ground = (ground, Op.ground, GT.string) t]
+
+  let run_t eta = Tester.run_r reify (GT.show logic) eta
+  let le a b = !!(Op (!!Op.LE, a, b))
+  let _ = var !!""
+
+  let _ =
+    [%tester
+      run_t (-1) (fun _ ->
+        fresh
+          www
+          (Std.pair (le !!"one" !!"x") (le !!"one" !!"x")
+          =/= Std.pair (le __ www) (le __ www))
+        (* gives an answer, bvecause it simplifies to www=/= "x" *))]
+  ;;
+end
