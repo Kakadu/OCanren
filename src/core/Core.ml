@@ -480,6 +480,8 @@ let (?&) gs st =
 
 let disj_base f g st = Stream.mplus (f st) (Stream.from_fun (fun () -> g st))
 
+let disj_2nd_strict f g st = Stream.mplus (f st) (g st)
+
 let disj f g st =
   let () = IFDEF STATS THEN disj_counter_incr () ELSE () END in
   let st = State.new_scope st in

@@ -76,6 +76,8 @@ val (&&&) : goal -> goal -> goal
 (** [disj s1 s2] creates a goal, which is a disjunction of its arguments *)
 val disj : goal -> goal -> goal
 
+val disj_2nd_strict : goal -> goal -> goal
+
 (** [|||] is a left-associative infix synonym for [disj] *)
 val (|||) : goal -> goal -> goal
 
