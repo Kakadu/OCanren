@@ -70,37 +70,30 @@ let __ () =
   run_exn show_int_list (-1)  qr qrh (REPR (fun q r  ->
     appendo q r (ilist [1; 2; 3; 4])   ));
   ()
-let () =
+let __ () =
   run_exn show_int_list (-1)  q qh (REPR (fun q   ->
     reverso q (ilist [1])   ));
   ()
 
-(*
-let run_exn eta = run_r (Std.List.prj_exn OCanren.prj_exn) eta
-let _ =
-  run_exn show_int_list  1  q qh (REPR (fun q   -> q === !!1 % q));
-  run_exn show_int_list  1  q qh (REPR (fun q   -> appendo q (ilist [3; 4]) (ilist [1; 2; 3; 4])   ));
-  run_exn show_int_list  1  q qh (REPR (fun q   -> reverso q (ilist [1; 2; 3; 4])                  ));
-  run_exn show_int_list  1  q qh (REPR (fun q   -> reverso (ilist [1; 2; 3; 4]) q                  ));
-  run_exn show_int_list  2  q qh (REPR (fun q   -> reverso q (ilist [1])                           ));
-  run_exn show_int_list  1  q qh (REPR (fun q   -> reverso (ilist [1]) q                           ));
-  run_exn show_int_list  1  q qh (REPR (fun q   -> occurs q                                        ))
 
-let run_exn eta = run_r OCanren.prj_exn  eta
-let _ =
-  run_exn show_int       1  q qh (REPR (fun q   -> a_and_b q                                       ));
-  run_exn show_int       2  q qh (REPR (fun q   -> a_and_b' q                                      ));
-  run_exn show_int      10  q qh (REPR (fun q   -> fives q                                         ))
+(*  *)
+let rel q =
+  fresh (a b c d )
+    (a === a ||| (b === b))(c === c)(d === d)
 
-let runL eta = run_r (Std.List.reify OCanren.reify) show_intl_list eta
+let rel q =
+  fresh (c d )
+    (q === !<(!!1) ||| (q === !<(!!2)))
+    (c === q)
+    (d === q)
 
-let _withFree =
-  runL          1  q  qh (REPR (fun q   -> reverso (ilist []) (ilist [])                ));
-  runL          2  q  qh (REPR (fun q   -> reverso q q                                  ));
-  runL          4 qr qrh (REPR (fun q r -> appendo q (ilist []) r                       ));
-  runL          1  q  qh (REPR (fun q   -> reverso q q                                  ));
-  runL          2  q  qh (REPR (fun q   -> reverso q q                                  ));
-  runL          3  q  qh (REPR (fun q   -> reverso q q                                  ));
-  runL         10  q  qh (REPR (fun q   -> reverso q q                                  ));
-  runL          1 qr qrh (REPR (fun q r -> two_vars q r                                 ));
-  () *)
+
+let run_l eta =
+  run_r (Std.List.reify OCanren.reify)
+    (GT.show Std.List.logic (GT.show OCanren.logic (GT.show GT.int)))
+    eta
+
+let () =
+  run_l (-1)  q qh (REPR (fun q   ->
+    rel q  ));
+  ()
