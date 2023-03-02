@@ -71,7 +71,25 @@ let __ () =
     appendo q r (ilist [1; 2; 3; 4])   ));
   ()
 
-let  () =
+let __ () =
   run_exn show_int_list (-1)  q qh (REPR (fun q   ->
     reverso q (ilist [1])   ));
+  ()
+
+(*  *)
+let rel q =
+  fresh (c d )
+    (q === !<(!!1) ||| (q === !<(!!2)))
+    (c === q)
+    (d === q)
+
+
+let run_l eta =
+  run_r (Std.List.reify OCanren.reify)
+    (GT.show Std.List.logic (GT.show OCanren.logic (GT.show GT.int)))
+    eta
+
+let () =
+  run_l (-1)  q qh (REPR (fun q   ->
+    rel q  ));
   ()
