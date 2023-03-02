@@ -107,7 +107,7 @@ let rec mplus: 'a . 'a t -> 'a t -> 'a t = fun xs ys ->
   | Thunk   _     ->
       from_fun (fun () -> mplus (force ys) xs)
   | Bind (st, fh, ftl)  ->
-      mplus ys (bind_impl st fh ftl)
+      mplus ys (Thunk (fun () -> bind_impl st fh ftl))
   | Waiting ss    ->
     let ys = force ys in
     (* handling waiting streams is tricky *)

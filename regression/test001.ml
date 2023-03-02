@@ -33,12 +33,13 @@ let show_int       = show(int)
 let show_int_list   = show(List.ground) (show int)
 let show_intl_list  = show(List.logic ) (show(logic) (show int))
 
-let flip f a b = f b a
 let (===) a b =
   let reif = Std.Pair.reify (Std.List.reify OCanren.reify) (Std.List.reify OCanren.reify) in
-  (debug_var (Std.pair a b) (flip reif) (fun [ Value (x, y) ] ->
-    Format.printf "unify `%s` and `%s`\n%!" (show_intl_list x) (show_intl_list y);
-    success
+  (debug_var (Std.pair a b) (Fun.flip reif) (function
+    | [ Value (x, y) ] ->
+      Format.printf "unify `%s` and `%s`\n%!" (show_intl_list x) (show_intl_list y);
+      success
+    | _ -> assert false
   )) &&& (OCanren.unify a b)
 
 let rec appendo a b ab =
@@ -60,6 +61,17 @@ let rec reverso a b =
     ]
 
 let run_exn eta = run_r (Std.List.prj_exn OCanren.prj_exn) eta
-let _ =
+let __ () =
   run_exn show_int_list  1  q qh (REPR (fun q   -> appendo q (ilist [3; 4]) (ilist [1; 2; 3; 4])   ));
+  ()
+
+
+let __ () =
+  run_exn show_int_list (-1)  qr qrh (REPR (fun q r  ->
+    appendo q r (ilist [1; 2; 3; 4])   ));
+  ()
+
+let  () =
+  run_exn show_int_list (-1)  q qh (REPR (fun q   ->
+    reverso q (ilist [1])   ));
   ()
