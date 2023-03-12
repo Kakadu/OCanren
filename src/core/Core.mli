@@ -322,3 +322,7 @@ module PrunesControl : sig
   val is_exceeded: unit -> bool
   val skipped_prunes : unit -> int
 end
+
+type tbl = (Obj.t, Obj.t) Hashtbl.t
+
+val hashcons: ?verbose:bool -> tbl -> 'a ilogic -> goal

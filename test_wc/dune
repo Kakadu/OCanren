@@ -1,6 +1,6 @@
 (executables
- (names main debug_var peano)
- (modules main debug_var peano)
+ (names main debug_var peano hashcons bv)
+ (modules main debug_var peano hashcons bv)
  (preprocess
   (pps
    ppx_expect
@@ -32,7 +32,8 @@
   ;./unique.exe
   ./debug_var.exe
   ./peano.exe
-  ;./fd.exe
+  hashcons.exe
+  bv.exe
   ;./cut_off.exe
   ;
   ))

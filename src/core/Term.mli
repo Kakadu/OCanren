@@ -121,3 +121,5 @@ val hash    : t -> int
 val show : t -> string
 val describe_var : Format.formatter -> Var.t -> unit
 val pp : Format.formatter -> 'a -> unit
+
+val is_box : int -> bool

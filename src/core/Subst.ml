@@ -16,6 +16,12 @@
  * See the GNU Library General Public License version 2 for more details
  * (enclosed in the file COPYING).
  *)
+
+
+let log fmt =
+  if true then Format.kasprintf (Format.printf "%s\n%!") fmt
+  else Format.ifprintf Format.std_formatter fmt
+
 IFDEF STATS THEN
 type stat = {mutable walk_count : int}
 
@@ -247,3 +253,45 @@ let reify env subst x =
   map env subst (Term.repr x)
     ~fvar:(fun v -> Term.repr v)
     ~fval:(fun x -> Term.repr x)
+
+let rec hashcons ?(verbose=false) env subst tbl x =
+  match Env.var env x with
+  | Some v when Term.Var.is_wildcard v -> (x,subst)
+  | Some v ->
+    ( if verbose then
+        log "a varable %d" v.Term.Var.index;
+      match v.Term.Var.subst with
+      | Some term -> hashcons env subst tbl term
+      | None  ->
+        (match Term.VarMap.find v subst with
+        | term ->
+          let newv, subst = hashcons env subst tbl term in
+          if newv == term then (newv, subst)
+          else (newv, extend ~scope:Term.Var.non_local_scope env subst v newv)
+        | exception Not_found -> (Obj.repr v, subst))
+    )
+  | None -> (
+      if verbose then
+        log "a term '%a'" Term.pp x;
+      match Hashtbl.find tbl x with
+      | exception Not_found ->
+          if Term.is_box Obj.(tag @@ repr x)
+          then
+            let sz = Obj.size x in
+            let rec loop subst i =
+              if i>=sz then subst
+              else
+                let newv, subst = hashcons ~verbose:verbose env subst tbl (Obj.field x i) in
+                Obj.set_field x i newv;
+                loop subst (1+i)
+            in
+            let subst = loop subst 0 in
+            (match Hashtbl.find tbl x with
+            | exception Not_found ->
+                let () = if verbose then log "adding to table: '%a'" Term.pp x in
+                let () = if verbose then log "  ptr = %d, hash = %d" (Obj.magic x) (Hashtbl.hash x) in
+                let () = Hashtbl.add tbl x x in
+                (x, subst)
+            | v -> (v,subst))
+          else x,subst
+      | v -> (x, subst))

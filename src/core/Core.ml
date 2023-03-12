@@ -803,3 +803,23 @@ module Tabling =
       g := currier g_tabled;
       !g
   end
+
+let log fmt =
+  if true then Format.kasprintf (Format.printf "%s\n%!") fmt
+  else Format.ifprintf Format.std_formatter fmt
+
+type tbl = (Obj.t, Obj.t) Hashtbl.t
+
+let hashcons: ?verbose:bool -> tbl -> 'a ilogic -> goal = fun ?(verbose=false) tbl v st ->
+  let subst = State.subst st in
+  if verbose then
+    log "old subst = @[%a@]" Subst.pp subst;
+  let new_var, new_subst =
+    Subst.hashcons (State.env st) subst tbl (Obj.repr v)
+  in
+  if not (new_var == (Obj.repr v))
+    then if verbose then (
+      log "Core.hashcons rewrites \n\t'%a'\n     -> '%a'" Term.pp v Term.pp (Obj.repr new_var);
+      log "new subst = @[%a@]" Subst.pp new_subst;
+    );
+  Stream.single { st with State.subst = new_subst }
