@@ -393,6 +393,15 @@ let conj f g st =
   let () = IFDEF STATS THEN conj_counter_incr () ELSE () END in
   Stream.bind (f st) g
 
+let conj_strict: goal -> goal -> goal = fun f g st ->
+  match  Stream.msplit (f st) with
+  | Some (h, tl) ->
+      assert (Stream.msplit tl = None);
+      g h
+  | None -> Stream.nil
+
+let (&&&&) = conj_strict
+
 let debug_var v reifier call = fun st ->
   let xs = List.map (fun answ ->
     reifier (Obj.magic @@ Answer.ctr_term answ) (Answer.env answ)

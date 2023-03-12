@@ -70,6 +70,8 @@ val structural :
 (** [conj s1 s2] creates a goal, which is a conjunction of its arguments *)
 val conj : goal -> goal -> goal
 
+val (&&&&) : goal -> goal -> goal
+
 (** [&&&] is a left-associative infix synonym for [conj] *)
 val (&&&) : goal -> goal -> goal
 
