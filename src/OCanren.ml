@@ -22,6 +22,7 @@ include Core
 
 module Stream  = Stream
 module Runconf = Runconf
+module Term = Term
 
 (** See also {!Install_timer} *)
 module Timer   = Timer

@@ -325,3 +325,7 @@ end
 
 (** Runs reifier on empty state. Useful to debug execution order *)
 val reify_in_empty: ('a, 'b) Reifier.t -> 'a -> 'b
+
+type tbl = (Obj.t, Obj.t) Hashtbl.t
+
+val hashcons: ?verbose:bool -> tbl -> 'a ilogic -> goal

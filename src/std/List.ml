@@ -95,6 +95,39 @@ let list_reify = reify
 let prj_exn_list = prj_exn
 let list_prj_exn = prj_exn
 
+let rec prj_exn_hacky : ('a, 'b) Reifier.t -> ('a injected, 'b ground) Reifier.t =
+  let mymap : 'a 'b 'c 'd. ('a -> 'd) -> ('b -> 'c) -> ('a, 'b) t -> ('d, 'c) t = fun fa fb x ->
+    match x with
+    | Nil  as x -> Obj.magic x
+    | Cons (h, tl) ->
+      let h2 = fa h in
+      let tl2 = fb tl in
+      match (Obj.magic h)==h2, (Obj.magic tl)==tl2 with
+      | true, true -> Obj.magic x
+      | false,false -> Obj.magic @@ Cons(Obj.magic h2, Obj.magic tl)
+      | true, false -> Obj.magic @@ Cons(Obj.magic h, Obj.magic tl2)
+      | false, true -> Obj.magic @@ Cons (Obj.magic h2, Obj.magic tl)
+    in
+
+  fun ra ->
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun rself ->
+      Reifier.compose Reifier.prj_exn
+      (let* fa = ra in
+      let* fr = rself in
+      Env.Monad.return (fun x -> mymap fa fr x)))
+
+let prj_to_list_exn : ('a, 'b) Reifier.t -> ('a groundi, 'b GT.list) Reifier.t =
+  let gmap fa fb = function
+    | Nil -> Stdlib.List.([])
+    | Cons (h, tl) -> Stdlib.List.cons (fa h) (fb tl)
+  in
+  let open Env.Monad in
+  let fmapt fa fb subj = return gmap <*> fa <*> fb <*> subj in
+  fun ra ->
+    let open Env.Monad.Syntax in
+    Reifier.fix (fun self -> Logic.Reifier.prj_exn <..> chain (fmapt ra self))
+
 (* let rec prj : (int -> _ ground) -> ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t =
   fun onvar ra ->
     let ( >>= ) = Env.Monad.bind in

@@ -87,6 +87,8 @@ module Answer :
 
 val reify : Env.t -> t -> 'a -> Answer.t
 
+val hashcons: ?verbose:bool -> Env.t -> t -> (Obj.t, Obj.t) Hashtbl.t -> Obj.t -> Obj.t * t
+
 IFDEF STATS THEN
 (** Walk counter *)
 val walk_counter : unit -> int

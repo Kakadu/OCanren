@@ -100,3 +100,5 @@ val from_fun_counter         : unit -> int
 val bind_counter             : unit -> int
 val mplus_counter            : unit -> int
 END
+
+val msplit: 'a t -> ('a * 'a t) option

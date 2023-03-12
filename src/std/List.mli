@@ -98,6 +98,9 @@ val list_reify :  ('a, 'b) Reifier.t -> ('a injected, 'b logic) Reifier.t
 
 (* Reification/projection to non-logic domain *)
 val prj_exn : ('a, 'b) Reifier.t -> ('a injected, 'b ground) Reifier.t
+val prj_exn_hacky : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t
+
+val prj_to_list_exn :  ('a, 'b) Reifier.t -> ('a groundi, 'b GT.list) Reifier.t
 
 (** [list_prj_exn] is a synonym for [prj_exn] *)
 val list_prj_exn : ('a, 'b) Reifier.t -> ('a injected, 'b ground) Reifier.t
