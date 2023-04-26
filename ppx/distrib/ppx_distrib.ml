@@ -44,13 +44,13 @@ let filter_out_gt_attributes tdecls = tdecls
 
 let knot_reifiers_sig ~loc reifiers =
   List.concat_map reifiers ~f:(fun ri ->
-      let open Ppx_distrib_expander in
-      match ri.Reifier_info.typ with
-      | None -> []
-      | Some t ->
-          let open Ppxlib.Ast_builder.Default in
-          let name = Located.mk ~loc ri.Reifier_info.name in
-          [ psig_value ~loc (value_description ~loc ~name ~prim:[] ~type_:t) ])
+    let open Ppx_distrib_expander in
+    match ri.Reifier_info.typ with
+    | None -> []
+    | Some t ->
+        let open Ppxlib.Ast_builder.Default in
+        let name = Located.mk ~loc ri.Reifier_info.name in
+        [ psig_value ~loc (value_description ~loc ~name ~prim:[] ~type_:t) ])
 ;;
 
 let knot_reifiers ~loc ?(kind = Reify_impl.Prj_exn) reifiers base_decls =
@@ -99,19 +99,17 @@ let knot_reifiers ~loc ?(kind = Reify_impl.Prj_exn) reifiers base_decls =
             mangle1name decl.ptype_name.txt nameR)
       in
       [ (List.map joined ~f:(fun ({ Reifier_info.decl }, tdecl) ->
-             let info =
-               reifier_for_fully_abstract ~kind { tdecl with ptype_name = decl.ptype_name }
-             in
-             let pat =
-               ppat_var ~loc (Located.mk ~loc (Printf.sprintf "__%s" decl.ptype_name.txt))
-             in
-             let expr =
-               Myhelpers.Exp.funs
-                 ~loc
-                 info.body
-                 (List.map ~f:(Printf.sprintf "f%s") (Myhelpers.extract_names tdecl.ptype_params))
-             in
-             value_binding ~loc ~pat ~expr)
+           let info =
+             reifier_for_fully_abstract ~kind { tdecl with ptype_name = decl.ptype_name }
+           in
+           let pat = ppat_var ~loc (Located.mk ~loc (Printf.sprintf "__%s" decl.ptype_name.txt)) in
+           let expr =
+             Myhelpers.Exp.funs
+               ~loc
+               info.body
+               (List.map ~f:(Printf.sprintf "f%s") (Myhelpers.extract_names tdecl.ptype_params))
+           in
+           value_binding ~loc ~pat ~expr)
         |> fun xs -> [ pstr_value ~loc Recursive xs ])
       ; (let vbs =
            List.map2
@@ -159,32 +157,32 @@ let knot_reifiers ~loc ?(kind = Reify_impl.Prj_exn) reifiers base_decls =
            (pexp_tuple
               ~loc
               (List.map knotted_names ~f:(fun name ->
-                   pexp_ident ~loc (Located.mk ~loc @@ Lident name))))
+                 pexp_ident ~loc (Located.mk ~loc @@ Lident name))))
          |> fun e ->
          [ pstr_value ~loc Nonrecursive [ value_binding ~loc ~pat:[%pat? fix] ~expr:e ] ])
       ; List.map knotted_names ~f:(fun knotted ->
-            let expr =
-              let pat =
-                ppat_tuple
-                  ~loc
-                  (List.map knotted_names ~f:(fun n ->
-                       if String.equal knotted n
-                       then ppat_var ~loc (Located.mk ~loc "f")
-                       else ppat_any ~loc))
-              in
-              [%expr
-                fun eta ->
-                  [%e
-                    pexp_let
-                      ~loc
-                      Nonrecursive
-                      [ value_binding ~loc ~pat ~expr:[%expr fix] ]
-                      [%expr f eta]]]
+          let expr =
+            let pat =
+              ppat_tuple
+                ~loc
+                (List.map knotted_names ~f:(fun n ->
+                   if String.equal knotted n
+                   then ppat_var ~loc (Located.mk ~loc "f")
+                   else ppat_any ~loc))
             in
-            pstr_value
-              ~loc
-              Nonrecursive
-              [ value_binding ~loc ~pat:(ppat_var ~loc (Located.mk ~loc knotted)) ~expr ])
+            [%expr
+              fun eta ->
+                [%e
+                  pexp_let
+                    ~loc
+                    Nonrecursive
+                    [ value_binding ~loc ~pat ~expr:[%expr fix] ]
+                    [%expr f eta]]]
+          in
+          pstr_value
+            ~loc
+            Nonrecursive
+            [ value_binding ~loc ~pat:(ppat_var ~loc (Located.mk ~loc knotted)) ~expr ])
       ]
       |> List.concat
       |> pmod_structure ~loc
@@ -331,15 +329,16 @@ let () =
               -> ai list)
         -> other_stuff:
              (( type_declaration list
-              , value_binding list
-              , Ppx_distrib_expander.Reifier_info.t list )
-              Ppx_distrib_expander.the_result
+                , value_binding list
+                , Ppx_distrib_expander.Reifier_info.t list )
+                Ppx_distrib_expander.the_result
               -> ai list)
         -> string
         -> Extension.t
       =
      fun ~ctx ~of_tdecl ~of_value ~group_items ~knot_reifiers ~other_stuff name ->
-      Extension.declare name ctx (classify_tdecl ()) (fun ~loc ~path:_ -> function
+      Extension.declare name ctx (classify_tdecl ()) (fun ~loc ~path:_ ->
+        function
         | Other (_, []) -> failwith "Not supported"
         | Other (is_rec, [ ({ ptype_kind = Ptype_abstract; ptype_manifest = Some _ } as tdecl) ]) ->
             (* type abbreviation *)
