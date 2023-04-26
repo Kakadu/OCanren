@@ -3,7 +3,7 @@
   include
     struct
       type nonrec polarity_fuly =
-        | Extends 
+        | Extends
         | Super [@@deriving gt ~options:{ gmap; fmt }]
       type nonrec polarity = polarity_fuly[@@deriving
                                             gt ~options:{ gmap; fmt }]
@@ -43,19 +43,19 @@
     end
   include
     struct
-      type ('a1, 'a0) targ_fuly =
-        | T of 'a1 
+      type nonrec ('a1, 'a0) targ_fuly =
+        | T of 'a1
         | Wildcard of 'a0 [@@deriving gt ~options:{ gmap }]
-      type ('a6, 'a5, 'a4, 'a3, 'a2, 'a1, 'a0) jtype_fuly =
-        | Array of 'a0 
-        | Class of 'a4 * 'a6 
-        | Interface of 'a4 * 'a5 
+      type nonrec ('a6, 'a5, 'a4, 'a3, 'a2, 'a1, 'a0) jtype_fuly =
+        | Array of 'a0
+        | Class of 'a4 * 'a6
+        | Interface of 'a4 * 'a5
         | V of {
         id: 'a4 ;
         index: 'a3 ;
         upb: 'a2 ;
-        lwb: 'a1 } 
-        | Null 
+        lwb: 'a1 }
+        | Null
         | Intersect of 'a0 [@@deriving gt ~options:{ gmap }]
       type targ = (jtype, (polarity * jtype) GT.option) targ_fuly
       and jtype =
