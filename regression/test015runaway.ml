@@ -6,7 +6,7 @@ open Printf
 
 let ilist xs = list (!!) xs
 
-let runaway_cell: int ilogic List.groundi ref = Stdlib.ref (Obj.magic ())
+let runaway_cell: int ilogic List.injected ref = Stdlib.ref (Obj.magic ())
 
 let demo1 q =
   call_fresh (fun r ->

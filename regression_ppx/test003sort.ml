@@ -61,12 +61,12 @@ let rec sorto x y =
 (* Some shortcuts to make regular lists from relational ones *)
 let int_list = Stdlib.List.map Nat.to_int
 
-let (_ : (Nat.groundi List.groundi, Nat.ground List.ground) Reifier.t) =
+let (_ : (Nat.injected List.injected, Nat.ground List.ground) Reifier.t) =
   Std.List.prj_exn Nat.prj_exn
 ;;
 
 let project
-  : ((Nat.groundi as 'a), 'a List.groundi) List.t reified -> Nat.ground List.ground
+  : ((Nat.injected as 'a), 'a List.injected) List.t reified -> Nat.ground List.ground
   =
  fun rr -> rr#reify (List.prj_exn Nat.prj_exn)
 ;;
