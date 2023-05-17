@@ -23,9 +23,12 @@ open Logic
 open Core
 
 (** Abstract nat type *)
-type 'a t =
+type 'a ground_fuly =
 | O
 | S of 'a [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+
+type 'a t = 'a ground_fuly
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** Ground nat are ismorphic for regular one *)
 type ground = ground t [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
@@ -36,7 +39,7 @@ type logic = logic t Logic.logic [@@deriving gt ~options:{ show; gmap; html; eq;
 (** Type synonyms to comply with the generic naming scheme *)
 type nat       = ground [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 type nat_logic = logic  [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
-                      
+
 (** Logic injection (for reification) *)
 val inj : ground -> logic
 

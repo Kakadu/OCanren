@@ -1,7 +1,7 @@
 (* SPDX-License-Identifier: LGPL-2.1-or-later *)
 (*
  * OCanren.
- * Copyright (C) 2015-2022
+ * Copyright (C) 2015-2023
  * Dmitri Boulytchev, Dmitry Kosarev, Alexey Syomin, Evgeny Moiseenko
  * St.Petersburg State University, JetBrains Research
  *
@@ -20,11 +20,8 @@
 open Logic
 open Core
 
-(* to avoid clash with Std.List (i.e. logic list) *)
-module List = Stdlib.List
-
-type ground     = GT.bool              [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 type t          = GT.bool              [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type ground     = GT.bool              [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 type logic      = GT.bool Logic.logic  [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 type bool       = ground               [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
@@ -54,7 +51,7 @@ let prj_exn : (bool ilogic, bool) Reifier.t = Logic.prj_exn
 
 let reify_bool = reify
 let prj_exn_bool = prj_exn
-                 
+
 let falso = Logic.inj false
 let truo  = Logic.inj true
 

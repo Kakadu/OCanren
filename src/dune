@@ -38,7 +38,9 @@
   (per_module
    ((pps
      GT.ppx_all
+     OCanren-ppx.ppx_distrib
      --
+     -new-typenames
      ; TODO: highly likely instrumentalization in Std is not needed
      -pp
      %{read-lines:../config/pp5+instrumentalization.cfg})
