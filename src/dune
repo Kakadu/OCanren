@@ -31,10 +31,23 @@
   (:standard -rectypes -short-paths -w -49))
  ; Below we use PPX rewriter to preprocess module Triple and old school camlp5 for everything else.
  ; Later we are going to use PPX everywhere.
+ (preprocessor_deps
+  %{project_root}/config/instrumentalization.cfg
+  %{project_root}/camlp5/pp5+dump.exe)
  (preprocess
   (per_module
-   ((pps GT.ppx_all)
-    Triple)
+   ((pps
+     GT.ppx_all
+     --
+     ; TODO: highly likely instrumentalization in Std is not needed
+     -pp
+     %{read-lines:../config/pp5+instrumentalization.cfg})
+    Bool
+    Option
+    Pair
+    Triple
+    Nat
+    List)
    ((action
      (run
       %{project_root}/camlp5/pp5+gt+plugins+dump.exe
@@ -43,11 +56,6 @@
     Core
     Stream
     Subst
-    Option
-    Bool
-    Nat
-    Pair
-    List
     Logic
     Peep
     OCanren))))

@@ -20,15 +20,12 @@
 open Logic
 open Core
 
-(* to avoid clash with Std.List (i.e. logic list) *)
-module List = Stdlib.List
+type ('a, 'l) t = Nil | Cons of 'a * 'l [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
-@type ('a, 'l) t = Nil | Cons of 'a * 'l with show, gmap, html, eq, compare, foldl, foldr, fmt
-
-@type 'a ground     = 'a GT.list with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type 'a logic      = ('a, 'a logic) t Logic.logic with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type 'a list       = 'a ground with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type 'a list_logic = 'a logic with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a ground     = 'a GT.list [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type 'a logic      = ('a, 'a logic) t Logic.logic [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type 'a list       = 'a ground [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type 'a list_logic = 'a logic [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 let logic = {
   logic with
@@ -108,9 +105,9 @@ let nil () : 'a groundi = Logic.inj Nil
 let cons : 'a -> 'a groundi -> 'a groundi = fun x y ->
   Logic.inj (Cons (x, y))
 
-let of_list = List.map
+let of_list = Stdlib.List.map
 
-let to_list = List.map
+let to_list = Stdlib.List.map
 
 let rec inj f = function
 | []    -> Value Nil

@@ -1,7 +1,7 @@
 (* SPDX-License-Identifier: LGPL-2.1-or-later *)
 (*
  * OCanren.
- * Copyright (C) 2015-2021
+ * Copyright (C) 2015-2023
  * Dmitri Boulytchev, Dmitry Kosarev, Alexey Syomin, Evgeny Moiseenko
  * St.Petersburg State University, JetBrains Research
  *
@@ -23,19 +23,19 @@ open Logic
 open Core
 
 (** Abstract nat type *)
-@type 'a t =
+type 'a t =
 | O
-| S of 'a with show, html, eq, compare, foldl, foldr, gmap, fmt
+| S of 'a [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** Ground nat are ismorphic for regular one *)
-@type ground = ground t with show, html, eq, compare, foldl, foldr, gmap, fmt
+type ground = ground t [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** Logic nat *)
-@type logic = logic t Logic.logic with show, html, eq, compare, foldl, foldr, gmap, fmt
+type logic = logic t Logic.logic [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** Type synonyms to comply with the generic naming scheme *)
-@type nat       = ground with show, html, eq, compare, foldl, foldr, gmap, fmt
-@type nat_logic = logic  with show, html, eq, compare, foldl, foldr, gmap, fmt
+type nat       = ground [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type nat_logic = logic  [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
                       
 (** Logic injection (for reification) *)
 val inj : ground -> logic
@@ -43,21 +43,19 @@ val inj : ground -> logic
 (** {2 Relational API} *)
 
 (** A type synonym for injected nat *)
-type groundi = groundi t Logic.ilogic
-
-type injected = groundi
+type injected = injected t Logic.ilogic
 
 (** {3:reifiers Reifiers} *)
 
 (** Reifier *)
-val reify : (groundi, logic) Reifier.t
+val reify : (injected, logic) Reifier.t
 
 (** Shallow non-variable projection *)
-val prj_exn : (groundi, ground) Reifier.t
+val prj_exn : (injected, ground) Reifier.t
 
 (** Synonyms to comply with the generic naming scheme *)
-val reify_nat   : (groundi, logic) Reifier.t
-val prj_exn_nat : (groundi, ground) Reifier.t
+val reify_nat   : (injected, logic) Reifier.t
+val prj_exn_nat : (injected, ground) Reifier.t
   
 (** [of_int n] converts integer [n] into [ground]; negative integers become [O] *)
 val of_int : int -> ground
@@ -66,51 +64,51 @@ val of_int : int -> ground
 val to_int : ground -> int
 
 (** Make injected [nat] from ground one *)
-val nat : ground -> groundi
+val nat : ground -> injected
 
 (** {3 Constructors} *)
 
 (** A zero. The name {!o} was selected because it looks similar to arabic digit 0. *)
-val o : groundi
+val o : injected
 
 (** Constructs next number (a successor) after the provided one. *)
-val s : groundi -> groundi
+val s : injected -> injected
 
 (** A synomym for {!o}. *)
-val zero : groundi
+val zero : injected
 
 (** An alias for [s zero]. *)
-val one  : groundi
+val one  : injected
 
 (** A synomym for {!s}. *)
-val succ : groundi -> groundi
+val succ : injected -> injected
 
 (** {3 Built-in relations} *)
 
 (** Relational addition. *)
-val addo  : groundi -> groundi -> groundi -> goal
+val addo  : injected -> injected -> injected -> goal
 
 (** Infix synonym for [addo]. *)
-val ( + ) : groundi -> groundi -> groundi -> goal
+val ( + ) : injected -> injected -> injected -> goal
 
 (** Relational multiplication. *)
-val mulo  : groundi -> groundi -> groundi -> goal
+val mulo  : injected -> injected -> injected -> goal
 
 (** Infix synonym for [mulo]. *)
-val ( * ) : groundi -> groundi -> groundi -> goal
+val ( * ) : injected -> injected -> injected -> goal
 
 (** Comparisons *)
-val leo : groundi -> groundi -> Bool.groundi -> goal
-val geo : groundi -> groundi -> Bool.groundi -> goal
-val gto : groundi -> groundi -> Bool.groundi -> goal
-val lto : groundi -> groundi -> Bool.groundi -> goal
+val leo : injected -> injected -> Bool.injected -> goal
+val geo : injected -> injected -> Bool.injected -> goal
+val gto : injected -> injected -> Bool.injected -> goal
+val lto : injected -> injected -> Bool.injected -> goal
 
 (** Comparisons as goals *)
-val (<=) : groundi -> groundi -> goal
-val (>=) : groundi -> groundi -> goal
-val (>)  : groundi -> groundi -> goal
-val (<)  : groundi -> groundi -> goal
+val (<=) : injected -> injected -> goal
+val (>=) : injected -> injected -> goal
+val (>)  : injected -> injected -> goal
+val (<)  : injected -> injected -> goal
 
 (** Minimum/maximum *)
-val maxo : groundi -> groundi -> groundi -> goal
-val mino : groundi -> groundi -> groundi -> goal                                   
+val maxo : injected -> injected -> injected -> goal
+val mino : injected -> injected -> injected -> goal

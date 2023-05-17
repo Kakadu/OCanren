@@ -17,26 +17,19 @@
  * (enclosed in the file COPYING).
  *)
 
-open Logic
-open Core
-
-(* to avoid clash with Std.List (i.e. logic list) *)
-module List = Stdlib.List
-
-let logic' = logic;;
-
 type ('a, 'b, 'c) t = 'a * 'b * 'c
-[@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
-let fmap f g h x = GT.gmap(t) f g h x;;
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+
+let fmap f g h x = GT.gmap(t) f g h x
 
 type ('a, 'b, 'c) ground          = 'a * 'b * 'c
-[@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 type ('a, 'b, 'c) logic           = ('a * 'b * 'c) Logic.logic
-[@@deriving gt ~options:{ show; gmap;  eq; compare; foldl; foldr; fmt }]
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
-type ('a, 'b, 'c) groundi = ('a * 'b * 'c) ilogic
+open Core
 
-type ('a, 'b, 'c) injected = ('a, 'b, 'c) groundi
+type ('a, 'b, 'c) injected = ('a * 'b * 'c) Logic.ilogic
 
 let logic = {
   logic with
@@ -47,20 +40,22 @@ let logic = {
       method eq            = logic.GT.plugins#eq
       method foldl         = logic.GT.plugins#foldl
       method foldr         = logic.GT.plugins#foldr
-      (* method html          = logic.GT.plugins#html *)
+      method html          = logic.GT.plugins#html
       method fmt           = logic.GT.plugins#fmt
-      method show fa fb fc = GT.show(logic') (fun l -> GT.show(ground) fa fb fc l)
+      method show fa fb fc = GT.show(Logic.logic) (fun l -> GT.show(ground) fa fb fc l)
     end
 }
 
-let inj f g h p = to_logic (GT.gmap(ground) f g h p)
+let inj f g h p = Logic.to_logic (GT.gmap(ground) f g h p)
 
 let make x y z = Logic.inj (x, y, z)
 
 let triple = make
 
+module Reifier = Logic.Reifier
+
 let reify : 'a 'b 'c 'd . ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t -> ('e, 'f) Reifier.t ->
-  (('a, 'c, 'e) groundi, ('b, 'd, 'f) logic) Reifier.t =
+  (('a, 'c, 'e) injected, ('b, 'd, 'f) logic) Reifier.t =
   fun ra rb rc ->
     let ( >>= ) = Env.Monad.bind in
     Reifier.fix (fun self ->
@@ -69,15 +64,15 @@ let reify : 'a 'b 'c 'd . ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t -> ('e, 'f) R
          rb >>= fun fb ->
          rc >>= fun fc ->
           let rec foo = function
-              | Var (v, xs) ->
-                Var (v, Stdlib.List.map foo xs)
+              | Logic.Var (v, xs) ->
+                Logic.Var (v, Stdlib.List.map foo xs)
               | Value x -> Value (GT.gmap t fa fb fc x)
           in
           Env.Monad.return foo
         ))
 
 let prj_exn : ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t -> ('e, 'f) Reifier.t ->
-  (('a, 'c, 'e) groundi, ('b, 'd, 'f) ground) Reifier.t =
+  (('a, 'c, 'e) injected, ('b, 'd, 'f) ground) Reifier.t =
   fun ra rb rc ->
     let ( >>= ) = Env.Monad.bind in
     Reifier.compose Reifier.prj_exn

@@ -1,39 +1,29 @@
 lib: [
-  "_build/install/default/lib/OCanren/Bool.ml"
-  "_build/install/default/lib/OCanren/Bool.mli"
-  "_build/install/default/lib/OCanren/Core.ml"
-  "_build/install/default/lib/OCanren/Core.mli"
-  "_build/install/default/lib/OCanren/Disequality.ml"
-  "_build/install/default/lib/OCanren/Disequality.mli"
-  "_build/install/default/lib/OCanren/Env.ml"
-  "_build/install/default/lib/OCanren/Env.mli"
-  "_build/install/default/lib/OCanren/List.ml"
-  "_build/install/default/lib/OCanren/List.mli"
-  "_build/install/default/lib/OCanren/Logic.ml"
-  "_build/install/default/lib/OCanren/Logic.mli"
   "_build/install/default/lib/OCanren/META"
-  "_build/install/default/lib/OCanren/Nat.ml"
-  "_build/install/default/lib/OCanren/Nat.mli"
   "_build/install/default/lib/OCanren/OCanren.a"
   "_build/install/default/lib/OCanren/OCanren.cma"
   "_build/install/default/lib/OCanren/OCanren.cmxa"
   "_build/install/default/lib/OCanren/OCanren.ml"
-  "_build/install/default/lib/OCanren/Option.ml"
-  "_build/install/default/lib/OCanren/Option.mli"
-  "_build/install/default/lib/OCanren/Pair.ml"
-  "_build/install/default/lib/OCanren/Pair.mli"
-  "_build/install/default/lib/OCanren/Peep.ml"
-  "_build/install/default/lib/OCanren/Peep.mli"
-  "_build/install/default/lib/OCanren/Runconf.ml"
-  "_build/install/default/lib/OCanren/Runconf.mli"
-  "_build/install/default/lib/OCanren/Stream.ml"
-  "_build/install/default/lib/OCanren/Stream.mli"
-  "_build/install/default/lib/OCanren/Subst.ml"
-  "_build/install/default/lib/OCanren/Subst.mli"
-  "_build/install/default/lib/OCanren/Term.ml"
-  "_build/install/default/lib/OCanren/Term.mli"
-  "_build/install/default/lib/OCanren/Timer.ml"
-  "_build/install/default/lib/OCanren/Timer.mli"
+  "_build/install/default/lib/OCanren/core/Core.ml" {"core/Core.ml"}
+  "_build/install/default/lib/OCanren/core/Core.mli" {"core/Core.mli"}
+  "_build/install/default/lib/OCanren/core/Disequality.ml" {"core/Disequality.ml"}
+  "_build/install/default/lib/OCanren/core/Disequality.mli" {"core/Disequality.mli"}
+  "_build/install/default/lib/OCanren/core/Env.ml" {"core/Env.ml"}
+  "_build/install/default/lib/OCanren/core/Env.mli" {"core/Env.mli"}
+  "_build/install/default/lib/OCanren/core/Logic.ml" {"core/Logic.ml"}
+  "_build/install/default/lib/OCanren/core/Logic.mli" {"core/Logic.mli"}
+  "_build/install/default/lib/OCanren/core/Peep.ml" {"core/Peep.ml"}
+  "_build/install/default/lib/OCanren/core/Peep.mli" {"core/Peep.mli"}
+  "_build/install/default/lib/OCanren/core/Runconf.ml" {"core/Runconf.ml"}
+  "_build/install/default/lib/OCanren/core/Runconf.mli" {"core/Runconf.mli"}
+  "_build/install/default/lib/OCanren/core/Stream.ml" {"core/Stream.ml"}
+  "_build/install/default/lib/OCanren/core/Stream.mli" {"core/Stream.mli"}
+  "_build/install/default/lib/OCanren/core/Subst.ml" {"core/Subst.ml"}
+  "_build/install/default/lib/OCanren/core/Subst.mli" {"core/Subst.mli"}
+  "_build/install/default/lib/OCanren/core/Term.ml" {"core/Term.ml"}
+  "_build/install/default/lib/OCanren/core/Term.mli" {"core/Term.mli"}
+  "_build/install/default/lib/OCanren/core/Timer.ml" {"core/Timer.ml"}
+  "_build/install/default/lib/OCanren/core/Timer.mli" {"core/Timer.mli"}
   "_build/install/default/lib/OCanren/dune-package"
   "_build/install/default/lib/OCanren/install_timer/install_timer.a" {"install_timer/install_timer.a"}
   "_build/install/default/lib/OCanren/install_timer/install_timer.cma" {"install_timer/install_timer.cma"}
@@ -109,14 +99,42 @@ lib: [
   "_build/install/default/lib/OCanren/oCanren__Timer.cmt"
   "_build/install/default/lib/OCanren/oCanren__Timer.cmti"
   "_build/install/default/lib/OCanren/oCanren__Timer.cmx"
+  "_build/install/default/lib/OCanren/oCanren__Triple.cmi"
+  "_build/install/default/lib/OCanren/oCanren__Triple.cmt"
+  "_build/install/default/lib/OCanren/oCanren__Triple.cmti"
+  "_build/install/default/lib/OCanren/oCanren__Triple.cmx"
   "_build/install/default/lib/OCanren/opam"
+  "_build/install/default/lib/OCanren/std/Bool.ml" {"std/Bool.ml"}
+  "_build/install/default/lib/OCanren/std/Bool.mli" {"std/Bool.mli"}
+  "_build/install/default/lib/OCanren/std/List.ml" {"std/List.ml"}
+  "_build/install/default/lib/OCanren/std/List.mli" {"std/List.mli"}
+  "_build/install/default/lib/OCanren/std/Nat.ml" {"std/Nat.ml"}
+  "_build/install/default/lib/OCanren/std/Nat.mli" {"std/Nat.mli"}
+  "_build/install/default/lib/OCanren/std/Option.ml" {"std/Option.ml"}
+  "_build/install/default/lib/OCanren/std/Option.mli" {"std/Option.mli"}
+  "_build/install/default/lib/OCanren/std/Pair.ml" {"std/Pair.ml"}
+  "_build/install/default/lib/OCanren/std/Pair.mli" {"std/Pair.mli"}
+  "_build/install/default/lib/OCanren/std/Triple.ml" {"std/Triple.ml"}
+  "_build/install/default/lib/OCanren/std/Triple.mli" {"std/Triple.mli"}
   "_build/install/default/lib/OCanren/syntax/pa_ocanren.a" {"syntax/pa_ocanren.a"}
   "_build/install/default/lib/OCanren/syntax/pa_ocanren.cma" {"syntax/pa_ocanren.cma"}
   "_build/install/default/lib/OCanren/syntax/pa_ocanren.cmi" {"syntax/pa_ocanren.cmi"}
   "_build/install/default/lib/OCanren/syntax/pa_ocanren.cmt" {"syntax/pa_ocanren.cmt"}
+  "_build/install/default/lib/OCanren/syntax/pa_ocanren.cmti" {"syntax/pa_ocanren.cmti"}
   "_build/install/default/lib/OCanren/syntax/pa_ocanren.cmx" {"syntax/pa_ocanren.cmx"}
   "_build/install/default/lib/OCanren/syntax/pa_ocanren.cmxa" {"syntax/pa_ocanren.cmxa"}
   "_build/install/default/lib/OCanren/syntax/pa_ocanren.ml" {"syntax/pa_ocanren.ml"}
+  "_build/install/default/lib/OCanren/syntax/pa_ocanren.mli" {"syntax/pa_ocanren.mli"}
+  "_build/install/default/lib/OCanren/syntax/pa_ocanren__.cmi" {"syntax/pa_ocanren__.cmi"}
+  "_build/install/default/lib/OCanren/syntax/pa_ocanren__.cmt" {"syntax/pa_ocanren__.cmt"}
+  "_build/install/default/lib/OCanren/syntax/pa_ocanren__.cmx" {"syntax/pa_ocanren__.cmx"}
+  "_build/install/default/lib/OCanren/syntax/pa_ocanren__.ml" {"syntax/pa_ocanren__.ml"}
+  "_build/install/default/lib/OCanren/syntax/pa_ocanren__Writer.cmi" {"syntax/pa_ocanren__Writer.cmi"}
+  "_build/install/default/lib/OCanren/syntax/pa_ocanren__Writer.cmt" {"syntax/pa_ocanren__Writer.cmt"}
+  "_build/install/default/lib/OCanren/syntax/pa_ocanren__Writer.cmti" {"syntax/pa_ocanren__Writer.cmti"}
+  "_build/install/default/lib/OCanren/syntax/pa_ocanren__Writer.cmx" {"syntax/pa_ocanren__Writer.cmx"}
+  "_build/install/default/lib/OCanren/syntax/writer.ml" {"syntax/writer.ml"}
+  "_build/install/default/lib/OCanren/syntax/writer.mli" {"syntax/writer.mli"}
   "_build/install/default/lib/OCanren/tester/tester.a" {"tester/tester.a"}
   "_build/install/default/lib/OCanren/tester/tester.cma" {"tester/tester.cma"}
   "_build/install/default/lib/OCanren/tester/tester.cmi" {"tester/tester.cmi"}
@@ -137,4 +155,5 @@ doc: [
   "_build/install/default/doc/OCanren/CHANGES"
   "_build/install/default/doc/OCanren/LICENSE"
   "_build/install/default/doc/OCanren/README.md"
+  "_build/install/default/doc/OCanren/odoc-pages/index.mld" {"odoc-pages/index.mld"}
 ]

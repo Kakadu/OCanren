@@ -20,12 +20,13 @@
   gt-flags-native.cfg
   logger-flags.cfg
   stublibs-dir.cfg
+  pp5+instrumentalization.cfg
   instrumentalization.cfg
   package-doc.cfg)
  (deps
   (package GT))
  (action
-  (run ./discover.exe -all-flags)))
+  (run ./discover.exe -all-flags -set-project-root %{project_root})))
 
 (rule
  (targets tests.txt dune.tests)

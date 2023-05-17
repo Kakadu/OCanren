@@ -20,23 +20,18 @@
 open Logic
 open Core
 
-(* to avoid clash with Std.List (i.e. logic list) *)
-module List = Stdlib.List
+type 'a t = O | S of 'a [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
-@type 'a t = O | S of 'a with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ground  = ground t
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type logic   = logic t Logic.logic
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type nat  = ground
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type nat_logic   = logic
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
-@type ground  = ground t
-with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type logic   = logic t Logic.logic
-with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type nat  = ground
-with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type nat_logic   = logic
-with show, gmap, html, eq, compare, foldl, foldr, fmt
-
-type groundi = groundi t Logic.ilogic
-
-type injected = groundi
+type injected = injected t Logic.ilogic
 
 let logic = {
   logic with
@@ -72,7 +67,7 @@ let reify =
         Env.Monad.return foo
     ))
 
-let prj_exn : (groundi, ground) Reifier.t =
+let prj_exn : (injected, ground) Reifier.t =
   let ( >>= ) = Env.Monad.bind in
   Reifier.fix (fun self ->
     Reifier.compose Reifier.prj_exn
@@ -82,7 +77,7 @@ let prj_exn : (groundi, ground) Reifier.t =
 
 let reify_nat = reify
 let prj_exn_nat = prj_exn
-                
+
 let o   = Logic.inj O
 let s x = Logic.inj (S x)
 

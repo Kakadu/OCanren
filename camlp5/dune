@@ -169,7 +169,7 @@
   (run
    mkcamlp5
    -package
-   camlp5.pa_o,camlp5.pr_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations
+   camlp5.pa_o,camlp5.macro,camlp5.pr_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations
    %{read-lines:../config/package-doc.cfg}
    -o
    %{targets})))
@@ -181,7 +181,7 @@
   (run
    mkcamlp5.opt
    -package
-   camlp5.pa_o,camlp5.pr_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations
+   camlp5.pa_o,camlp5.macro,camlp5.pr_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations
    %{read-lines:../config/package-doc.cfg}
    -o
    %{targets})))

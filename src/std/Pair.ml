@@ -1,7 +1,7 @@
 (* SPDX-License-Identifier: LGPL-2.1-or-later *)
 (*
  * OCanren.
- * Copyright (C) 2015-2022
+ * Copyright (C) 2015-2023
  * Dmitri Boulytchev, Dmitry Kosarev, Alexey Syomin, Evgeny Moiseenko
  * St.Petersburg State University, JetBrains Research
  *
@@ -20,24 +20,30 @@
 open Logic
 open Core
 
-(* to avoid clash with Std.List (i.e. logic list) *)
-module List = Stdlib.List
+type 'a logic'                = 'a logic
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
-@type 'a logic'                = 'a logic                                   with show, gmap, html, eq, compare, foldl, foldr, fmt
+let logic' = logic
 
-let logic' = logic;;
+type ('a, 'b) t = 'a * 'b
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
-@type ('a, 'b) t = 'a * 'b with show, gmap, html, eq, compare, foldl, foldr, fmt
-let fmap f g x = GT.gmap(t) f g x;;
+let fmap f g x = GT.gmap(t) f g x
 
-@type ('a, 'b) ground          = 'a * 'b                                    with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type ('a, 'b) logic           = ('a * 'b) logic'                           with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type ('a, 'b) pair            = ('a, 'b) ground                            with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type ('a, 'b) pair_logic      = ('a, 'b) logic                             with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ('a, 'b) ground          = 'a * 'b
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
-type ('a, 'b) groundi = ('a * 'b) ilogic
+type ('a, 'b) logic           = ('a * 'b) logic'
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
-type ('a, 'b) injected = ('a, 'b) groundi
+type ('a, 'b) pair            = ('a, 'b) ground
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+
+type ('a, 'b) pair_logic      = ('a, 'b) logic
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+
+
+type ('a, 'b) injected = ('a * 'b) ilogic
 
 let logic = {
   logic with
@@ -59,7 +65,7 @@ let inj f g p = to_logic (GT.gmap(ground) f g p)
 let pair x y = Logic.inj (x, y)
 
 let reify : 'a 'b 'c 'd . ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t ->
-  (('a,'c) groundi, ('b, 'd) logic) Reifier.t =
+  (('a,'c) injected, ('b, 'd) logic) Reifier.t =
   fun ra rb ->
     let ( >>= ) = Env.Monad.bind in
     Reifier.fix (fun self ->
@@ -75,7 +81,7 @@ let reify : 'a 'b 'c 'd . ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t ->
         ))
 
 let prj_exn : 'a 'b 'c 'd . ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t ->
-  (('a, 'c) groundi, ('b, 'd) ground) Reifier.t =
+  (('a, 'c) injected, ('b, 'd) ground) Reifier.t =
   fun ra rb ->
     let ( >>= ) = Env.Monad.bind in
     Reifier.compose Reifier.prj_exn

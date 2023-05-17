@@ -1,3 +1,7 @@
+type cfg = { mutable project_root : string }
+
+let args_config = { project_root = "" }
+
 module Cfg = Configurator.V1
 
 (*** utility functions ***)
@@ -133,6 +137,27 @@ let discover_stats () =
     Cfg.Flags.write_lines filename [ "-D"; "STATS" ]
   with Not_found -> Cfg.Flags.write_lines filename []
 
+let discover_pp5_dump_instrumentalization () =
+  let filename = "pp5+instrumentalization.cfg" in
+  Sys.command (Printf.sprintf "rm -fr '%s'" filename) |> ignore;
+  let instr_arg =
+    try
+      let _ = Unix.getenv "OCANREN_STATS" in
+      "-D STATS"
+    with Not_found -> ""
+  in
+
+  Cfg.Flags.write_lines filename
+    [
+      String.concat ""
+        [
+          Unix.realpath args_config.project_root;
+          "/camlp5/pp5+dump.exe";
+          " ";
+          instr_arg;
+        ];
+    ]
+
 let discover_docs () =
   let filename = "package-doc.cfg" in
   try
@@ -183,6 +208,9 @@ let args =
   let set_cram_dir s = cram_dir := Some s in
   Arg.align
     [
+      ( "-set-project-root",
+        Arg.String (fun s -> args_config.project_root <- s),
+        " set project root explicitly" );
       ( "-tests-dir",
         Arg.String set_tests_dir,
         "DIR discover tests in this directory" );
@@ -216,6 +244,8 @@ let () =
       else []
     in
 
+    if args_config.project_root <> "" then
+      discover_pp5_dump_instrumentalization ();
     if !stats_flags || !all_flags then discover_stats ();
     if !doc_flags || !all_flags then discover_docs ();
 

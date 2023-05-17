@@ -20,17 +20,16 @@
 (** {1 Relational pairs} *)
 
 open Logic
-open Core
 
 (** {2 GT-related API} *)
 
 type ('a, 'b, 'c) t = 'a * 'b * 'c
-[@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 type ('a, 'b, 'c) ground          = 'a * 'b * 'c
-[@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 type ('a, 'b, 'c) logic           = ('a * 'b * 'c) Logic.logic
-[@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** {2 Relational API} *)
 
@@ -38,9 +37,7 @@ type ('a, 'b, 'c) logic           = ('a * 'b * 'c) Logic.logic
 val inj : ('a -> 'b) -> ('c -> 'd) -> ('e -> 'f) -> ('a, 'c, 'e) ground -> ('b, 'd, 'f) logic
 
 (** A synonym for injected triple *)
-type ('a, 'b, 'c) groundi = ('a * 'b * 'c) ilogic
-
-type ('a, 'b, 'c) injected = ('a, 'b, 'c) groundi
+type ('a, 'b, 'c) injected = ('a * 'b * 'c) ilogic
 
 (** Make injected triple from ground one with injected components *)
 val make : 'a ilogic -> 'b ilogic -> 'c ilogic -> ('a ilogic, 'b ilogic, 'c ilogic) injected
