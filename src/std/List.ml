@@ -20,11 +20,33 @@
 open Logic
 open Core
 
-type ('a, 'l) t = Nil | Cons of 'a * 'l [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+(* Rewriter adds many explict module paths, but in OCanren.Std it is painful
+   An alternative would be to add command line switch which removes explicit module paths
+*)
+module OCanren = struct
+  type 'a ilogic = 'a Logic.ilogic
+  type 'a logic = 'a Logic.logic =
+    | Var   of GT.int * 'a logic GT.list
+    | Value of 'a
+  [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+
+  let logic = Logic.logic
+  module Env = Env
+  module Reifier = Reifier
+  let prj_exn = Logic.prj_exn
+  let reify = Logic.reify
+end
+
+[%%ocanren_inject
+type 'a list = Nil | Cons of 'a * 'a list
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+]
+
+type ('a, 'l) t = ('a, 'l) list_fuly
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 type 'a ground     = 'a GT.list [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
-type 'a logic      = ('a, 'a logic) t Logic.logic [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
-type 'a list       = 'a ground [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type 'a logic      = 'a list_logic [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 type 'a list_logic = 'a logic [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 let logic = {
@@ -58,9 +80,8 @@ let logic = {
 }
 
 type 'a injected = ('a, 'a injected) t Logic.ilogic
-type 'a groundi = 'a injected
 
-let reify : 'a 'b . ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t =
+let reify : 'a 'b . ('a, 'b) Reifier.t -> ('a injected, 'b logic) Reifier.t =
   fun ra ->
     let open Env.Monad.Syntax in
     Reifier.fix (fun self ->
@@ -74,7 +95,7 @@ let reify : 'a 'b . ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t =
         Env.Monad.return foo
       ))
 
-let rec prj_exn : ('a, 'b) Reifier.t -> ('a groundi, 'b GT.list) Reifier.t =
+let rec prj_exn : ('a, 'b) Reifier.t -> ('a injected, 'b GT.list) Reifier.t =
   let map fa fb = function
   | Nil -> []
   | Cons (h, tl) -> fa h :: fb tl
@@ -91,7 +112,7 @@ let reify_list   = reify
 let list_reify = reify
 let prj_exn_list = prj_exn
 let list_prj_exn = prj_exn
-                 
+
 (* let rec prj : (int -> _ ground) -> ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t =
   fun onvar ra ->
     let ( >>= ) = Env.Monad.bind in
@@ -101,8 +122,8 @@ let list_prj_exn = prj_exn
      self >>= fun fr ->
      Env.Monad.return (fun x -> GT.gmap t fa fr x))) *)
 
-let nil () : 'a groundi = Logic.inj Nil
-let cons : 'a -> 'a groundi -> 'a groundi = fun x y ->
+let nil () : 'a injected = Logic.inj Nil
+let cons : 'a -> 'a injected -> 'a injected = fun x y ->
   Logic.inj (Cons (x, y))
 
 let of_list = Stdlib.List.map
@@ -226,7 +247,7 @@ let rec membero l a =
 
 let nullo q : goal = (q === nil())
 
-let caro : 'a groundi -> _ -> goal = fun xs h -> call_fresh (fun tl -> xs === (h % tl))
-let cdro : 'a Logic.ilogic groundi -> _ -> goal = fun xs tl -> call_fresh (fun h  -> xs === (h % tl))
+let caro : 'a injected -> _ -> goal = fun xs h -> call_fresh (fun tl -> xs === (h % tl))
+let cdro : 'a Logic.ilogic injected -> _ -> goal = fun xs tl -> call_fresh (fun h  -> xs === (h % tl))
 let hdo = caro
 let tlo = cdro

@@ -23,7 +23,7 @@ open Logic
 open Core
 
 (** Abstract list type *)
-type ('a, 'l) t =
+type ('a, 'l) list_fuly =
 | Nil
 | Cons of 'a * 'l
 [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
@@ -31,14 +31,19 @@ type ('a, 'l) t =
 (** {2 GT-related API} *)
 
 (** Ground lists (isomorphic to regular ones) *)
+type 'a list      = ('a, 'a list) list_fuly 
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+
+(** Type synonyms to comply with the generic naming scheme *)
+
+type ('a, 'l) t = ('a, 'l) list_fuly
+[@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+
 type 'a ground = 'a GT.list [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** Logic lists (with the tails as logic lists) *)
 type 'a logic  = ('a, 'a logic) t Logic.logic [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
-(** Type synonyms to comply with the generic naming scheme *)
-type 'a list       = 'a ground [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
-type 'a list_logic = 'a logic [@@deriving gt ~options:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** {2 Relational API} *)
 
