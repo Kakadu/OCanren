@@ -26,7 +26,7 @@ module State :
   end
 
 (** Goal is a function that converts a state into a lazy stream of states. *)
-type 'a goal'
+type 'a goal' = State.t -> 'a
 
 (** @canonical OCanren.goal *)
 type goal = State.t Stream.t goal'
@@ -318,3 +318,7 @@ module PrunesControl : sig
   val is_exceeded: unit -> bool
   val skipped_prunes : unit -> int
 end
+
+(** Runs reifier on empty state. Useful to debug execution order *)
+val reify_in_empty: ('a, 'b) Reifier.t -> 'a -> 'b
+
