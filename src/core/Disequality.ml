@@ -16,6 +16,15 @@
  * (enclosed in the file COPYING).
  *)
 
+let use_logging = false
+let use_logging = true
+
+let log fmt =
+  if use_logging
+  then Format.kasprintf (fun s -> Format.printf "%s\n%!" s) fmt
+  else Format.ifprintf Format.std_formatter fmt
+;;
+
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
 
@@ -114,9 +123,18 @@ module Disjunct :
     val simplify : Env.t -> Subst.t -> t -> t option
 
     val reify : Env.t -> Subst.t -> t -> Subst.Binding.t list
+
+    val pp : Format.formatter -> t -> unit
   end =
   struct
     type t = Term.t Term.VarMap.t
+
+
+    let pp ppf map =
+      let open Format in
+      fprintf ppf "@[{d| ";
+      Term.VarMap.iter (fun k v -> Format.fprintf ppf "%d -> %s; " k.Term.Var.index (Term.show v)) map ;
+      fprintf ppf " |d}@]"
 
     let update t =
       ListLabels.fold_left ~init:t
@@ -229,12 +247,20 @@ module Conjunct :
     val diff : Env.t -> Subst.t -> t -> t -> t * t
 
     val reify : Env.t -> Subst.t -> t -> 'a -> Answer.t list
+
+    val pp : Format.formatter -> t -> unit
   end = struct
     let next_id = ref 0
 
     module M = Map.Make(struct type t = int let compare = (-) end)
 
     type t = Disjunct.t M.t
+
+    let pp ppf map =
+      let open Format in
+      fprintf ppf "[c| ";
+      M.iter (fun k v -> Format.fprintf ppf "%d => %a; " k Disjunct.pp v) map ;
+      fprintf ppf " |c]"
 
     let empty = M.empty
 
@@ -349,6 +375,13 @@ module Conjunct :
 
 type t = Conjunct.t Term.VarMap.t
 
+
+let pp ppf (map: t) =
+  let open Format in
+  fprintf ppf "{| ";
+  Term.VarMap.iter (fun k v -> Format.fprintf ppf "%d -> %a; " k.Term.Var.index Conjunct.pp v) map ;
+  fprintf ppf " |}"
+
 let empty = Term.VarMap.empty
 
 (* merges all conjuncts (linked to different variables) into one *)
@@ -370,17 +403,32 @@ let add env subst cstore x y =
     | Disequality_violated  -> None
 
 let recheck env subst cstore bs =
-  let helper var cstore =
+  let open Format in
+  log  "@[[[[ ";
+  List.iter (fun { Subst.Binding.var; term } ->
+    Format.printf "%d -> %s; "
+      var.Term.Var.index
+      (Term.show term)
+  ) bs ;
+  log " ]]]@]";
+
+  let helper : Term.Var.t -> t -> t = fun var cstore ->
+    log "%s _.%d" __FUNCTION__ var.Term.Var.index;
     try
       let conj = Term.VarMap.find var cstore in
+      log "  conj = %a\n%!" Conjunct.pp conj;
       let cstore = Term.VarMap.remove var cstore in
       update env subst (Conjunct.recheck env subst conj) cstore
-    with Not_found -> cstore
+    with Not_found ->
+      log "%d Not_found" __LINE__;
+      cstore
   in
   try
     let cstore = ListLabels.fold_left bs ~init:cstore
       ~f:(let open Subst.Binding in fun cstore {var; term} ->
+        log "%s %d: _.%d" __FUNCTION__ __LINE__ var.Term.Var.index;
         let cstore = helper var cstore in
+        log "updated cstore: %a" pp cstore;
         match Env.var env term with
         | Some u -> helper u cstore
         | None   -> cstore

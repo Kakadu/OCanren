@@ -354,6 +354,10 @@ type goal = State.t Stream.t goal'
 let success st = Stream.single st
 let failure _  = Stream.nil
 
+let trace_diseq msg st =
+  Format.printf "%s:  @[%a@]\n%!" msg Disequality.pp (State.constraints st);
+  success st
+
 let only_head g st =
   let stream = g st in
   try Stream.single @@ Stream.hd stream

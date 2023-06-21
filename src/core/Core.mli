@@ -316,3 +316,5 @@ module PrunesControl : sig
   val is_exceeded: unit -> bool
   val skipped_prunes : unit -> int
 end
+
+val trace_diseq : string -> goal

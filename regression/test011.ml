@@ -122,3 +122,47 @@ let () =
    in
    run_r (List.prj_exn prj_exn) show_int_list (-1) q qh (REPR (fun q -> rembero !1 (!1 % (!2 % (!1 %< !3))) q          ));
    runInt                (-1) q qh (REPR (fun q -> rembero !1 (!1 % (!2 %< !3)) (!1 % (!2 %< !3)) ))
+
+
+let () =
+
+  let mytrace list1 list2 =
+    let ppl ppf x = Format.fprintf ppf "%s" (show_intl_List x) in
+    let open Format in
+    (debug_var list1 (Fun.flip (Std.List.reify OCanren.reify)) (function xs ->
+      Format.printf "list1 = %a\n%!"
+        (pp_print_list ~pp_sep:(fun ppf () -> fprintf ppf " \/ ") ppl) xs;
+      success)) &&&
+    (debug_var list2 (Fun.flip (Std.List.reify OCanren.reify)) (function xs ->
+      Format.printf "list2 = %a\n%!"
+        (pp_print_list ~pp_sep:(fun ppf () -> fprintf ppf " \/ ") ppl) xs;
+      success))
+    in
+  runIList (-1) q qh
+    (REPR
+       (fun list1 ->
+         fresh (list2 hd1 tl1 hd2 tl2)
+           (list1 =/= list2)
+           (list1 === hd1 % tl1)
+           (list2 === hd2 % tl2)
+
+           (mytrace list1 list2)
+           (trace_diseq "a")
+           (hd2 === !1)
+
+           (mytrace list1 list2)
+           (trace_diseq "b")
+           (tl2 === nil ())
+
+           (mytrace list1 list2)
+           (trace_diseq "c")
+           (hd1 === !1)
+
+           (mytrace list1 list2)
+           (trace_diseq "d")
+           (tl1 === nil ())
+
+           (trace_diseq "x")
+           (mytrace list1 list2)
+           (trace_diseq "end")
+         (*  *)))
