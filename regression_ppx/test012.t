@@ -46,59 +46,7 @@
           let jtyp_prj_exn eta = let (f, _) = fix in f eta
           let targ_prj_exn eta = let (_, f) = fix in f eta
         end
-      include
-        struct
-          let rec __jtyp fa fa1 fa0 =
-            let open OCanren.Env.Monad in
-              OCanren.Reifier.fix
-                (fun _ ->
-                   OCanren.reify <..>
-                     (chain
-                        (OCanren.Reifier.zed
-                           (OCanren.Reifier.rework ~fv:(jtyp_fmapt fa fa1 fa0)))))
-          and __targ fa fa0 =
-            let open OCanren.Env.Monad in
-              OCanren.Reifier.fix
-                (fun _ ->
-                   OCanren.reify <..>
-                     (chain
-                        (OCanren.Reifier.zed
-                           (OCanren.Reifier.rework ~fv:(targ_fmapt fa fa0)))))
-          let fix =
-            let rec jtyp_reify fa eta =
-              (__jtyp fa (jtyp_reify fa) (targ_reify fa)) eta
-            and targ_reify fa eta = (__targ fa (jtyp_reify fa)) eta in
-            (jtyp_reify, targ_reify)
-          let jtyp_reify eta = let (f, _) = fix in f eta
-          let targ_reify eta = let (_, f) = fix in f eta
-        end
+
     end
-  let rec pp_arg fa ppf =
-    (function
-     | TNoarg -> Format.fprintf ppf "noarg"
-     | T (l, r) -> Format.fprintf ppf "(%a,%a)" (pp_typ fa) l fa r : 'a targ ->
-                                                                      unit)
-  and pp_typ fa ppf =
-    (function
-     | Array typ -> Format.fprintf ppf "(Array %a)" (pp_typ fa) typ
-     | V arg -> Format.fprintf ppf "%a" (pp_arg fa) arg
-     | Other a -> Format.fprintf ppf "(Other %a)" fa a : 'a jtyp -> unit)
-  open OCanren
-  let () =
-    (((let open OCanren in run q) (fun q -> q === (!! TNoarg))
-        (fun rr -> rr#reify (targ_prj_exn OCanren.prj_exn)))
-       |> OCanren.Stream.take)
-      |>
-      (Stdlib.List.iter (Format.printf "%a\n%!" (pp_arg Format.pp_print_int)))
-  let () =
-    (((let open OCanren in run q)
-        (fun q ->
-           q === (!! (Array (!! (V (!! (T ((!! (Other (!! 1))), (!! 2)))))))))
-        (fun rr -> rr#reify (jtyp_prj_exn OCanren.prj_exn)))
-       |> OCanren.Stream.take)
-      |>
-      (Stdlib.List.iter (Format.printf "%a\n%!" (pp_typ Format.pp_print_int)))
+
   $ ./test012mutual.exe
-  test012
-  noarg
-  (Array ((Other 1),2))

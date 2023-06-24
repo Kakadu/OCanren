@@ -25,8 +25,7 @@ let pp_input ppf = function
   | Other _ -> Format.fprintf ppf "Other"
 ;;
 
-(* For mutual recursion gt only available for regular types. Currently we forbit it at all *)
-let filter_out_gt_attributes tdecls =
+let filter_out_gt_attributes1 tdecl =
   let helper attrs =
     List.filter attrs ~f:(fun attr ->
         match attr.attr_name.txt with
@@ -36,11 +35,13 @@ let filter_out_gt_attributes tdecls =
             | _ -> true)
         | _ -> true)
   in
+  { tdecl with ptype_attributes = helper tdecl.ptype_attributes }
+;;
+
+let filter_out_gt_attributes tdecls =
   match tdecls with
   | [] | [ _ ] -> tdecls
-  | _ ->
-      List.map tdecls ~f:(function { ptype_attributes; _ } as g ->
-          { g with ptype_attributes = helper ptype_attributes })
+  | _ -> List.map tdecls ~f:filter_out_gt_attributes1
 ;;
 
 let knot_reifiers ~loc ?(kind = Reify_impl.Prj_exn) reifiers base_decls =
@@ -444,16 +445,21 @@ let () =
             let open Ppxlib.Ast_builder.Default in
             let items =
               let fully_abstract_types = List.map full_and_ground_list ~f:fst in
+              let hacky_filter ?(total = false) tdecls =
+                let len = List.length tdecls in
+                List.mapi tdecls ~f:(fun i tdecl ->
+                    if i >= len - 1 && not total then tdecl else filter_out_gt_attributes1 tdecl)
+              in
               List.concat
                 [ []
                 ; List.map rez.t ~f:(fun t -> pstr_type ~loc Nonrecursive [ t ])
-                ; [ pstr_type ~loc is_rec (filter_out_gt_attributes rez.ground) ]
-                ; [ pstr_type ~loc is_rec (filter_out_gt_attributes rez.logic) ]
-                ; [ pstr_type ~loc is_rec rez.injected ]
+                  (* ; [ pstr_type ~loc is_rec (hacky_filter rez.ground) ] *)
+                ; [ pstr_type ~loc is_rec (hacky_filter rez.logic) ]
+                  (* ; [ pstr_type ~loc is_rec rez.injected ]
                 ; List.map rez.fmapt ~f:(fun vb -> pstr_value ~loc Nonrecursive [ vb ])
                 ; knot_reifiers ~loc ~kind:Prj_exn rez.prj_exn fully_abstract_types
                 ; knot_reifiers ~loc ~kind:Reify rez.reify fully_abstract_types
-                ; rez.other
+                ; rez.other *)
                 ]
             in
             pstr_include ~loc (include_infos ~loc (pmod_structure ~loc items))

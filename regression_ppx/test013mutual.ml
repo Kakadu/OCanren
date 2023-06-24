@@ -21,13 +21,15 @@ and jtype =
   | Interface of id * targ
   | V of
       { id : id
-      ; index : int
+      ; index : GT.int
       ; upb : jtype
       ; lwb : jtype GT.option
       }
   | Null
   | Intersect of jtype OCanren.Std.List.ground
-[@@deriving gt ~options:{ gmap }]]
+[@@deriving gt ~options:{ gmap; fmt }]]
+
+let (_ : jtype -> jtype) = GT.gmap jtype
 
 let rec pp_arg ppf : targ -> unit = function
   | Wildcard opt -> Format.fprintf ppf "Wildcard %a" ([%fmt: (polarity * 'a) GT.option] pp_typ) opt
@@ -60,5 +62,7 @@ let () =
   in
   (run q) (fun q -> q === exa1) (fun rr -> rr#reify jtype_prj_exn)
   |> OCanren.Stream.take
-  |> Stdlib.List.iter (Format.printf "%a\n%!" pp_typ)
+  |> Stdlib.List.iter (fun t ->
+         Format.printf "%a\n%!" pp_typ t;
+         Format.printf "%a\n%!" (GT.fmt jtype) t)
 ;;

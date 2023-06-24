@@ -496,7 +496,9 @@ let remove_deriving_gmap attr =
   match attr.attr_payload with
   | PStr [%str [%e? e]] ->
       (* notify "%s %d" __FILE__ __LINE__; *)
-      Some { attr with attr_payload = PStr [ pstr_eval ~loc:attr.attr_loc (helper e) [] ] }
+      (* Some { attr with attr_payload = PStr [ pstr_eval ~loc:attr.attr_loc (helper e) [] ] } *)
+      (* assert false; *)
+      Some attr
   | _ -> None
 ;;
 
@@ -826,8 +828,8 @@ let process_main ~loc rec_ (base_tdecl, tdecl) =
                     (Exp.construct
                        (Located.map_lident cd.pcd_name)
                        (if List.is_empty args
-                       then None
-                       else Some (Exp.mytuple ~loc (List.map args ~f:(Exp.lident ~loc)))))
+                        then None
+                        else Some (Exp.mytuple ~loc (List.map args ~f:(Exp.lident ~loc)))))
               | Pcstr_record ls ->
                   let add_args rhs =
                     List.fold_right ~init:rhs ls ~f:(fun { pld_name = { txt } } acc ->
@@ -904,8 +906,8 @@ let process_main ~loc rec_ (base_tdecl, tdecl) =
       ppat_var
         ~loc
         (if Reify_impl.is_new ()
-        then Located.sprintf ~loc "%s_fmapt" tdecl.ptype_name.txt
-        else Located.sprintf ~loc "fmapt")
+         then Located.sprintf ~loc "%s_fmapt" tdecl.ptype_name.txt
+         else Located.sprintf ~loc "fmapt")
     in
     value_binding ~loc ~pat ~expr
   in
