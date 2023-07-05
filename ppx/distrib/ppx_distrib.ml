@@ -453,13 +453,13 @@ let () =
               List.concat
                 [ []
                 ; List.map rez.t ~f:(fun t -> pstr_type ~loc Nonrecursive [ t ])
-                  (* ; [ pstr_type ~loc is_rec (hacky_filter rez.ground) ] *)
+                ; [ pstr_type ~loc is_rec (hacky_filter rez.ground) ]
                 ; [ pstr_type ~loc is_rec (hacky_filter rez.logic) ]
-                  (* ; [ pstr_type ~loc is_rec rez.injected ]
+                ; [ pstr_type ~loc is_rec rez.injected ]
                 ; List.map rez.fmapt ~f:(fun vb -> pstr_value ~loc Nonrecursive [ vb ])
                 ; knot_reifiers ~loc ~kind:Prj_exn rez.prj_exn fully_abstract_types
                 ; knot_reifiers ~loc ~kind:Reify rez.reify fully_abstract_types
-                ; rez.other *)
+                ; rez.other
                 ]
             in
             pstr_include ~loc (include_infos ~loc (pmod_structure ~loc items))
