@@ -400,6 +400,17 @@ let debug_var v reifier call = fun st ->
   in
   call xs st
 
+let is_ground v st cb =
+  let ans = Subst.reify (State.env st) (State.subst st) v in 
+  cb (Term.is_var ans)
+
+let is_ground_bool 
+  : bool ilogic -> State.t -> onvar:(unit->unit) -> on_ground:(bool -> unit) -> unit = 
+  fun v st ~onvar ~on_ground ->
+    let ans = Subst.reify (State.env st) (State.subst st) (Obj.magic v) in 
+    if (Term.is_var ans) then onvar()
+    else on_ground (Obj.magic ans : bool)
+
 let structural : 'a  ->
   ('a , 'b) Reifier.t ->
   ('b -> bool) ->
