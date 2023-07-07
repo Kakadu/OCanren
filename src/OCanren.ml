@@ -91,7 +91,7 @@ module Std =
     let debug_var = Core.debug_var
     let only_head = Core.only_head
 
-
+      let is_ground_bool = is_ground_bool
   end
 IFDEF STATS THEN
 module Peep = Peep

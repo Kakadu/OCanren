@@ -305,6 +305,12 @@ See also: {!structural}.
 *)
 val debug_var : 'a ilogic -> (Env.t -> 'a ilogic -> 'b) -> ('b list -> goal) -> goal
 
+val is_ground : 'a ilogic -> State.t -> (bool -> unit) -> unit
+
+val is_ground_bool : bool ilogic -> State.t -> onvar:(unit->unit) -> on_ground:(bool -> unit) -> unit
+
+
+
 (** The goal [only_head f] returns no answers when [f] returns:
   - empty stream when [f] returns empty stream;
   - hangs when [f] hangs during search for first answer;
