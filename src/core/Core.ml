@@ -401,13 +401,13 @@ let debug_var v reifier call = fun st ->
   call xs st
 
 let is_ground v st cb =
-  let ans = Subst.reify (State.env st) (State.subst st) v in 
-  cb (Term.is_var ans)
+  let ans = Subst.reify (State.env st) (State.subst st) v in
+  cb (not(Term.is_var ans))
 
-let is_ground_bool 
-  : bool ilogic -> State.t -> onvar:(unit->unit) -> on_ground:(bool -> unit) -> unit = 
+let is_ground_bool
+  : bool ilogic -> State.t -> onvar:(unit->unit) -> on_ground:(bool -> unit) -> unit =
   fun v st ~onvar ~on_ground ->
-    let ans = Subst.reify (State.env st) (State.subst st) (Obj.magic v) in 
+    let ans = Subst.reify (State.env st) (State.subst st) (Obj.magic v) in
     if (Term.is_var ans) then onvar()
     else on_ground (Obj.magic ans : bool)
 
@@ -810,7 +810,11 @@ module Tabling =
       !g
   end
 
-
 let reify_in_empty reifier x =
   let st = State.empty () in
   reifier (State.env st) x
+
+let reify_in_state st reifier x =
+  let env = State.env st in
+  let subst = State.subst st in
+  reifier (State.env st) (Subst.reify env subst x |> Obj.magic)
