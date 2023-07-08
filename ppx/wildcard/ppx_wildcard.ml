@@ -33,14 +33,15 @@ open Ppxlib
 open Ppxlib.Ast_helper
 
 let name_of_loc loc =
-  (* Format.printf "name_of_loc: %a\n%!" Location.print loc; *)
   let start = loc.Location.loc_start in
-  (* let mangled_fname =
-    String.map start.pos_fname ~f:(function
+  let mangled_fname =
+    String.map
+      (function
+        | '/' -> '_'
         | '.' -> '_'
         | c -> c)
-  in *)
-  let mangled_fname = start.pos_fname in
+      start.pos_fname
+  in
   Printf.sprintf "__%s_c%d" mangled_fname Lexing.(start.pos_cnum - start.pos_bol)
 ;;
 
@@ -81,9 +82,7 @@ let mapper =
       let loc = e.pexp_loc in
       let pat =
         let open Ppxlib.Ast_pattern in
-        pexp_apply
-          (pexp_ident (lident (string "===")))
-          ((nolabel ** __) ^:: (nolabel ** __) ^:: nil)
+        pexp_apply (pexp_ident (lident (string "==="))) ((nolabel ** __) ^:: (nolabel ** __) ^:: nil)
         |> map2 ~f:(fun a b -> Unif, a, b)
         ||| (pexp_apply
                (pexp_ident (lident (string "=/=")))
@@ -101,7 +100,7 @@ let mapper =
           let nameless = true in
           let make_wc, make_fresh =
             if nameless
-            then [%expr wc], [%expr call_fresh]
+            then [%expr wc], [%expr Fresh.one]
             else [%expr named_wc [%e name_expr]], [%expr named_fresh [%e name_expr]]
           in
           match kind with

@@ -329,3 +329,5 @@ end
 
 (** Runs reifier on empty state. Useful to debug execution order *)
 val reify_in_empty: ('a, 'b) Reifier.t -> 'a -> 'b
+
+val reify_in_state: State.t -> ('a, 'b) Reifier.t -> 'a -> 'b
