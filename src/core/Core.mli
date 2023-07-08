@@ -324,3 +324,6 @@ module PrunesControl : sig
   val is_exceeded: unit -> bool
   val skipped_prunes : unit -> int
 end
+
+
+val reify_in_state: State.t -> ('a, 'b) Reifier.t -> 'a -> 'b
