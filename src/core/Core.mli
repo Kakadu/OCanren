@@ -87,6 +87,8 @@ val (?|) : goal list -> goal
 (** [conde] is a synonym for [?|] *)
 val conde : goal list -> goal
 
+val condeep : goal list -> goal
+
 (** [?& [s1; s2; ...; sk]] calculates [s1 &&& (s2 && ... &&& sk)...)] for a non-empty list of goals
     (note the {i right} association)
 *)
@@ -318,3 +320,6 @@ module PrunesControl : sig
   val is_exceeded: unit -> bool
   val skipped_prunes : unit -> int
 end
+
+(** Runs reifier on empty state. Useful to debug execution order *)
+val reify_in_empty: ('a, 'b) Reifier.t -> 'a -> 'b
