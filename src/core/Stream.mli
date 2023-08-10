@@ -92,6 +92,9 @@ val tl : 'a t -> 'a t
 
 val msplit: 'a t -> ('a * 'a t) option
 
+val concat : 'a t -> 'a t -> 'a t
+
+
 IFDEF STATS THEN
 (* Gets a counter *)
 val unwrap_suspended_counter : unit -> int
