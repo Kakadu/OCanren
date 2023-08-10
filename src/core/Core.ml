@@ -515,6 +515,12 @@ let condo2 a b st =
   | Some (a, b) -> Stream.cons a b
   | None -> b st
 
+let rec condeep xs st =
+  let st = State.new_scope st in
+  match xs with
+  | [] -> failure st
+  | h :: tl -> Stream.concat (h st) (condeep tl st)
+
 let call_fresh f st =
   let x = State.fresh st in
   f x st
