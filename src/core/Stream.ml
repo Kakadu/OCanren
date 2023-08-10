@@ -128,6 +128,17 @@ let rec bind s f =
       Waiting (List.map helper ss)
     | s          -> bind s f
 
+let rec concat xs ys =
+  match xs with
+  | Nil -> ys
+  | Cons (x, xs) ->
+    (* Printf.printf "Got a cons in concat: %s\n" (Term.show (Obj.repr x)); *)
+    cons x (from_fun (fun () -> concat xs ys ))
+  | Thunk f ->
+    (* Printf.printf "Got a think in concat\n"; *)
+    concat (force xs) ys
+  | Waiting _ -> assert false
+
 let rec msplit = function
 | Nil           -> None
 | Cons (x, xs)  -> Some (x, xs)
@@ -141,6 +152,7 @@ let is_empty s =
   match msplit s with
   | Some _  -> false
   | None    -> true
+
 
 let rec map f = function
 | Nil          -> Nil

@@ -300,3 +300,29 @@
   %{project_root}/ppx/pp_ocanren_all.exe
   test014mutual.ml
   test014mutual.exe))
+
+(executables
+ (names test015condeep)
+ (modules test015condeep)
+ (package OCanren)
+ (public_names -)
+ (flags
+  (:standard
+   ;
+   ))
+ (preprocess
+  (pps
+   OCanren-ppx.ppx_fresh
+   OCanren-ppx.ppx_repr
+   OCanren-ppx.ppx_deriving_reify
+   GT.ppx_all))
+ (libraries OCanren OCanren.tester))
+
+(cram
+ (package OCanren)
+ (applies_to test015condeep)
+ (deps
+  (package OCanren-ppx)
+  %{project_root}/ppx/pp_ocanren_all.exe
+  test015condeep.ml
+  test015condeep.exe))
