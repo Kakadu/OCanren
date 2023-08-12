@@ -78,6 +78,8 @@ val mplus : 'a t -> 'a t -> 'a t
   *)
 val bind : 'a t -> ('a -> 'b t) -> 'b t
 
+val bindeep : 'a t -> ('a -> 'b t) -> 'b t
+
 (** [retrieve ~n:n s] returns the list of [n]-first elements of [s] and the rest of the stream *)
 val retrieve : ?n:int -> 'a t -> 'a list * 'a t
 

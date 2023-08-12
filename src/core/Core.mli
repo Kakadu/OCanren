@@ -73,6 +73,9 @@ val conj : goal -> goal -> goal
 (** [&&&] is a left-associative infix synonym for [conj] *)
 val (&&&) : goal -> goal -> goal
 
+(* Conjunction with dfs under the hood *)
+val (&&&&) : goal -> goal -> goal
+
 (** [disj s1 s2] creates a goal, which is a disjunction of its arguments *)
 val disj : goal -> goal -> goal
 
