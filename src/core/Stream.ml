@@ -128,6 +128,7 @@ let rec bind s f =
       Waiting (List.map helper ss)
     | s          -> bind s f
 
+
 let rec concat xs ys =
   match xs with
   | Nil -> ys
@@ -138,6 +139,13 @@ let rec concat xs ys =
     (* Printf.printf "Got a think in concat\n"; *)
     concat (force xs) ys
   | Waiting _ -> assert false
+
+let rec bindeep s f =
+  match s with
+  | Nil           -> Nil
+  | Cons (x, s)   -> concat (f x) (from_fun (fun () -> bind (force s) f))
+  | Thunk zz      -> from_fun (fun () -> bindeep (zz ()) f)
+  | Waiting ss    -> failwith "Not implemented"
 
 let rec msplit = function
 | Nil           -> None
