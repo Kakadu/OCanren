@@ -393,6 +393,9 @@ let conj f g st =
   let () = IFDEF STATS THEN conj_counter_incr () ELSE () END in
   Stream.bind (f st) g
 
+let (&&&&) f g st =
+  Stream.bindeep (f st) g
+
 let debug_var v reifier call = fun st ->
   let xs = List.map (fun answ ->
     reifier (Answer.env answ) (Obj.magic @@ Answer.ctr_term answ)
