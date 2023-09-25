@@ -40,7 +40,13 @@ let name_of_loc loc =
         | '.' -> '_'
         | c -> c)
   in *)
-  let mangled_fname = start.pos_fname in
+  let mangled_fname =
+    String.map
+      (function
+        | '/' -> '_'
+        | c -> c)
+      start.pos_fname
+  in
   Printf.sprintf "__%s_c%d" mangled_fname Lexing.(start.pos_cnum - start.pos_bol)
 ;;
 
@@ -81,9 +87,7 @@ let mapper =
       let loc = e.pexp_loc in
       let pat =
         let open Ppxlib.Ast_pattern in
-        pexp_apply
-          (pexp_ident (lident (string "===")))
-          ((nolabel ** __) ^:: (nolabel ** __) ^:: nil)
+        pexp_apply (pexp_ident (lident (string "==="))) ((nolabel ** __) ^:: (nolabel ** __) ^:: nil)
         |> map2 ~f:(fun a b -> Unif, a, b)
         ||| (pexp_apply
                (pexp_ident (lident (string "=/=")))
