@@ -33,17 +33,12 @@ open Ppxlib
 open Ppxlib.Ast_helper
 
 let name_of_loc loc =
-  (* Format.printf "name_of_loc: %a\n%!" Location.print loc; *)
   let start = loc.Location.loc_start in
-  (* let mangled_fname =
-    String.map start.pos_fname ~f:(function
-        | '.' -> '_'
-        | c -> c)
-  in *)
   let mangled_fname =
     String.map
       (function
         | '/' -> '_'
+        | '.' -> '_'
         | c -> c)
       start.pos_fname
   in
