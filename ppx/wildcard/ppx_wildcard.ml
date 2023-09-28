@@ -100,7 +100,7 @@ let mapper =
           let nameless = true in
           let make_wc, make_fresh =
             if nameless
-            then [%expr wc], [%expr call_fresh]
+            then [%expr wc], [%expr Fresh.one]
             else [%expr named_wc [%e name_expr]], [%expr named_fresh [%e name_expr]]
           in
           match kind with
