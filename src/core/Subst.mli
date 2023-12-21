@@ -45,6 +45,8 @@ val split : t -> Binding.t list
  *)
 val apply : Env.t -> t -> 'a -> 'a
 
+val walks_to_var : t -> 'a -> bool
+
 (* [is_bound x subst] - checks whether [x] is bound by [subst] *)
 val is_bound : Term.Var.t -> t -> bool
 

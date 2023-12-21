@@ -301,6 +301,8 @@ See also: {!structural}.
 *)
 val debug_var : 'a ilogic -> (Env.t -> 'a ilogic -> 'b) -> ('b list -> goal) -> goal
 
+val is_free : 'a ilogic -> sk:goal -> goal -> goal
+
 (** The goal [only_head f] returns no answers when [f] returns:
   - empty stream when [f] returns empty stream;
   - hangs when [f] hangs during search for first answer;

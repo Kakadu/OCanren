@@ -280,3 +280,11 @@ let rec compare x y =
 let rec hash x = fold x ~init:1
   ~fvar:(fun acc v -> Hashtbl.hash (Var.hash v, List.fold_left (fun acc x -> Hashtbl.hash (acc, hash x)) acc v.Var.constraints))
   ~fval:(fun acc x -> Hashtbl.hash (acc, Hashtbl.hash x))
+
+let is_var x =
+  let x = Obj.repr x in
+  let tx = Obj.tag x in
+  if is_box tx then
+    let sx = Obj.size x in
+    is_var tx sx x
+  else false

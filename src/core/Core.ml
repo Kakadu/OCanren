@@ -399,6 +399,10 @@ let debug_var v reifier call = fun st ->
   in
   call xs st
 
+let is_free v ~sk fk : goal = fun st ->
+  let subst = State.subst st in 
+  if Subst.walks_to_var subst (Obj.magic v) then sk st else fk st
+
 let structural : 'a  ->
   ('a , 'b) Reifier.t ->
   ('b -> bool) ->

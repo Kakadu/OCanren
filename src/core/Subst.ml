@@ -183,6 +183,21 @@ let apply env subst x = Obj.magic @@
     ~fvar:(fun v -> Term.repr v)
     ~fval:(fun x -> Term.repr x)
 
+
+let walks_to_var (subst: t) = 
+  let rec helper x =
+    (* TODO: try to rewrite without allocations *)
+    match Term.var (Obj.magic x) with
+    | None -> false
+    | Some v ->
+      match v.Term.Var.subst with
+      | Some term -> helper (Obj.magic term)
+      | None ->
+          try helper (Obj.magic (Term.VarMap.find v subst))
+          with Not_found -> true
+  in
+  helper
+
 let freevars env subst x =
   Env.freevars env @@ apply env subst x
 
