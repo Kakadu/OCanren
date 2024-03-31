@@ -1,6 +1,8 @@
 (executables
  (names main debug_var peano hashcons bv)
  (modules main debug_var peano hashcons bv)
+ (flags
+  (:standard -rectypes))
  (preprocess
   (pps
    ppx_expect
@@ -16,6 +18,8 @@
  (name match)
  (modules match)
  (libraries OCanren OCanren.tester)
+ (flags
+  (:standard -rectypes))
  (preprocess
   (pps
    ppx_expect

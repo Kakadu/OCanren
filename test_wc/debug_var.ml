@@ -9,21 +9,22 @@ let show_pairl = GT.show Pair.logic show_intl show_intl
 let run_pair eta = run_r (Pair.reify reify reify) show_pairl eta
 
 let trace_int q =
-  debug_var q (Fun.flip OCanren.reify) (fun xs ->
+  debug_var q OCanren.reify (fun xs ->
     Stdlib.List.iter (fun x -> print_endline @@ show_intl x) xs;
     success)
 ;;
 
 let trace_pair (q : (_, _) Pair.groundi) =
-  debug_var
-    q
-    (Fun.flip @@ Pair.reify reify reify)
-    (fun xs ->
-      Stdlib.List.iter (fun x -> print_endline @@ show_pairl x) xs;
-      success)
+  debug_var q (Pair.reify reify reify) (fun xs ->
+    Stdlib.List.iter (fun x -> print_endline @@ show_pairl x) xs;
+    success)
 ;;
 
-let _ = [%tester run_int (-1) (fun q -> trace_int q)]
+let _ =
+  [%tester
+    run_r OCanren.reify ([%show: GT.int OCanren.logic] ()) (-1) (fun q -> trace_int q)]
+;;
+
 let __ _ = [%tester run_int (-1) (fun q -> q === !!1 &&& trace_int q)]
 let _ = [%tester run_int (-1) (fun q -> q =/= !!1 &&& trace_int q)]
 let _ = [%tester run_pair (-1) (fun q -> q =/= Std.pair !!1 !!2 &&& trace_pair q)]

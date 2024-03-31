@@ -6,5 +6,6 @@
  (modules ppx_tester)
  (flags
   (:standard -linkall))
+ (inline_tests)
  (preprocess
-  (pps ppxlib.metaquot)))
+  (pps ppxlib.metaquot ppx_expect)))

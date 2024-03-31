@@ -3,7 +3,7 @@ open OCanren
 let trace_helper reifier pp bv fmt =
   Format.kasprintf
     (fun msg ->
-      debug_var bv (Fun.flip reifier) (function
+      debug_var bv reifier (function
         | [ q ] ->
           Format.printf "%s: %a\n%!" msg pp q;
           success
@@ -40,25 +40,22 @@ module BV = struct
   let pp_logic = GT.fmt logic
 
   let debug_n : injected -> (int OCanren.logic Std.List.logic list -> goal) -> goal =
-   fun n -> debug_var n (fun a b -> OCanren.Std.List.reify OCanren.reify b a)
- ;;
+    fun n -> debug_var n (fun a b -> OCanren.Std.List.reify OCanren.reify a b)
+  ;;
 
   let trace_n n fmt =
-    debug_var
-      n
-      (Fun.flip @@ OCanren.Std.List.reify OCanren.reify)
-      (function
-       | [ n ] ->
-         Format.printf
-           "%s: %s\n%!"
-           (Format.asprintf fmt)
-           (GT.show Std.List.logic (GT.show OCanren.logic @@ GT.show GT.int) n);
-         success
-       | _ -> assert false)
+    debug_var n (OCanren.Std.List.reify OCanren.reify) (function
+      | [ n ] ->
+        Format.printf
+          "%s: %s\n%!"
+          (Format.asprintf fmt)
+          (GT.show Std.List.logic (GT.show OCanren.logic @@ GT.show GT.int) n);
+        success
+      | _ -> assert false)
   ;;
 
   let trace_cmp n fmt =
-    debug_var n (Fun.flip OCanren.reify) (function
+    debug_var n OCanren.reify (function
       | [ n ] ->
         Format.printf
           "%s: %a\n%!"
@@ -89,7 +86,7 @@ module BV = struct
           (l === lh % ltl)
           (r === rh % rtl)
           (* (trace_n l " leo_helper.l")
-               (trace_n r " leo_helper.r") *)
+             (trace_n r " leo_helper.r") *)
           (compare_helper0 (pos - 1) ltl rtl top_rez)
           (conde
              [ top_rez === !!GT &&& (rez === !!GT)
@@ -104,18 +101,18 @@ module BV = struct
     fresh
       ()
       (* (trace_n l " compare_helper l")
-      (trace_n r " compare_helper r")
-      (trace_cmp rez " compare_helper rez") *)
+         (trace_n r " compare_helper r")
+         (trace_cmp rez " compare_helper rez") *)
       (compare_helper0 bv_size l r rez)
   ;;
 end
 
 module Op = struct
-  [%%ocanren type nonrec op = Shl [@@deriving gt ~options:{ show; fmt; gmap }]]
+  [%%ocanren_inject type nonrec op = Shl [@@deriving gt ~options:{ show; fmt; gmap }]]
 end
 
 module T = struct
-  [%%ocanren
+  [%%ocanren_inject
   type nonrec ('self, 'op, 'int, 'varname) t =
     | Const of 'int
     | SubjVar of 'varname
@@ -129,7 +126,7 @@ module T = struct
 end
 
 module Ph = struct
-  [%%ocanren
+  [%%ocanren_inject
   type nonrec ('self, 'term) t =
     | Not of 'self
     | LE of 'term * 'term

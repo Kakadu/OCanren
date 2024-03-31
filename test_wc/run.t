@@ -48,10 +48,10 @@
   q=(_.11 [=/= 1], 1);
   }
   fun q -> fresh () (q === ((!! 1) % ((!! 2) % __))) (q === (__ % __)), all answers {
-  q=[1; 2; _.11];
+  q=[1; 2 | _.11];
   }
   fun q -> fresh (a b) (q === ((!! 1) % ((!! 2) % __))) (q === (a % b)), all answers {
-  q=[1; 2; _.13];
+  q=[1; 2 | _.13];
   }
   fun q -> fresh () (q === (__ % __)) (q === (!< (!! 1))) (q === (!< (!! 2))), all answers {
   }
@@ -72,7 +72,7 @@
   fun _ -> non_membero (!! 0) (Std.list (!!) [0]), all answers {
   }
   fun q -> (q =/= (__ % __)) &&& (q =/= (List.nil ())), all answers {
-  q=_.10 [=/= [_.-42; _.-42]; =/= []];
+  q=_.10 [=/= [_.-42 | _.-42]; =/= []];
   }
   fun q -> (q =/= (Std.pair (!! true) __)) &&& (q === (Std.pair __ (!! true))), all answers {
   q=(_.11 [=/= true], true);
