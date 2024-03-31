@@ -77,16 +77,16 @@ val logic_to_ground_exn: ('a -> 'b) -> 'a logic -> 'b ground
 val nil : unit -> 'a groundi
 
 (** A dual for [cons] (a.k.a. [::]) constructor. *)
-val cons : 'a  -> 'a groundi -> 'a groundi
+val cons : 'a  -> 'a injected -> 'a injected
 
 (** Infix synonym for {!cons} *)
-val (%) : 'a  -> 'a groundi -> 'a groundi
+val (%) : 'a  -> 'a injected -> 'a injected
 
 (** [x %< y] is a synonym for [cons x (cons y (nil ()))] *)
-val (%<) : 'a  -> 'a -> 'a groundi
+val (%<) : 'a  -> 'a -> 'a injected
 
 (** [!< x] is a synonym for [cons x (nil ())] *)
-val (!<) : 'a  ->  'a groundi
+val (!<) : 'a  ->  'a injected
 
 (** {3:reifiers Reifiers} *)
 
@@ -98,7 +98,7 @@ val list_reify :  ('a, 'b) Reifier.t -> ('a injected, 'b logic) Reifier.t
 
 (* Reification/projection to non-logic domain *)
 val prj_exn : ('a, 'b) Reifier.t -> ('a injected, 'b ground) Reifier.t
-val prj_exn_hacky : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t
+val prj_exn_hacky : ('a, 'b) Reifier.t -> ('a injected, 'b ground) Reifier.t
 
 val prj_to_list_exn :  ('a, 'b) Reifier.t -> ('a groundi, 'b GT.list) Reifier.t
 
