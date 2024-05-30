@@ -3,15 +3,11 @@
   include
     struct
       type nonrec ('a, 'a0) targ_fuly =
-        | T of 'a0 * 'a 
+        | T of 'a0 * 'a
         | TNoarg [@@deriving gt ~options:{ gmap }]
-<<<<<<< HEAD
-      type ('a, 'a1, 'a0) jtyp_fuly =
-=======
       type nonrec ('a, 'a1, 'a0) jtyp_fuly =
->>>>>>> fbc2a094 (update tests for nonrecursive fully abstract types)
-        | Array of 'a1 
-        | V of 'a0 
+        | Array of 'a1
+        | V of 'a0
         | Other of 'a [@@deriving gt ~options:{ gmap }]
       type 'a targ = ('a, 'a jtyp) targ_fuly
       and 'a jtyp = ('a, 'a jtyp, 'a targ) jtyp_fuly[@@deriving
