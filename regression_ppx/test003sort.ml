@@ -26,9 +26,7 @@ open OCanren.Std
 let minmaxo a b min max =
   let open Nat in
   conde
-    [ min === a &&& (max === b) &&& leo a b !!true
-    ; min === b &&& (max === a) &&& gto a b !!true
-    ]
+    [ min === a &&& (max === b) &&& leo a b !!true; min === b &&& (max === a) &&& gto a b !!true ]
 ;;
 
 (* [l] is a (non-empty) list, [s] is its smallest element,
@@ -37,12 +35,7 @@ let minmaxo a b min max =
 let rec smallesto l s l' =
   conde
     [ l === !<s &&& (l' === List.nil ())
-    ; fresh
-        (h t s' t' max)
-        (l' === max % t')
-        (l === h % t)
-        (minmaxo h s' s max)
-        (smallesto t s' t')
+    ; fresh (h t s' t' max) (l' === max % t') (l === h % t) (minmaxo h s' s max) (smallesto t s' t')
     ]
 ;;
 
@@ -53,7 +46,7 @@ let rec sorto x y =
       x === nil () &&& (y === x)
     ; (* or the sorted one is a concatenation of the
       smallest element (s) and sorted list of all other elements (xs')
-   *)
+      *)
       fresh (s xs xs') (y === s % xs') (sorto xs xs') (smallesto x s xs)
     ]
 ;;
@@ -65,9 +58,7 @@ let (_ : (Nat.groundi List.groundi, Nat.ground List.ground) Reifier.t) =
   Std.List.prj_exn Nat.prj_exn
 ;;
 
-let project
-  : ((Nat.groundi as 'a), 'a List.groundi) List.t reified -> Nat.ground List.ground
-  =
+let project : ((Nat.groundi as 'a), 'a List.groundi) List.t reified -> Nat.ground List.ground =
  fun rr -> rr#reify (List.prj_exn Nat.prj_exn)
 ;;
 

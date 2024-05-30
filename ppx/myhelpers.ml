@@ -18,9 +18,9 @@ let lident_of_list = function
 
 let extract_names =
   List.map ~f:(fun (typ, _) ->
-      match typ.ptyp_desc with
-      | Ptyp_var s -> s
-      | _ -> failwith (Caml.Format.asprintf "Don't know what to do with %a" Pprintast.core_type typ))
+    match typ.ptyp_desc with
+    | Ptyp_var s -> s
+    | _ -> failwith (Caml.Format.asprintf "Don't know what to do with %a" Pprintast.core_type typ))
 ;;
 
 open Ppxlib.Ast_builder.Default
@@ -55,7 +55,7 @@ module Exp = struct
     | [] -> body
     | xs ->
         List.fold_right xs ~init:body ~f:(fun n acc ->
-            pexp_fun ~loc Nolabel None (ppat_var ~loc (Located.mk ~loc n)) acc)
+          pexp_fun ~loc Nolabel None (ppat_var ~loc (Located.mk ~loc n)) acc)
   ;;
 
   let lident ~loc l = pexp_ident ~loc (Located.mk ~loc (lident l))
@@ -72,7 +72,7 @@ let failwiths ?(loc = Location.none) fmt = Location.raise_errorf ~loc fmt
 let notify fmt =
   Format.kasprintf
     (fun s -> ignore (Sys.command (Printf.sprintf "notify-send %S" s)))
-      (* (fun s ->
+       (* (fun s ->
       assert (
         0 = Sys.command (Printf.sprintf "dunstify --action='replyAction,reply' %S" s))) *)
     fmt

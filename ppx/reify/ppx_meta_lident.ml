@@ -36,6 +36,6 @@ let () =
     "lident"
     ~extensions:
       [ Extension.declare "lident" Extension.Context.Pattern pattern (fun ~loc ~path:_ ->
-            helper ~loc)
+          helper ~loc)
       ]
 ;;

@@ -40,19 +40,15 @@ let () =
       let open Ast_pattern in
       pstr (pstr_eval (pexp_apply __ __) nil ^:: nil)
     in
-    [ Extension.declare
-        name
-        Extension.Context.Expression
-        pattern
-        (fun ~loc ~path:_ f args ->
+    [ Extension.declare name Extension.Context.Expression pattern (fun ~loc ~path:_ f args ->
         let open Ppxlib.Ast_builder.Default in
         let rev_prefix, last =
           match args with
           | [] -> failwith "should not happen"
           | xs ->
-            (match List.rev xs with
-             | h :: tl -> tl, h
-             | [] -> failwith "should not happen")
+              (match List.rev xs with
+              | h :: tl -> tl, h
+              | [] -> failwith "should not happen")
         in
         let count =
           let rec helper acc e =
@@ -78,10 +74,7 @@ let () =
           let open Ppxlib.Ast_builder.Default in
           [%expr [%e pexp_constant ~loc (Pconst_string (s, loc, None))], [%e snd last]]
         in
-        pexp_apply
-          ~loc
-          f
-          (List.rev_append rev_prefix @@ List.concat [ middle; [ Nolabel, last ] ]))
+        pexp_apply ~loc f (List.rev_append rev_prefix @@ List.concat [ middle; [ Nolabel, last ] ]))
     ]
   in
   Ppxlib.Driver.register_transformation ~extensions name

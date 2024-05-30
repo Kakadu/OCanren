@@ -37,9 +37,9 @@ let name_of_loc loc =
   let mangled_fname =
     String.map
       (function
-        | '/' -> '_'
-        | '.' -> '_'
-        | c -> c)
+         | '/' -> '_'
+         | '.' -> '_'
+         | c -> c)
       start.pos_fname
   in
   Printf.sprintf "__%s_c%d" mangled_fname Lexing.(start.pos_cnum - start.pos_bol)

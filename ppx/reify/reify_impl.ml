@@ -219,12 +219,11 @@ let make_reifier_for_tuple ~loc kind = function
                   pexp_tuple
                     ~loc
                     (List.map fnames ~f:(fun name ->
-                         pexp_apply
-                           ~loc
-                           (pexp_ident ~loc (Located.mk ~loc @@ Lident name))
-                           [ ( Asttypes.Nolabel
-                             , pexp_ident ~loc (Located.mk ~loc @@ Lident (name ^ "s")) )
-                           ]))]]
+                       pexp_apply
+                         ~loc
+                         (pexp_ident ~loc (Located.mk ~loc @@ Lident name))
+                         [ Asttypes.Nolabel, pexp_ident ~loc (Located.mk ~loc @@ Lident (name ^ "s"))
+                         ]))]]
       in
       let rnames = List.map ~f:(fun _ -> gen_symbol ~prefix:"r" ()) ps in
       let body =
@@ -232,18 +231,17 @@ let make_reifier_for_tuple ~loc kind = function
           let gmap_tuple = [%e gmap_expr] in
           let fmapt = [%e make_fmapt_body ~loc [%expr gmap_tuple] (List.length ps)] in
           OCanren.Reifier.fix (fun _ ->
-              let open OCanren.Env.Monad in
-              [%e
-                let call_to_fmapt =
-                  Myhelpers.Exp.apply ~loc [%expr fmapt] (List.map rnames ~f:(Exp.lident ~loc))
-                in
-                match kind with
-                | Prj_exn -> [%expr OCanren.prj_exn <..> chain [%e call_to_fmapt]]
-                | Reify ->
-                    [%expr
-                      OCanren.reify
-                      <..> chain
-                             (OCanren.Reifier.zed (OCanren.Reifier.rework ~fv:[%e call_to_fmapt]))]])]
+            let open OCanren.Env.Monad in
+            [%e
+              let call_to_fmapt =
+                Myhelpers.Exp.apply ~loc [%expr fmapt] (List.map rnames ~f:(Exp.lident ~loc))
+              in
+              match kind with
+              | Prj_exn -> [%expr OCanren.prj_exn <..> chain [%e call_to_fmapt]]
+              | Reify ->
+                  [%expr
+                    OCanren.reify
+                    <..> chain (OCanren.Reifier.zed (OCanren.Reifier.rework ~fv:[%e call_to_fmapt]))]])]
       in
       Myhelpers.Exp.funs ~loc body rnames
 ;;
@@ -407,7 +405,7 @@ let make_reifier_composition ~pat ?(typ = None) kind tdecl =
     let loc = tdecl.ptype_loc in
     let args rhs =
       List.fold_right names ~init:rhs ~f:(fun name acc ->
-          [%expr fun [%p ppat_var ~loc (Located.mk ~loc (mk_arg_reifier name))] -> [%e acc]])
+        [%expr fun [%p ppat_var ~loc (Located.mk ~loc (mk_arg_reifier name))] -> [%e acc]])
     in
     args
   in

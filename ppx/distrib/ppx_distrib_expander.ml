@@ -27,9 +27,9 @@ let nolabelize = List.map ~f:(fun e -> Nolabel, e)
 let notify fmt =
   Printf.ksprintf
     (fun s ->
-      let _cmd = Printf.sprintf "notify-send %S" s in
-      let (_ : int) = Caml.Sys.command _cmd in
-      ())
+       let _cmd = Printf.sprintf "notify-send %S" s in
+       let (_ : int) = Caml.Sys.command _cmd in
+       ())
     fmt
 ;;
 
@@ -55,11 +55,11 @@ let has_name_attr (xs : attributes) =
   let exception Found of string in
   try
     List.iter xs ~f:(function
-        | { attr_loc; attr_name = { txt = "name" }; attr_payload = PStr [ si ] } ->
-            let open Ast_pattern in
-            let p = pstr_eval (pexp_constant (pconst_string __ __ none)) nil in
-            parse p attr_loc ~on_error:(fun _ -> ()) si (fun s -> raise (Found s))
-        | _ -> ());
+      | { attr_loc; attr_name = { txt = "name" }; attr_payload = PStr [ si ] } ->
+          let open Ast_pattern in
+          let p = pstr_eval (pexp_constant (pconst_string __ __ none)) nil in
+          parse p attr_loc ~on_error:(fun _ -> ()) si (fun s -> raise (Found s))
+      | _ -> ());
     None
   with
   | Found s -> Some s
@@ -485,9 +485,9 @@ let remove_deriving_gmap attr =
         | Pexp_record (labs, other) ->
             let labs =
               List.filter labs ~f:(fun (lab, _) ->
-                  match lab.txt with
-                  | Lident "gmap" -> false
-                  | _ -> true)
+                match lab.txt with
+                | Lident "gmap" -> false
+                | _ -> true)
             in
             let loc = opts.pexp_loc in
             (match labs with
@@ -505,14 +505,14 @@ let remove_deriving_gmap attr =
 
 let filter_out_gmap_attr attrs =
   List.concat_map attrs ~f:(fun attr ->
-      match attr.attr_name.txt with
-      | "distrib" -> []
-      | "deriving" ->
-          remove_deriving_gmap attr
-          |> (function
-          | Some x -> [ x ]
-          | None -> [])
-      | _ -> [ attr ])
+    match attr.attr_name.txt with
+    | "distrib" -> []
+    | "deriving" ->
+        remove_deriving_gmap attr
+        |> (function
+         | Some x -> [ x ]
+         | None -> [])
+    | _ -> [ attr ])
 ;;
 
 let decorate_with_attributes tdecl attrs = { tdecl with ptype_attributes = attrs }
@@ -586,16 +586,16 @@ let make_reifier_gen ~kind is_rec tdecl : Reifier_info.t =
             let tname = Format.sprintf "%s_%s" name (Reify_impl.string_of_kind kind) in
             let rhs = pexp_ident ~loc (Located.mk ~loc (Ldot (m, tname))) in
             List.fold_left ~init:rhs args ~f:(fun acc x ->
-                pexp_apply ~loc acc [ nolabel, helper x ])
+              pexp_apply ~loc acc [ nolabel, helper x ])
         | { ptyp_desc = Ptyp_constr ({ txt = Ldot (m, _) }, args) } ->
             let rhs = pexp_ident ~loc (Located.mk ~loc (Ldot (m, name))) in
             List.fold_left ~init:rhs args ~f:(fun acc x ->
-                pexp_apply ~loc acc [ nolabel, helper x ])
+              pexp_apply ~loc acc [ nolabel, helper x ])
         | { ptyp_desc = Ptyp_constr ({ txt = Lident name }, args) } when Reify_impl.is_new () ->
             let tname = Format.sprintf "%s_%s" name (Reify_impl.string_of_kind kind) in
             let rhs = pexp_ident ~loc (Located.mk ~loc (Lident tname)) in
             List.fold_left ~init:rhs args ~f:(fun acc x ->
-                pexp_apply ~loc acc [ nolabel, helper x ])
+              pexp_apply ~loc acc [ nolabel, helper x ])
         | _ ->
             failwiths
               ~loc:typ.ptyp_loc
@@ -620,13 +620,13 @@ let make_reifier_gen ~kind is_rec tdecl : Reifier_info.t =
             [%expr
               let open OCanren.Env.Monad in
               OCanren.Reifier.fix (fun [%p self_pat] ->
-                  [%e base_reifier]
-                  <..> chain
-                         [%e
-                           match kind with
-                             | Reify ->
-                                 [%expr OCanren.Reifier.zed (OCanren.Reifier.rework ~fv:[%e fmapt])]
-                             | Prj_exn -> fmapt])]
+                [%e base_reifier]
+                <..> chain
+                       [%e
+                         match kind with
+                           | Reify ->
+                               [%expr OCanren.Reifier.zed (OCanren.Reifier.rework ~fv:[%e fmapt])]
+                           | Prj_exn -> fmapt])]
         | _ -> failwiths ~loc:manifest.ptyp_loc "Not supported %s %d" Caml.__FILE__ Caml.__LINE__
       in
       { Reifier_info.typ = None; body = body (); name = pat_name; decl = tdecl }
@@ -656,20 +656,20 @@ let reifier_for_fully_abstract ~kind tdecl =
         ~loc
         fmapt
         (List.map tdecl.ptype_params ~f:(fun (t, _) ->
-             match t.ptyp_desc with
-             | Ptyp_var v -> Nolabel, pexp_ident ~loc (Located.mk ~loc (Lident (sprintf "f%s" v)))
-             | _ -> assert false))
+           match t.ptyp_desc with
+           | Ptyp_var v -> Nolabel, pexp_ident ~loc (Located.mk ~loc (Lident (sprintf "f%s" v)))
+           | _ -> assert false))
     in
     let self_pat = [%pat? _] in
     [%expr
       let open OCanren.Env.Monad in
       OCanren.Reifier.fix (fun [%p self_pat] ->
-          [%e base_reifier]
-          <..> chain
-                 [%e
-                   match kind with
-                     | Reify -> [%expr OCanren.Reifier.zed (OCanren.Reifier.rework ~fv:[%e fmapt])]
-                     | Prj_exn -> fmapt])]
+        [%e base_reifier]
+        <..> chain
+               [%e
+                 match kind with
+                   | Reify -> [%expr OCanren.Reifier.zed (OCanren.Reifier.rework ~fv:[%e fmapt])]
+                   | Prj_exn -> fmapt])]
   in
   { Reifier_info.typ = None; body = body (); name = pat_name; decl = tdecl }
 ;;
@@ -706,9 +706,10 @@ let%expect_test _ =
 ;;
 
 let pp_attributes ppf attrs =
-  List.iteri attrs ~f:(fun i -> function
-    | { attr_payload = PStr stru } -> Format.fprintf ppf "%d: %a\n%!" i Pprintast.structure stru
-    | _ -> Format.fprintf ppf "pprinting is not implemented")
+  List.iteri attrs ~f:(fun i ->
+      function
+      | { attr_payload = PStr stru } -> Format.fprintf ppf "%d: %a\n%!" i Pprintast.structure stru
+      | _ -> Format.fprintf ppf "pprinting is not implemented")
 ;;
 
 let process_main ~loc rec_ (base_tdecl, tdecl) =
@@ -807,54 +808,54 @@ let process_main ~loc rec_ (base_tdecl, tdecl) =
       match base_tdecl.ptype_kind with
       | Ptype_variant cds ->
           List.map cds ~f:(fun cd ->
-              let name =
-                match has_name_attr cd.pcd_attributes with
-                | None -> name cd
-                | Some name -> name
-              in
-              let prim_pat = Pat.var ~loc (Located.mk ~loc name) in
-              match cd.pcd_args with
-              | Pcstr_tuple xs ->
-                  let args = List.map xs ~f:(fun _ -> Ppxlib.gen_symbol ()) in
-                  let add_args rhs =
-                    match args with
-                    | [] -> [%expr fun () -> [%e rhs]]
-                    | args ->
-                        List.fold_right ~init:rhs args ~f:(fun x acc ->
-                            Exp.fun_ nolabel None (Pat.var (Located.mk ~loc x)) acc)
-                  in
-                  make_stri
-                    prim_pat
-                    add_args
-                    (Exp.construct
-                       (Located.map_lident cd.pcd_name)
-                       (if List.is_empty args
-                        then None
-                        else Some (Exp.mytuple ~loc (List.map args ~f:(Exp.lident ~loc)))))
-              | Pcstr_record ls ->
-                  let add_args rhs =
-                    List.fold_right ~init:rhs ls ~f:(fun { pld_name = { txt } } acc ->
-                        Exp.fun_ nolabel None (Pat.var (Located.mk ~loc txt)) acc)
-                  in
-                  make_stri
-                    prim_pat
-                    add_args
-                    (Exp.construct
-                       (Located.map_lident cd.pcd_name)
-                       (Some
-                          (Exp.record
-                             ~loc
-                             (List.map
-                                ~f:(fun { pld_name } ->
-                                  let ident = Lident pld_name.txt in
-                                  let loc = pld_name.loc in
-                                  Located.mk ~loc ident, Exp.ident ~loc ident)
-                                ls)
-                             None))))
+            let name =
+              match has_name_attr cd.pcd_attributes with
+              | None -> name cd
+              | Some name -> name
+            in
+            let prim_pat = Pat.var ~loc (Located.mk ~loc name) in
+            match cd.pcd_args with
+            | Pcstr_tuple xs ->
+                let args = List.map xs ~f:(fun _ -> Ppxlib.gen_symbol ()) in
+                let add_args rhs =
+                  match args with
+                  | [] -> [%expr fun () -> [%e rhs]]
+                  | args ->
+                      List.fold_right ~init:rhs args ~f:(fun x acc ->
+                        Exp.fun_ nolabel None (Pat.var (Located.mk ~loc x)) acc)
+                in
+                make_stri
+                  prim_pat
+                  add_args
+                  (Exp.construct
+                     (Located.map_lident cd.pcd_name)
+                     (if List.is_empty args
+                      then None
+                      else Some (Exp.mytuple ~loc (List.map args ~f:(Exp.lident ~loc)))))
+            | Pcstr_record ls ->
+                let add_args rhs =
+                  List.fold_right ~init:rhs ls ~f:(fun { pld_name = { txt } } acc ->
+                    Exp.fun_ nolabel None (Pat.var (Located.mk ~loc txt)) acc)
+                in
+                make_stri
+                  prim_pat
+                  add_args
+                  (Exp.construct
+                     (Located.map_lident cd.pcd_name)
+                     (Some
+                        (Exp.record
+                           ~loc
+                           (List.map
+                              ~f:(fun { pld_name } ->
+                                let ident = Lident pld_name.txt in
+                                let loc = pld_name.loc in
+                                Located.mk ~loc ident, Exp.ident ~loc ident)
+                              ls)
+                           None))))
       | Ptype_record ls ->
           let add_args rhs =
             List.fold_right ~init:rhs ls ~f:(fun { pld_name = { txt } } acc ->
-                Exp.fun_ nolabel None (Pat.var (Located.mk ~loc txt)) acc)
+              Exp.fun_ nolabel None (Pat.var (Located.mk ~loc txt)) acc)
           in
           let prim_pat =
             Pat.var ~loc (Located.map_loc ~f:(fun s -> "make_" ^ s) base_tdecl.ptype_name)
@@ -927,13 +928,12 @@ let process_main ~loc rec_ (base_tdecl, tdecl) =
       let rez =
         [%type:
           ( [%t ptyp_constr ~loc lident (List.map names ~f:(ptyp_var ~loc))]
-          , [%t ptyp_constr ~loc lident_g (List.map names_2 ~f:(ptyp_var ~loc))] )
-          OCanren.Reifier.t]
+            , [%t ptyp_constr ~loc lident_g (List.map names_2 ~f:(ptyp_var ~loc))] )
+            OCanren.Reifier.t]
       in
       List.fold_right names ~init:rez ~f:(fun name acc ->
-          [%type:
-            ([%t ptyp_var ~loc name], [%t ptyp_var ~loc (mangle name)]) OCanren.Reifier.t
-            -> [%t acc]])
+        [%type:
+          ([%t ptyp_var ~loc name], [%t ptyp_var ~loc (mangle name)]) OCanren.Reifier.t -> [%t acc]])
     in
     { ri with Reifier_info.typ = Some injected_typ }
   in
@@ -951,7 +951,7 @@ let process_main ~loc rec_ (base_tdecl, tdecl) =
 
 (* TODO(Kakadu): remember why this is really needed *)
 (*
-let process_composable =
+   let process_composable =
   List.map ~f:(fun tdecl ->
       let loc = tdecl.pstr_loc in
       match tdecl.pstr_desc with
@@ -973,7 +973,7 @@ let process_composable =
           | None -> tdecl)
       | _ -> tdecl)
 ;;
- *)
+*)
 (* let prepare_reifiers (rs : Reifier_info.t list) =
   let names = [] (* type params of original decl *) in
   let mk_arg_reifier s = sprintf "r%s" s in
@@ -1007,4 +1007,4 @@ let process_composable =
         ; List.concat_map rs ~f:(fun _ -> [])
         ]
 ;;
- *)
+*)

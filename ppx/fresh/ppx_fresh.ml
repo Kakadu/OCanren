@@ -53,15 +53,15 @@ let is_call_fresh = need_insert_fname ~name:"call_fresh"
 
 let is_unif =
   classify_name ~f:(function
-      | Lident s -> String.length s >= 3 && String.equal (String.sub s ~pos:0 ~len:3) "==="
-      | _ -> false)
+    | Lident s -> String.length s >= 3 && String.equal (String.sub s ~pos:0 ~len:3) "==="
+    | _ -> false)
 ;;
 
 let is_conj = need_insert_fname ~name:"conj"
 let is_disj e = need_insert_fname ~name:"disj" e || need_insert_fname ~name:"|||" e
 
 (*
-let rec walkthrough ~fname (expr: expression) =
+   let rec walkthrough ~fname (expr: expression) =
 
   let add_fname () =
     [%expr [%e Ast_helper.Exp.constant (Pconst_string (fname,None))] <=>
@@ -128,9 +128,9 @@ let reconstruct_args e =
     try
       Some
         (List.map xs ~f:(fun (_, e) ->
-             match e.pexp_desc with
-             | Pexp_ident { txt = Longident.Lident i; _ } -> i
-             | _ -> raise Not_an_ident))
+           match e.pexp_desc with
+           | Pexp_ident { txt = Longident.Lident i; _ } -> i
+           | _ -> raise Not_an_ident))
     with
     | Not_an_ident -> None
   in
@@ -205,32 +205,32 @@ let mapper =
                     [%expr
                       Fresh.five
                         (fun
-                          [%p to_pat ident1]
-                          [%p to_pat ident2]
-                          [%p to_pat ident3]
-                          [%p to_pat ident4]
-                          [%p to_pat ident5]
-                        -> [%e loop tl])]
+                            [%p to_pat ident1]
+                            [%p to_pat ident2]
+                            [%p to_pat ident3]
+                            [%p to_pat ident4]
+                            [%p to_pat ident5]
+                          -> [%e loop tl])]
                 | ident1 :: ident2 :: ident3 :: ident4 :: tl ->
                     [%expr
                       Fresh.four
                         (fun
-                          [%p to_pat ident1]
-                          [%p to_pat ident2]
-                          [%p to_pat ident3]
-                          [%p to_pat ident4]
-                        -> [%e loop tl])]
+                            [%p to_pat ident1]
+                            [%p to_pat ident2]
+                            [%p to_pat ident3]
+                            [%p to_pat ident4]
+                          -> [%e loop tl])]
                 | ident1 :: ident2 :: ident3 :: tl ->
                     [%expr
                       Fresh.three (fun [%p to_pat ident1] [%p to_pat ident2] [%p to_pat ident3] ->
-                          [%e loop tl])]
+                        [%e loop tl])]
                 | ident1 :: ident2 :: tl ->
                     [%expr Fresh.two (fun [%p to_pat ident1] [%p to_pat ident2] -> [%e loop tl])]
                 | ident :: tl ->
                     [%expr
                       Fresh.one
                         (fun [%p Pat.var ~loc (Ast_builder.Default.Located.mk ident ~loc)] ->
-                          [%e loop tl])]
+                           [%e loop tl])]
               in
               loop xs
           | None ->

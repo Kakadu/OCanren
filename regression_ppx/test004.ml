@@ -59,16 +59,14 @@ module _ = struct
   let () = run_peano 1 q qh (REPR (fun q -> q === z ()))
 
   let v : injected =
-    match
-      run q (fun q -> fresh m (q === succ m)) (fun rr -> rr#reify reify_bad) |> Stream.hd
-    with
-    | Value (S var) -> var
-    | _ -> assert false
+    match run q (fun q -> fresh m (q === succ m)) (fun rr -> rr#reify reify_bad) |> Stream.hd with
+      | Value (S var) -> var
+      | _ -> assert false
   ;;
 
   let () =
     try run_peano 1 q qh (REPR (fun q -> q === v)) with
-    | Failure s -> Format.printf "Failure: %s\n%!" s
+      | Failure s -> Format.printf "Failure: %s\n%!" s
   ;;
 
   let v : injected t OCanren__Logic.logic =

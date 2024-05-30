@@ -31,11 +31,11 @@ module FoldInfo = struct
     try
       List.iter
         (fun i ->
-          let new_repr =
-            Pprintast.core_type Format.str_formatter i.rtyp;
-            Format.flush_str_formatter ()
-          in
-          if new_repr = typ_repr then raise (ItemFound i))
+           let new_repr =
+             Pprintast.core_type Format.str_formatter i.rtyp;
+             Format.flush_str_formatter ()
+           in
+           if new_repr = typ_repr then raise (ItemFound i))
         ts;
       None
     with
@@ -69,8 +69,8 @@ let run loc tdecls =
     in
     if List.for_all
          (function
-           | { ptype_attributes = [] } -> true
-           | _ -> false)
+            | { ptype_attributes = [] } -> true
+            | _ -> false)
          prefix
     then fun _ -> last.ptype_attributes
     else Fun.id
@@ -103,38 +103,38 @@ let run loc tdecls =
       | Ptype_variant ctors ->
           List.fold_right
             (fun cd (n, acc_map, cs) ->
-              let acc = n, acc_map, [] in
-              match cd.pcd_args with
-              | Pcstr_tuple tt ->
-                  let n, map2, new_args = List.fold_right abstracting_internal_type tt acc in
-                  let new_args = Pcstr_tuple new_args in
-                  n, map2, { cd with pcd_args = new_args } :: cs
-              | Pcstr_record lds ->
-                  let typs = List.map (fun ldt -> ldt.pld_type) lds in
-                  let n, map2, new_args = List.fold_right abstracting_internal_type typs acc in
-                  let new_args =
-                    Pcstr_record (List.map2 (fun ld t -> { ld with pld_type = t }) lds new_args)
-                  in
-                  n, map2, { cd with pcd_args = new_args } :: cs)
+               let acc = n, acc_map, [] in
+               match cd.pcd_args with
+               | Pcstr_tuple tt ->
+                   let n, map2, new_args = List.fold_right abstracting_internal_type tt acc in
+                   let new_args = Pcstr_tuple new_args in
+                   n, map2, { cd with pcd_args = new_args } :: cs
+               | Pcstr_record lds ->
+                   let typs = List.map (fun ldt -> ldt.pld_type) lds in
+                   let n, map2, new_args = List.fold_right abstracting_internal_type typs acc in
+                   let new_args =
+                     Pcstr_record (List.map2 (fun ld t -> { ld with pld_type = t }) lds new_args)
+                   in
+                   n, map2, { cd with pcd_args = new_args } :: cs)
             ctors
             (0, FoldInfo.empty, [])
           |> fun (_, mapa, cs) -> mapa, { tdecl with ptype_kind = Ptype_variant cs }
       | Ptype_record fields ->
           List.fold_right
             (fun field (n, map, args) ->
-              let typ = field.pld_type in
-              let upd_field typ = { field with pld_type = typ } in
-              match typ with
-              | [%type: _] -> assert false
-              | { ptyp_desc = Ptyp_var _; _ } -> n, map, field :: args
-              | arg ->
-                  (match FoldInfo.param_for_rtyp arg map with
-                  | Some { param_name } -> n, map, upd_field (ptyp_var ~loc param_name) :: args
-                  | None ->
-                      let new_name = sprintf "a%d" n in
-                      ( n + 1
-                      , FoldInfo.extend new_name arg arg map
-                      , upd_field (ptyp_var ~loc new_name) :: args )))
+               let typ = field.pld_type in
+               let upd_field typ = { field with pld_type = typ } in
+               match typ with
+               | [%type: _] -> assert false
+               | { ptyp_desc = Ptyp_var _; _ } -> n, map, field :: args
+               | arg ->
+                   (match FoldInfo.param_for_rtyp arg map with
+                   | Some { param_name } -> n, map, upd_field (ptyp_var ~loc param_name) :: args
+                   | None ->
+                       let new_name = sprintf "a%d" n in
+                       ( n + 1
+                       , FoldInfo.extend new_name arg arg map
+                       , upd_field (ptyp_var ~loc new_name) :: args )))
             fields
             (0, FoldInfo.empty, [])
           |> fun (_, mapa, fields) -> mapa, { tdecl with ptype_kind = Ptype_record fields }
@@ -159,7 +159,7 @@ let run loc tdecls =
       ; ptype_params =
           full_t.ptype_params
           @ FoldInfo.map mapa ~f:(fun { FoldInfo.param_name } ->
-                make_simple_arg (ptyp_var ~loc param_name))
+            make_simple_arg (ptyp_var ~loc param_name))
       }
     in
     (* now we need to add some parameters if we collected ones *)

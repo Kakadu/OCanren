@@ -171,8 +171,8 @@ module _ = struct
       (Pair.reify (Triple.reify OCanren.reify OCanren.reify OCanren.reify) OCanren.reify)
       ([%show:
          ( (GT.bool logic, GT.bool logic, GT.bool logic) Std.Triple.logic
-         , GT.int logic )
-         Std.Pair.logic]
+           , GT.int logic )
+           Std.Pair.logic]
          ())
       eta
   ;;
