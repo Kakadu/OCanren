@@ -1,0 +1,2 @@
+$ ls
+$ ./bits.exe

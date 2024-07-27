@@ -73,10 +73,46 @@
  (deps tree.exe sorting.exe WGC.exe JeepProblem.exe len.exe))
 
 (cram
- (deps
-  tree.exe
-  sorting.exe
-  WGC.exe
-  JeepProblem.exe
-  ;
-  ))
+ (applies_to tree)
+ (deps tree.exe))
+
+(cram
+ (applies_to Jeep)
+ (deps JeepProblem.exe))
+
+(cram
+ (applies_to WGC)
+ (deps WGC.exe))
+
+(cram
+ (applies_to sorting)
+ (deps sorting.exe))
+
+(library
+ (name bits_lib)
+ (modules bits bits_lib_test)
+ (wrapped false)
+ (inline_tests)
+ (preprocess
+  (pps
+   ppx_expect
+   OCanren-ppx.ppx_fresh
+   OCanren-ppx.ppx_tester
+   OCanren-ppx.ppx_deriving_reify
+   GT.ppx_all))
+ (libraries GT OCanren OCanren.tester))
+
+(executable
+ (name bits_run)
+ (modules bits_run)
+ (preprocess
+  (pps
+   OCanren-ppx.ppx_fresh
+   OCanren-ppx.ppx_tester
+   OCanren-ppx.ppx_deriving_reify
+   GT.ppx_all))
+ (libraries GT OCanren bits_lib OCanren.tester))
+
+(cram
+ (applies_to bits)
+ (deps bits_run.exe))
