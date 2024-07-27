@@ -111,7 +111,7 @@
    OCanren-ppx.ppx_tester
    OCanren-ppx.ppx_deriving_reify
    GT.ppx_all))
- (libraries GT OCanren bits_lib OCanren.tester))
+ (libraries mtime mtime.clock.os GT OCanren bits_lib OCanren.tester))
 
 (cram
  (applies_to bits)

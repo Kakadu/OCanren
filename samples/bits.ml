@@ -127,22 +127,31 @@ let test_groupo_fwd matrix =
 (* All xss are lists of the same length *)
 let rec counto_distincto =
   let open Std in
-  let rec helper (xss : matrixi) (count : counti) =
+  let rec helper ?(verbose = false) (xss : matrixi) (count : counti) =
     conde
       [
-        list_of_singletons xss count;
-        fresh
-          (head0 head1 count0 count1)
-          (groupo xss ~head1 head0) (helper head0 count0) (helper head1 count1)
-          (debug_var (Std.pair count0 count1)
-             [%reify: (Nat.logic, Nat.logic) Std.Pair.logic] (function
-            | [ Value (count0, count1) ] ->
-                Printf.printf "count0 = %s, count1 = %s\n"
-                  ([%show: Nat.logic] () count0)
-                  ([%show: Nat.logic] () count1);
-                success
-            | _ -> assert false))
-          (Nat.addo count0 count1 count);
+        xss === nil () &&& (count === Nat.zero);
+        xss =/= nil ()
+        &&& conde
+              [
+                (* list_of_singletons xss count; *)
+                list_of_same ~xs:xss (Std.nil ()) &&& (count === Nat.one);
+                fresh
+                  (head0 head1 count0 count1)
+                  (groupo xss ~head1 head0) (helper head0 count0)
+                  (helper head1 count1)
+                  (if verbose then
+                     debug_var (Std.pair count0 count1)
+                       [%reify: (Nat.logic, Nat.logic) Std.Pair.logic] (function
+                       | [ Value (count0, count1) ] ->
+                           Printf.printf "count0 = %s, count1 = %s\n"
+                             ([%show: Nat.logic] () count0)
+                             ([%show: Nat.logic] () count1);
+                           success
+                       | _ -> assert false)
+                   else success)
+                  (Nat.addo count0 count1 count);
+              ];
       ]
   in
   fun ?(verbose = false) submatrix count ->
@@ -155,7 +164,7 @@ let rec counto_distincto =
              success
          | _ -> success)
      else success)
-    &&& helper submatrix count
+    &&& helper ~verbose submatrix count
     &&&
     if verbose then
       debug_var (Std.pair submatrix count)
@@ -168,7 +177,8 @@ let rec counto_distincto =
         | _ -> success)
     else success
 
-let test_counto_distincto_full_ground ?(n = 1) ~xlen numbers distinct_count =
+let test_counto_distincto_full_ground ?(verbose = false) ?(n = 1) ~xlen numbers
+    distinct_count =
   let inj_matrix = Std.list (Std.list ( !! )) in
   let matrix = List.map (binary_of_int xlen) numbers in
   print_matrix matrix;
@@ -177,7 +187,8 @@ let test_counto_distincto_full_ground ?(n = 1) ~xlen numbers distinct_count =
     run_r OCanren.reify
       ([%show: GT.int OCanren.logic] ())
       n
-      (fun _ -> counto_distincto (inj_matrix matrix) (Std.nat distinct_count))]
+      (fun _ ->
+        counto_distincto ~verbose (inj_matrix matrix) (Std.nat distinct_count))]
 
 let test_counto_distincto_fwd matrix =
   let inj_matrix = Std.list (Std.list ( !! )) in
@@ -366,12 +377,13 @@ let test1 xlen numbers ~distinct_count =
   test_main_submatrix ~n:1 ~xlen numbers ~index_count:2 distinct_count;
   ()
 
-let test_main_anyindex_anysubmatrix ?(n = 1) matrix distinct_count =
-  let inj_matrix = Std.list (Std.list ( !! )) in
-  Printf.printf "\nDistinct count = %d \n" distinct_count;
-  List.iter
-    (fun n -> Printf.printf "\t%s\n" @@ [%show: GT.int GT.list] () n)
-    matrix;
+let test_main_anyindex_anysubmatrix ?(verbose = false) ?(n = 1) xlen numbers
+    distinct_count =
+  Printf.printf "\nDistinct count = %d, xlen = %d\n" distinct_count xlen;
+
+  assert (distinct_count > 0);
+  let matrix = List.map (binary_of_int xlen) numbers in
+  print_matrix matrix;
   let open Tester in
   [%tester
     run_r [%reify: (Std.Nat.t, Matrix.t) Std.Pair.t]
@@ -380,15 +392,5 @@ let test_main_anyindex_anysubmatrix ?(n = 1) matrix distinct_count =
       (fun pair ->
         fresh (index_count submatrix)
           (pair === Std.pair index_count submatrix)
-          (main_rel (inj_matrix matrix) ~index_count submatrix
+          (main_rel ~verbose (inj_matrix matrix) ~index_count submatrix
              (Std.nat distinct_count)))]
-
-let run_anyindex_anysubmatrix ?(n = 1) xlen numbers distinct_count =
-  assert (distinct_count > 0);
-  let matrix = List.map (binary_of_int xlen) numbers in
-
-  List.iter
-    (fun n -> Printf.printf "\t%s\n" @@ [%show: GT.int GT.list] () n)
-    matrix;
-  test_main_anyindex_anysubmatrix ~n matrix distinct_count;
-  ()
