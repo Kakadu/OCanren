@@ -419,7 +419,7 @@ let%expect_test _ =
      test1 8 [ 255; 127; 16; 8; 7 ] 3;
      test1 3 [ 7; 5; 0; 0; 0 ] 3; *)
   test_main_anyindex_anysubmatrix ~n:5 8 [ 223; 93; 18; 10; 5 ] 5;
-  ();
+
   [%expect
     {|
     Distinct count = 5, xlen = 8
@@ -438,4 +438,109 @@ let%expect_test _ =
     q=(S (S (S (S (S (O))))), [[1; 1; 0; 1; 1]; [0; 1; 0; 1; 1]; [0; 0; 0; 1; 0]; [0; 0; 0; 0; 1]; [0; 0; 0; 0; 0]]);
     q=(S (S (S (O))), [[1; 1; 1]; [0; 1; 1]; [0; 1; 0]; [0; 0; 0]; [0; 0; 1]]);
     } |}];
+  ()
+
+let%expect_test _ =
+  let xlen = 5 in
+  let numbers = [ 5; 3 ] in
+  test_reconstruct_submatrix xlen numbers [];
+  [%expect
+    {|
+
+  xlen = 5
+  indicies = []
+  	[0; 0; 1; 0; 1]
+  	[0; 0; 0; 1; 1]
+  fun submatrix ->
+    reconstruct_submatrix ~verbose (Std.list Std.nat indices)
+      (inj_matrix matrix) submatrix, 1 answer {
+  q=[[]; []];
+  }|}];
+
+  test_reconstruct_submatrix ~n:2 3 numbers [ 1; 2; 3 ];
+  [%expect
+    {|
+    xlen = 3
+    indicies = [1; 2; 3]
+    	[1; 0; 1]
+    	[0; 1; 1]
+    fun submatrix ->
+      reconstruct_submatrix ~verbose (Std.list Std.nat indices)
+        (inj_matrix matrix) submatrix, 2 answers {
+    q=[[1; 0; 1]; [0; 1; 1]];
+    } |}];
+  test_reconstruct_submatrix ~n:2 3 numbers [ 1; 3 ];
+  [%expect
+    {|
+      xlen = 3
+      indicies = [1; 3]
+      	[1; 0; 1]
+      	[0; 1; 1]
+      fun submatrix ->
+        reconstruct_submatrix ~verbose (Std.list Std.nat indices)
+          (inj_matrix matrix) submatrix, 2 answers {
+      q=[[1; 1]; [0; 1]];
+      } |}];
+  ()
+
+let%expect_test _ =
+  test_main2 ~verbose:true ~n:2 2 [ 2; 1 ] 2;
+  [%expect {|
+    xlen = 2, distinct_count = 2
+    	[1; 0]
+    	[0; 1]
+    fun pair ->
+      fresh (submatrix indicies) (pair === (Std.pair submatrix indicies))
+        (main2 ~verbose (inj_matrix matrix) indicies ~submatrix
+           (Std.nat distinct_count)), 2 answers {
+    } |}];
+  (* test_main2 ~n:1 8 [ 223; 93; 18; 10; 5 ] 4; *)
+  (* *)
+  test_main2 ~verbose:true ~n:1 1 [ 1 ] 1;
+  [%expect {|
+    xlen = 1, distinct_count = 1
+    	[1]
+    fun pair ->
+      fresh (submatrix indicies) (pair === (Std.pair submatrix indicies))
+        (main2 ~verbose (inj_matrix matrix) indicies ~submatrix
+           (Std.nat distinct_count)), 1 answer {
+    c0 = O, c1 = S (O), total = S (O)
+    head0 = [], head1 = [[]] , m = [[1]]
+    HERR
+    q=([[1]], [S (O)]);
+    } |}];
+  test_main2 ~verbose:true ~n:1 2 [ 3; 1; 0 ] 1;
+  [%expect {|
+    xlen = 2, distinct_count = 1
+    	[1; 1]
+    	[0; 1]
+    	[0; 0]
+    fun pair ->
+      fresh (submatrix indicies) (pair === (Std.pair submatrix indicies))
+        (main2 ~verbose (inj_matrix matrix) indicies ~submatrix
+           (Std.nat distinct_count)), 1 answer {
+    } |}];
+  (* let matrix = [ [ 1 ] ] in *)
+  (* test_groupo_fwd ~n:1 matrix;
+     [%expect {|
+
+       } |}]; *)
+  (* let open Tester in
+     [%tester
+       run_r Std.Nat.reify (GT.show Std.Nat.logic) 2 (fun count0 count1 ->
+           let open Std in
+           fresh (head0 head1)
+             (groupo (inj_matrix matrix) ~head1 head0)
+             (conde
+                [
+                  head0 === Std.nil () &&& (count0 === Nat.zero);
+                  head0 =/= nil () &&& (count0 === Nat.one);
+                ])
+             (conde
+                [
+                  head1 === nil () &&& (count1 === Nat.zero);
+                  head1 =/= nil () &&& (count1 === Nat.one);
+                ])
+             (Nat.addo count0 count1 (Std.nat 2)))]; *)
+  [%expect {| |}];
   ()

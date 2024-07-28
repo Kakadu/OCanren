@@ -93,13 +93,19 @@
  (modules bits bits_lib_test)
  (wrapped false)
  (inline_tests)
+ (flags
+  (:standard -dsource))
  (preprocess
   (pps
    ppx_expect
    OCanren-ppx.ppx_fresh
    OCanren-ppx.ppx_tester
    OCanren-ppx.ppx_deriving_reify
-   GT.ppx_all))
+   OCanren-ppx.ppx_distrib
+   GT.ppx_all
+   --
+   ;-new-typenames
+   -pretty))
  (libraries GT OCanren OCanren.tester))
 
 (executable
@@ -110,6 +116,7 @@
    OCanren-ppx.ppx_fresh
    OCanren-ppx.ppx_tester
    OCanren-ppx.ppx_deriving_reify
+   OCanren-ppx.ppx_distrib
    GT.ppx_all))
  (libraries mtime mtime.clock.os GT OCanren bits_lib OCanren.tester))
 

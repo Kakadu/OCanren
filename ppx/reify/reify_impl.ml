@@ -107,6 +107,14 @@ let make_new_mangler kind tname =
       | Lident tname ->
           let lid = Lident (fix_tname tname) in
           k (fun ps -> ptyp_constr ~loc (Located.mk ~loc lid) ps)
+      | Ldot (prefix, "ground") when is_old () ->
+          let lid =
+            match kind with
+            | Reify -> "logic"
+            | Prj_exn -> "ground"
+          in
+          let lid = Ldot (prefix, lid) in
+          k (ptyp_constr ~loc (Located.mk ~loc lid))
       | Ldot (prefix, tname) ->
           let lid = Ldot (prefix, fix_tname tname) in
           k (fun ps -> ptyp_constr ~loc (Located.mk ~loc lid) ps)
@@ -476,7 +484,7 @@ let process_str tdecl =
   match tdecl.ptype_manifest with
   | Some m ->
       (* TODO(Kakadu): find a way not to pass both manifest and type declration *)
-      [ make_reifier ~loc m tdecl; make_prj ~loc m tdecl ]
+      [ make_prj ~loc m tdecl; make_reifier ~loc m tdecl ]
   | _ -> failwiths ~loc "no manifest"
 ;;
 
