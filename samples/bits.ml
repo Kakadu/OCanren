@@ -623,10 +623,44 @@ include struct
       | [ h ] -> Last h
       | h :: tl -> Cons (h, of_list tl)
 
-    let rec inj_list f = function
+    let rec inj_list f : _ -> _ injected = function
       | [] -> failwith "bad argument"
       | [ h ] -> last (f h)
       | h :: tl -> cons (f h) (inj_list f tl)
+
+    let rec of_binary_int ~xlen n =
+      assert (n >= 0);
+      assert (xlen > 0);
+      let rec loop acc curi n =
+        if curi > xlen then acc
+        else loop (Cons (n mod 2, acc)) (curi + 1) (n / 2)
+      in
+
+      loop (Last (n mod 2)) 2 (n / 2)
+
+    let rec inj f = function
+      | Last x -> last (f x)
+      | Cons (x, xs) -> cons (f x) (inj f xs)
+
+    let rec ground_to_normal_list = function
+      | Cons (h, tl) -> h :: ground_to_normal_list tl
+      | Last h -> [ h ]
+
+    let rec logic_to_normal_list_exn fcast_exn : _ logic -> _ list = function
+      | Value (Cons (h, tl)) ->
+          fcast_exn h :: logic_to_normal_list_exn fcast_exn tl
+      | Value (Last h) -> [ fcast_exn h ]
+      | Var _ -> failwith "bad arg"
+
+    let show_ground f xs = GT.show GT.list f (ground_to_normal_list xs)
+
+    let show_logic_int_list xs =
+      let l =
+        logic_to_normal_list_exn
+          (function Value x -> x | Var _ -> assert false)
+          xs
+      in
+      [%show: GT.int GT.list] () l
   end
 
   module Split_rez : sig
@@ -644,7 +678,7 @@ include struct
     val prj_exn : ('a, 'a_2) Reifier.t -> ('a injected, 'a_2 ground) Reifier.t
     val reify : ('a, 'a_2) Reifier.t -> ('a injected, 'a_2 logic) Reifier.t
     val last_col : 'a -> ('b, 'a) t ilogic
-    val many_cols : 'a -> 'b -> ('b, 'a) t ilogic
+    val many_cols : 'col -> 'm -> ('m, 'col) t ilogic
   end = struct
     [%%distrib
     type nonrec 'a ground =
@@ -672,12 +706,20 @@ include struct
       goal
 
     val groupo : injected -> head1:injected -> injected -> goal
+    val inj_numbers : xlen:int -> int list -> injected
+    val show_logic : logic -> string
   end = struct
     [%%distrib
     type nonrec ground = GT.int List1.ground GT.list
     [@@deriving gt ~options:{ gmap }]]
 
     let make xs = Std.list (List1.inj_list ( !! )) xs
+
+    let inj_numbers ~xlen xs : injected =
+      make @@ List.map (binary_of_int xlen) xs
+
+    let show_logic : logic -> string =
+     fun m -> GT.show Std.List.logic List1.show_logic_int_list m
 
     let split_1_col matrix rez =
       conde
@@ -724,27 +766,43 @@ include struct
    fun ?(verbose = false) ->
     let open Std in
     let _ = verbose in
-    let rec helper curidx indexes matrix rez =
+    let rec helper curidx indexes (matrix : Matrix1.injected)
+        (rez : Matrix1.injected) =
       conde
         [
-          fresh ()
+          fresh mrest
+            (* Last index === current, take first column *)
             (indexes === List1.last curidx)
-            (List.mapo (fun x y -> x === List1.last y) matrix rez);
-          fresh lasti
+            (conde
+               [
+                 (* matrix is big *)
+                 fresh col1
+                   (Matrix1.split_1_col matrix (Split_rez.many_cols col1 mrest))
+                   (List.mapo (fun e x -> x === List1.last e) col1 rez);
+                 fresh col1
+                   (Matrix1.split_1_col matrix (Split_rez.last_col col1))
+                   (List.mapo (fun e x -> x === List1.last e) col1 rez);
+               ]);
+          fresh (lasti col1 mrest)
+            (* Last index, NOT a current index *)
             (indexes === List1.last lasti)
             (lasti =/= curidx)
-            (List.mapo
-               (fun x y -> fresh tmp (x === List1.cons y tmp))
-               matrix rez);
-          fresh (ih itl)
+            (Matrix1.split_1_col matrix (Split_rez.many_cols col1 mrest))
+            (helper (Nat.succ curidx) indexes mrest rez);
+          fresh (ihead itl col1 mrest)
+            (* NOT Last index, NOT a current index *)
+            (* If matrix has only 1 column --- fail (not written here) *)
+            (indexes === List1.cons ihead itl)
+            (ihead =/= curidx)
+            (Matrix1.split_1_col matrix (Split_rez.many_cols col1 mrest))
+            (helper (Nat.succ curidx) indexes mrest rez);
+          fresh (ih itl mrest col1 rez_tl)
+            (* NOT Last index, starts with a CURRENT index *)
             (indexes === List1.cons ih itl)
-            (conde
-               (* TODO(Kakadu): continue from here *)
-               [
-                 List.mapo
-                   (fun x y -> fresh tmp (x === List1.cons y tmp))
-                   matrix rez;
-               ]);
+            (ih === curidx)
+            (Matrix1.split_1_col matrix (Split_rez.many_cols col1 mrest))
+            (Matrix1.split_1_col rez (Split_rez.many_cols col1 rez_tl))
+            (helper (Nat.succ curidx) itl mrest rez_tl);
         ]
     in
     fun eta -> helper Std.Nat.one eta

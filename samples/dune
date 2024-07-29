@@ -93,8 +93,8 @@
  (modules bits bits_lib_test)
  (wrapped false)
  (inline_tests)
- (flags
-  (:standard -dsource))
+ ;  (flags
+ ;   (:standard -dsource))
  (preprocess
   (pps
    ppx_expect

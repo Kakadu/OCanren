@@ -485,7 +485,8 @@ let%expect_test _ =
 
 let%expect_test _ =
   test_main2 ~verbose:true ~n:2 2 [ 2; 1 ] 2;
-  [%expect {|
+  [%expect
+    {|
     xlen = 2, distinct_count = 2
     	[1; 0]
     	[0; 1]
@@ -497,7 +498,8 @@ let%expect_test _ =
   (* test_main2 ~n:1 8 [ 223; 93; 18; 10; 5 ] 4; *)
   (* *)
   test_main2 ~verbose:true ~n:1 1 [ 1 ] 1;
-  [%expect {|
+  [%expect
+    {|
     xlen = 1, distinct_count = 1
     	[1]
     fun pair ->
@@ -510,7 +512,8 @@ let%expect_test _ =
     q=([[1]], [S (O)]);
     } |}];
   test_main2 ~verbose:true ~n:1 2 [ 3; 1; 0 ] 1;
-  [%expect {|
+  [%expect
+    {|
     xlen = 2, distinct_count = 1
     	[1; 1]
     	[0; 1]
@@ -544,3 +547,27 @@ let%expect_test _ =
              (Nat.addo count0 count1 (Std.nat 2)))]; *)
   [%expect {| |}];
   ()
+
+let test_reconstruct_submatrix3 ?(verbose = false) ?(n = 1) ~xlen numbers
+    indices =
+  let _ = verbose in
+  assert (List.for_all (fun x -> x > 0) indices);
+  Printf.printf "\nxlen = %d\n" xlen;
+  Printf.printf "indicies = %s\n" (GT.show GT.list (GT.show GT.int) indices);
+
+  let matrix = Matrix1.inj_numbers ~xlen numbers in
+  let indices = List1.inj_list Std.nat indices in
+  (* print_matrix matrix; *)
+  let open Tester in
+  [%tester
+    run_r [%reify: Matrix1.t] Matrix1.show_logic n (fun submatrix ->
+        reconstruct_submatrix3 ~verbose indices matrix submatrix)]
+
+let%expect_test "reconstruct submatrix 3" =
+  print_endline "asdf";
+  [%expect {| asdf |}];
+  test_reconstruct_submatrix3 ~xlen:3 [ 5; 3; 1 ] [ 1 ];
+  [%expect {| asdf |}];
+  [%expect {| asdf |}];
+  [%expect {| asdf |}];
+  [%expect {| asdf |}]
