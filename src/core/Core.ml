@@ -811,8 +811,4 @@ module Tabling =
 
 let reify_in_empty reifier x =
   let st = State.empty () in
-<<<<<<< HEAD
   reifier (State.env st) x
-=======
-  reifier (State.env st) x
->>>>>>> e707d8a5 (Condeep)
