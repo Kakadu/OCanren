@@ -38,45 +38,48 @@ let () =
   let extensions =
     let pattern =
       let open Ast_pattern in
-      pstr
-        (pstr_eval
-           (pexp_apply
-              __
-              ((nolabel ** __) ^:: (nolabel ** __) ^:: (nolabel ** __) ^:: (nolabel ** __) ^:: nil))
-           nil
-        ^:: nil)
+      pstr (pstr_eval (pexp_apply __ (many (nolabel ** __))) nil ^:: nil)
     in
-    [ Extension.declare
-        name
-        Extension.Context.Expression
-        pattern
-        (fun ~loc ~path:_ runner reifier shower n realtion ->
-          let open Ppxlib.Ast_builder.Default in
-          let count =
-            let rec helper acc e =
-              match e.pexp_desc with
-              | Pexp_fun (_, _, _, body) -> helper (1 + acc) body
-              | _ -> acc
-            in
-            helper 0 realtion
-          in
-          let middle =
-            match count with
-            | 0 -> failwith "Bad syntax"
-            | 1 -> [ [%expr OCanren.q]; [%expr qh] ]
-            | 2 -> [ [%expr OCanren.qr]; [%expr qrh] ]
-            | 3 -> [ [%expr OCanren.qrs]; [%expr qrsh] ]
-            | 4 -> [ [%expr OCanren.qrst]; [%expr qrsth] ]
-            | _ -> failwith (Printf.sprintf "5 and more arguments are not supported")
-          in
-          let last =
-            let s = string_of_expression @@ realtion in
-            let open Ppxlib.Ast_builder.Default in
-            [%expr [%e pexp_constant ~loc (Pconst_string (s, loc, None))], [%e realtion]]
-          in
-          pexp_apply ~loc runner
-          @@ List.map (fun e -> Nolabel, e)
-          @@ List.concat [ [ reifier; shower; n ]; middle; [ last ] ])
+    let calc_arity =
+      let open Ppxlib.Ast_builder.Default in
+      let rec helper acc e =
+        match e.pexp_desc with
+        | Pexp_fun (_, _, _, body) -> helper (1 + acc) body
+        | _ -> acc
+      in
+      helper 0
+    in
+    let make_middle ~loc = function
+      | 0 -> failwith "Bad syntax"
+      | 1 -> [ [%expr OCanren.q]; [%expr qh] ]
+      | 2 -> [ [%expr OCanren.qr]; [%expr qrh] ]
+      | 3 -> [ [%expr OCanren.qrs]; [%expr qrsh] ]
+      | 4 -> [ [%expr OCanren.qrst]; [%expr qrsth] ]
+      | _ -> failwith (Printf.sprintf "5 and more arguments are not supported")
+    in
+    let repr_of_expr ~loc e =
+      let s = string_of_expression e in
+      let open Ppxlib.Ast_builder.Default in
+      [%expr [%e pexp_constant ~loc (Pconst_string (s, loc, None))], [%e e]]
+    in
+    [ (let open Ppxlib.Ast_builder.Default in
+       Extension.declare name Extension.Context.Expression pattern (fun ~loc ~path:_ runner ->
+           function
+         | [ n; relation ] ->
+             let count = calc_arity relation in
+             let middle = make_middle ~loc count in
+             let last = repr_of_expr ~loc relation in
+             pexp_apply ~loc runner
+             @@ List.map (fun e -> Nolabel, e)
+             @@ List.concat [ [ n ]; middle; [ last ] ]
+         | [ reifier; shower; n; relation ] ->
+             let count = calc_arity relation in
+             let middle = make_middle ~loc count in
+             let last = repr_of_expr ~loc relation in
+             pexp_apply ~loc runner
+             @@ List.map (fun e -> Nolabel, e)
+             @@ List.concat [ [ reifier; shower; n ]; middle; [ last ] ]
+         | _ -> pexp_extension ~loc @@ Location.error_extensionf ~loc "Too many arguments"))
     ]
   in
   Ppxlib.Driver.register_transformation ~extensions name
