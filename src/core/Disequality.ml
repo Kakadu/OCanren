@@ -16,6 +16,17 @@
  * (enclosed in the file COPYING).
  *)
 
+
+let rec map_cps ~f xs k =
+  match xs with
+  | [] -> k []
+  | h::tl -> map_cps ~f tl (fun xs -> k (f h :: xs))
+
+let rec concat_map_cps ~f xs k =
+  match xs with
+  | [] -> k []
+  | h::tl -> concat_map_cps ~f tl (fun xs -> k (Stdlib.List.append (f h) xs))
+
 module Answer =
   struct
     module S = Set.Make(Term)
@@ -331,13 +342,15 @@ module Conjunct :
        * we maintain a list of answers, that is a mapping [var -> term list] ---
        * list of disequality terms (without duplicates) for each variable
        *)
+      (* Format.printf "Conjunct.reify  where t.card = %d\n" (M.cardinal t); *)
       M.fold (fun _ disj acc ->
         let bs = Disjunct.reify env subst disj in
           (* for each answer we append every atom in disjunct to it,
            * obtaining a list of new `extended` answers;
            * then we `concat` these lists into single list
            *)
-        ListLabels.map acc ~f:(fun answ ->
+        (* Format.printf "Bindings in disj count = %d\n" (Stdlib.List.length bs); *)
+        concat_map_cps acc ~f:(fun answ ->
             let open Subst.Binding in
             (* it might be the case that some atom in the disjunct
              * is a duplicate of some other disequality in the answer;
@@ -351,7 +364,7 @@ module Conjunct :
               [answ]
             else
               Stdlib.List.map (fun {var; term} -> Answer.add env answ var term) bs
-          ) |> Stdlib.List.concat
+          ) Fun.id
       ) t [Answer.empty]
 
   end

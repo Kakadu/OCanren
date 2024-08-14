@@ -51,3 +51,5 @@ module Answer :
   end
 
 val reify : Env.t -> Subst.t -> t -> 'a -> Answer.t list
+
+val map_cps: f:('a -> 'b) -> 'a list -> ('b list -> 'c) -> 'c
