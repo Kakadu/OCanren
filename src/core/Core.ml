@@ -320,7 +320,7 @@ module State =
       match Disequality.reify env subst ctrs x with
       | [] -> [Answer.make env answ]
       | diseqs ->
-        ListLabels.map diseqs ~f:(fun diseq ->
+        Disequality.map_cps diseqs Fun.id ~f:(fun diseq ->
           let rec helper forbidden t =
             Term.map t
               ~fval:(fun x -> Term.repr x)
