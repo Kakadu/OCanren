@@ -306,10 +306,6 @@
  (modules test015condeep)
  (package OCanren)
  (public_names -)
- (flags
-  (:standard
-   ;
-   ))
  (preprocess
   (pps
    OCanren-ppx.ppx_fresh
@@ -326,3 +322,28 @@
   %{project_root}/ppx/pp_ocanren_all.exe
   test015condeep.ml
   test015condeep.exe))
+
+(executables
+ (names test016)
+ (modules test016)
+ (package OCanren)
+ (public_names -)
+ (preprocess
+  (pps
+   OCanren-ppx.ppx_fresh
+   OCanren-ppx.ppx_repr
+   OCanren-ppx.ppx_distrib
+   OCanren-ppx.ppx_deriving_reify
+   GT.ppx_all))
+ (libraries OCanren OCanren.tester))
+
+(cram
+ (package OCanren)
+ (applies_to test016)
+ (deps
+  (package OCanren-ppx)
+  %{project_root}/ppx/pp_ocanren_all.exe
+  %{project_root}/ppx/pp_distrib.exe
+  test016.ml
+  ;test016.exe
+  ))
