@@ -1,16 +1,4 @@
-<<<<<<< HEAD
-  $ ./test014diseq.exe
-  test014 rembero
-  bad rembero, 4 answers {
-  q=[1; 3; 2; 4];
-  q=[1; 2; 3; 4];
-  q=[1; 2; 3; 2; 4];
-  }
-  good rembero, 4 answers {
-  q=[1; 3; 2; 4];
-  }
-=======
-  $ ../ppx/pp_ocanren_all.exe test014mutual.ml -pretty -new-typenames
+  $ ../ppx/pp_ocanren_all.exe test015mutual.ml -pretty -new-typenames
   let () = print_endline "test014"
   module _ =
     struct
@@ -21,9 +9,13 @@
           type nonrec 'a0 jtype_fuly =
             | Array of 'a0 [@@deriving gt ~options:{ show; gmap }]
           type targ = jtype targ_fuly
-          and jtype = targ jtype_fuly
+          and jtype = targ jtype_fuly[@@deriving gt ~options:{ show; gmap }]
           type targ_logic = jtype_logic targ_fuly OCanren.logic
-          and jtype_logic = targ_logic jtype_fuly OCanren.logic
+          and jtype_logic = targ_logic jtype_fuly OCanren.logic[@@deriving
+                                                                 gt
+                                                                   ~options:
+                                                                   { show; gmap
+                                                                   }]
           type targ_injected = jtype_injected targ_fuly OCanren.ilogic
           and jtype_injected = targ_injected jtype_fuly OCanren.ilogic
           let targ_fmapt f__005_ subj__006_ =
@@ -78,6 +70,5 @@
             end
         end
     end
-  $ ./test014mutual.exe
+  $ ./test015mutual.exe
   test014
->>>>>>> 32814201 (update tests for nonrecursive fully abstract types)
