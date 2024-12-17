@@ -9,9 +9,13 @@
           type nonrec 'a0 jtype_fuly =
             | Array of 'a0 [@@deriving gt ~options:{ show; gmap }]
           type targ = jtype targ_fuly
-          and jtype = targ jtype_fuly
+          and jtype = targ jtype_fuly[@@deriving gt ~options:{ show; gmap }]
           type targ_logic = jtype_logic targ_fuly OCanren.logic
-          and jtype_logic = targ_logic jtype_fuly OCanren.logic
+          and jtype_logic = targ_logic jtype_fuly OCanren.logic[@@deriving
+                                                                 gt
+                                                                   ~options:
+                                                                   { show; gmap
+                                                                   }]
           type targ_injected = jtype_injected targ_fuly OCanren.ilogic
           and jtype_injected = targ_injected jtype_fuly OCanren.ilogic
           let targ_fmapt f__005_ subj__006_ =
