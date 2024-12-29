@@ -194,10 +194,15 @@ let mapper =
             | [ body ] -> self#expression body
             | body ->
                 let xs = List.map ~f:self#expression body in
+                let loc = { loc with loc_ghost = true } in
                 [%expr ?&[%e my_list ~loc xs]]
           in
           (match reconstruct_args args with
+          (* | Some [] ->
+             (* Uncommenting this should change order of search *)
+             new_body *)
           | Some (xs : string list) ->
+              let loc = { loc with loc_ghost = true } in
               let to_pat ident = Pat.var ~loc (Ast_builder.Default.Located.mk ident ~loc) in
               let rec loop = function
                 | [] -> [%expr delay (fun () -> [%e new_body])]
@@ -245,14 +250,15 @@ let mapper =
              in
              let body = (Labelled "loc", Exp.constant (Pconst_string (loc_str,None))) :: body in *)
           Exp.apply ~loc:e.pexp_loc d body
-      | Pexp_apply (e, xs) ->
+      | Pexp_apply (efun, xs) ->
           let ans =
-            Pexp_apply (self#expression e, List.map ~f:(fun (lbl, e) -> lbl, self#expression e) xs)
+            Pexp_apply
+              (self#expression efun, List.map ~f:(fun (lbl, e) -> lbl, self#expression e) xs)
           in
           let ans = { e with pexp_desc = ans } in
           ans
-      | Pexp_fun (l, opt, pat, e) ->
-          { e with pexp_desc = Pexp_fun (l, opt, pat, self#expression e) }
+      | Pexp_fun (l, opt, pat, ebody) ->
+          { e with pexp_desc = Pexp_fun (l, opt, pat, self#expression ebody) }
       | Pexp_construct (_, None) -> e
       | Pexp_construct (id, Some e1) ->
           { e with pexp_desc = Pexp_construct (id, Some (self#expression e1)) }
@@ -286,6 +292,8 @@ let mapper =
             List.map vbs ~f:(fun vb -> { vb with pvb_expr = self#expression vb.pvb_expr })
           in
           { e with pexp_desc = Pexp_let (_recflag, vbs_new, self#expression where_expr) }
+      | Pexp_letop op ->
+          { e with pexp_desc = Pexp_letop { op with body = self#expression op.body } }
       | Pexp_while (e1, e2) ->
           let e1 = self#expression e1 in
           let e2 = self#expression e2 in
@@ -331,7 +339,7 @@ let mapper =
           { e with pexp_desc = Pexp_try (scru, List.map ~f:self#case cases) }
       | Pexp_object _ | Pexp_unreachable -> e
       | Pexp_open (_od, ee) -> { e with pexp_desc = Pexp_open (_od, self#expression ee) }
-      | Pexp_letop _ | Pexp_extension _ | Pexp_pack _ -> e
+      | Pexp_extension _ | Pexp_pack _ -> e
     (* | _ ->
        Stdlib.Format.printf "%a\n%a\n%!" Location.print loc Pprintast.expression e;
        assert false*)
