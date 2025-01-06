@@ -25,6 +25,12 @@ let pp_input ppf = function
   | Other _ -> Format.fprintf ppf "Other"
 ;;
 
+let log fmt =
+  if false
+  then Format.kasprintf (Printf.printf "%s\n%!") fmt
+  else Format.ifprintf Format.std_formatter fmt
+;;
+
 (* For mutual recursion gt only available for regular types. Currently we forbit it at all *)
 let filter_out_gt_attributes tdecls =
   let helper attrs =

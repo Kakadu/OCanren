@@ -43,6 +43,11 @@ type kind =
   | Reify
   | Prj_exn
 
+let pp_kind ppf = function
+  | Reify -> Format.fprintf ppf "Reify"
+  | Prj_exn -> Format.fprintf ppf "Prj_exn"
+;;
+
 let typ_for_kind = function
   | Reify -> "logic"
   | Prj_exn -> "ground"

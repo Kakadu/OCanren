@@ -14,7 +14,7 @@ open Printf
 module Format = Stdlib.Format
 open Myhelpers
 
-let use_logging = false
+let use_logging = true
 
 let log fmt =
   if use_logging
@@ -535,6 +535,7 @@ let mk_arg_reifier s = sprintf "r%s" s
 
 let make_reifier_gen ~kind is_rec tdecl : Reifier_info.t =
   (* let names = extract_names tdecl.ptype_params in *)
+  (* log "%s %d kind = %a" __FILE__ __LINE__ Reify_impl.pp_kind kind; *)
   let loc = tdecl.ptype_loc in
   let _pat, base_reifier, name =
     match kind with
@@ -563,14 +564,16 @@ let make_reifier_gen ~kind is_rec tdecl : Reifier_info.t =
         | [%type: string] -> base_reifier
         | [%type: GT.int Move.ground] -> assert false
         | [%type: [%t? _arg] GT.list] ->
-            failwiths
-              ~loc
-              "There are some issues with GT.list. Please, use fully qualified \
-               OCanren.Std.List.ground for now"
+            pexp_extension ~loc
+            @@ Location.error_extensionf
+                 ~loc
+                 "There are some issues with GT.list. Please, use fully qualified \
+                  OCanren.Std.List.ground for now"
         | { ptyp_desc = Ptyp_tuple [ l; r ] } ->
             let reifier = Exp.ident ~loc (lident_of_list [ "OCanren"; "Std"; "Pair"; name ]) in
             [%expr [%e reifier] [%e helper l] [%e helper r]]
-        | { ptyp_desc = Ptyp_tuple _ } -> failwiths ~loc "Not implemented"
+        | { ptyp_desc = Ptyp_tuple _ } ->
+            pexp_extension ~loc @@ Location.error_extensionf ~loc "Not implemented"
         | { ptyp_desc = Ptyp_constr ({ txt = Ldot (m, name) }, args) } when Reify_impl.is_new () ->
             (* Myhelpers.notify "%s %d" __FILE__ __LINE__; *)
             let tname = Format.sprintf "%s_%s" name (Reify_impl.string_of_kind kind) in
@@ -587,13 +590,14 @@ let make_reifier_gen ~kind is_rec tdecl : Reifier_info.t =
             List.fold_left ~init:rhs args ~f:(fun acc x ->
                 pexp_apply ~loc acc [ nolabel, helper x ])
         | _ ->
-            failwiths
-              ~loc:typ.ptyp_loc
-              "not supported: %a. %s %d"
-              Pprintast.core_type
-              typ
-              __FILE__
-              __LINE__
+            pexp_extension ~loc
+            @@ Location.error_extensionf
+                 ~loc
+                 "not supported: %a. %s %d"
+                 Pprintast.core_type
+                 typ
+                 __FILE__
+                 __LINE__
       in
       let body () =
         match manifest.ptyp_desc with
@@ -618,7 +622,12 @@ let make_reifier_gen ~kind is_rec tdecl : Reifier_info.t =
                                  [%expr OCanren.Reifier.zed (OCanren.Reifier.rework ~fv:[%e fmapt])]
                              | Prj_exn -> fmapt])]
         | _ ->
-            failwiths ~loc:manifest.ptyp_loc "Not supported %s %d" Stdlib.__FILE__ Stdlib.__LINE__
+            pexp_extension ~loc
+            @@ Location.error_extensionf
+                 ~loc:manifest.ptyp_loc
+                 "Not supported %s %d"
+                 Stdlib.__FILE__
+                 Stdlib.__LINE__
       in
       { Reifier_info.typ = None; body = body (); name = pat_name; decl = tdecl }
   | None -> assert false
