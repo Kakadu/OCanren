@@ -1,0 +1,13 @@
+(env
+ (_
+  (flags
+   (:standard -w -missing-record-field-pattern -warn-error -unused-ancestor))))
+
+(library
+ (name ppx_fresh)
+ (public_name MiniKanren-ppx.ppx_fresh)
+ (kind ppx_rewriter)
+ (libraries ppxlib.stdppx ppxlib)
+ (modules ppx_fresh)
+ (preprocess
+  (pps ppxlib.metaquot)))

@@ -29,20 +29,21 @@
   [defer] performs "inverse-eta-delay". It has the form [defer (g)] and expanded into [fun st -> Lazy.from_fun (fun () -> g st)].
 *)
 
+[@@@ocaml.warnerror "-8"]
+
 (**/**)
 
-#load "pa_extend.cmo";;
-#load "q_MLast.cmo";;
+(* #load "pa_extend.cmo";; *)
+(* #load "q_MLast.cmo";; *)
 
 open Pcaml
-open Printf
 
 let rec fold_right1 f = function
 | [h]  -> h
 | h::t -> f h (fold_right1 f t)
 ;;
 
-let rec fold_left1 f xs = List.fold_left f (List.hd xs) (List.tl xs)
+let fold_left1 f xs = List.fold_left f (List.hd xs) (List.tl xs)
 
 EXTEND
   GLOBAL: expr;

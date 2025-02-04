@@ -61,6 +61,7 @@ module Bool =
 
     let ground = {
       GT.gcata = ();
+      GT.fix = ();
       GT.plugins =
         object(this)
           method html    n   = GT.html   (GT.bool) n
@@ -77,6 +78,7 @@ module Bool =
 
     let logic = {
       GT.gcata = ();
+      GT.fix = ();
       GT.plugins =
         object(this)
           method html    n   = GT.html   (logic') (GT.html   (ground)) n
@@ -168,6 +170,7 @@ module Nat = struct
 
     let ground = {
       GT.gcata = ();
+      GT.fix = ();
       GT.plugins =
         object(this)
           method html    n = GT.html   (lnat) this#html    n
@@ -182,6 +185,7 @@ module Nat = struct
 
     let logic = {
       GT.gcata = ();
+      GT.fix = ();
       GT.plugins =
         object(this)
           method html    n   = GT.html   (logic') (GT.html   (lnat) this#html   ) n
@@ -302,6 +306,7 @@ module List =
 
     let ground = {
       GT.gcata = ();
+      GT.fix = ();
       GT.plugins =
         object(this)
           method html    fa l = GT.html   (llist) fa (this#html    fa) l
@@ -313,11 +318,9 @@ module List =
           method show    fa l = "[" ^
             let rec inner l =
               (GT.transform(llist)
-                 (GT.lift fa)
-                 (GT.lift inner)
-                 (object inherit ['a,'a ground] @llist[show]
+                 (fun fself -> object inherit ['a,'a ground,_] @llist[show] (GT.lift fa) fself fself
                     method c_Nil   _ _      = ""
-                    method c_Cons  i s x xs = x.GT.fx () ^ (match xs.GT.x with Nil -> "" | _ -> "; " ^ xs.GT.fx ())
+                    method c_Cons  i s x xs = (fa x) ^ (match xs with Nil -> "" | _ -> "; " ^ (fself () xs))
                   end)
                  ()
                  l
@@ -328,6 +331,7 @@ module List =
 
     let logic = {
       GT.gcata = ();
+      GT.fix = ();
       GT.plugins =
         object(this)
           method compare fa l = GT.compare (logic') (GT.compare (llist) fa (this#compare fa)) l
@@ -337,24 +341,22 @@ module List =
           method foldr   fa l = GT.foldr   (logic') (GT.foldr   (llist) fa (this#foldr   fa)) l
           method html    fa l = GT.html    (logic') (GT.html    (llist) fa (this#html    fa)) l
 
-          (* We override default implementation to show list as semicolon-separated *)
-          method show : ('a -> string) -> 'a logic -> GT.string = fun fa l ->
-            GT.show(logic')
-              (fun l -> "[" ^
-                 let rec inner l =
-                    GT.transform(llist)
-                      (GT.lift fa)
-                      (GT.lift (GT.show(logic) inner))
-                      (object inherit ['a,'a logic] @llist[show]
-                         method c_Nil   _ _      = ""
-                         method c_Cons  i s x xs =
-                           x.GT.fx () ^ (match xs.GT.x with Value Nil -> "" | _ -> "; " ^ xs.GT.fx ())
-                       end)
-
-                    () l
-                   in inner l ^ "]"
-              )
-              l
+      method show (type a) : (a -> string) -> a logic -> _ = fun fa -> 
+        let rec loop ?(is_head=false): (a, a logic) t -> string = function
+          | Cons (h, (Var _ as tl)) ->
+              String.concat "" [if is_head then "" else "; "; fa h; " | "; loop_logic tl]
+          | Cons (h, Value tl) ->
+              String.concat "" [if is_head then "" else "; "; fa h; loop tl]
+          | Nil -> ""
+        and loop_whole x = "[" ^ loop ~is_head:true x ^ "]"
+        and loop_logic = function
+            | Value v -> loop v
+            | Var _ as l -> GT.show(logic') loop_whole l
+        and toplevel fa = function
+          | Var _ as l -> GT.show(logic') loop_whole l
+          | Value v -> loop_whole v
+        in
+        toplevel fa
         end
     }
 
@@ -380,10 +382,11 @@ module List =
 
     let groundi =
       { GT.gcata = ()
+      ; GT.fix = ()
       ; plugins = object
           method show : ('a -> string) -> ('a,_) groundi -> string = fun fa l ->
           (* we expect no free variables here *)
-          GT.show(ground) fa (Obj.magic l : 'a ground)
+          GT.show(ground) (fa) (Obj.magic l : 'a ground)
         end
       }
 

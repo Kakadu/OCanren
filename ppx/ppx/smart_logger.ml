@@ -1,4 +1,4 @@
-(* open Migrate_parsetree
+open Migrate_parsetree
 open Ast_405
 module Ast_convenience = Ast_convenience_405
 
@@ -252,7 +252,8 @@ let rec pamk_e ?(need_st=false) mapper e : expression =
       let loc_str =
         let b = Buffer.create 10 in
         let fmt = Format.formatter_of_buffer b in
-        Format.fprintf fmt "%a%!" Location.print_loc e.pexp_loc;
+        Location.print_compact fmt e.pexp_loc;
+        Format.pp_flush_formatter fmt;
         Buffer.contents b
       in
       (* let ans = e in *)
@@ -293,4 +294,4 @@ let pa_minikanren =
   { default_mapper with expr = fun mapper e -> pamk_e mapper e
   }
 
-let register () = Driver.register ~name:"pa_minikanren" Versions.ocaml_405 (fun _ _ -> pa_minikanren) *)
+let register () = Driver.register ~name:"pa_minikanren" Versions.ocaml_405 (fun _ _ -> pa_minikanren)

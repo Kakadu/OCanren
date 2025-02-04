@@ -63,7 +63,7 @@ module Bool :
          foldr   : 'a -> ground -> 'a;
          gmap    : ground -> ground;
          html    : ground -> HTML.viewer;
-         show    : ground -> string >)
+         show    : ground -> string >, unit)
       GT.t
 
     (** GT-compatible typeinfo for [logic] *)
@@ -75,7 +75,7 @@ module Bool :
          foldr   : 'a -> logic -> 'a;
          gmap    : logic -> logic;
          html    : logic -> HTML.viewer;
-         show    : logic -> string >)
+         show    : logic -> string >, unit)
       GT.t
 
     (** A synonym for injected boolean *)
@@ -140,7 +140,7 @@ module Nat :
          foldr   : 'a -> ground -> 'a;
          gmap    : ground -> ground;
          html    : ground -> HTML.viewer;
-         show    : ground -> string >)
+         show    : ground -> string >, unit)
       GT.t
 
     (** GT-compatible typeinfo for [logic] *)
@@ -152,7 +152,7 @@ module Nat :
          foldr   : 'a -> logic -> 'a;
          gmap    : logic -> logic;
          html    : logic -> HTML.viewer;
-         show    : logic -> string >)
+         show    : logic -> string >, unit)
       GT.t
 
     (** A type synonym for injected nat *)
@@ -233,7 +233,7 @@ module List :
          foldl   : ('b -> 'a -> 'b) -> 'b -> 'a ground -> 'b;
          foldr   : ('b -> 'a -> 'b) -> 'b -> 'a ground -> 'b;
          html    : ('a -> HTML.viewer) -> 'a ground -> HTML.viewer;
-         show    : ('a -> string) -> 'a ground -> string >)
+         show    : ('a -> string) -> 'a ground -> string >, unit)
       GT.t
 
     (** GT-compatible typeinfo for ['a logic] *)
@@ -245,7 +245,7 @@ module List :
           foldr   : ('b -> 'a -> 'b) -> 'b -> 'a logic -> 'b;
           foldl   : ('b -> 'a -> 'b) -> 'b -> 'a logic -> 'b;
           html    : ('a -> HTML.viewer) -> 'a logic -> HTML.viewer;
-          show    : ('a -> string) -> 'a logic -> GT.string  >)
+          show    : ('a -> string) -> 'a logic -> GT.string  >, unit)
         GT.t
 
     (** A synonym for injected list *)

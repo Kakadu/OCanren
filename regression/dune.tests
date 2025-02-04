@@ -1,0 +1,181 @@
+(executable
+ (name test000)
+ (public_name -)
+ (modules test000)
+ (libraries MiniKanren MiniKanren.Tester)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)))
+
+(executable
+ (name test001)
+ (public_name -)
+ (modules test001)
+ (libraries MiniKanren MiniKanren.Tester)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)))
+
+(executable
+ (name test002sort)
+ (public_name -)
+ (modules test002sort)
+ (libraries MiniKanren MiniKanren.Tester)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)))
+
+(executable
+ (name test004)
+ (public_name -)
+ (modules test004)
+ (libraries MiniKanren MiniKanren.Tester)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)))
+
+(executable
+ (name test005)
+ (public_name -)
+ (modules test005)
+ (libraries GT MiniKanren MiniKanren.Tester stlc)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)))
+
+(executable
+ (name test006)
+ (public_name -)
+ (modules test006)
+ (libraries MiniKanren MiniKanren.Tester stlc)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)))
+
+(executable
+ (name test007)
+ (public_name -)
+ (modules test007)
+ (libraries MiniKanren MiniKanren.Tester stlc)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)))
+
+(executable
+ (name test009)
+ (public_name -)
+ (modules test009)
+ (libraries MiniKanren MiniKanren.Tester)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)))
+
+(executable
+ (name test010)
+ (public_name -)
+ (modules test010)
+ (libraries MiniKanren MiniKanren.Tester)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)))
+
+(executable
+ (name test011)
+ (public_name -)
+ (modules test011)
+ (libraries MiniKanren MiniKanren.Tester)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)))
+
+(executable
+ (name test013)
+ (public_name -)
+ (modules test013)
+ (libraries MiniKanren MiniKanren.Tester)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)))
+
+(executable
+ (name test014)
+ (public_name -)
+ (modules test014)
+ (libraries MiniKanren MiniKanren.Tester)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)))
+
+(executable
+ (name test015runaway)
+ (public_name -)
+ (modules test015runaway)
+ (libraries MiniKanren MiniKanren.Tester)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)))
+
+(executable
+ (name test016sorto)
+ (public_name -)
+ (modules test016sorto)
+ (libraries MiniKanren MiniKanren.Tester)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)))

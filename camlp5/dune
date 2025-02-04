@@ -1,0 +1,53 @@
+(library
+ (name pa_ocanren)
+ (public_name MiniKanren.syntax)
+ (modules pa_minikanren)
+ (libraries camlp5)
+ (preprocessor_deps ./pp5+dump.exe)
+ (preprocess
+  (action
+   (run %{project_root}/camlp5/pp5+dump.exe %{input-file}))))
+
+(rule
+ (targets pp5+gt+plugins+ocanren+logger+dump.exe)
+ (package MiniKanren)
+ (deps
+  (:cmas pa_ocanren.cmxa))
+ (action
+  (run
+   mkcamlp5.opt
+   -package
+   camlp5,camlp5.pa_o,GT.syntax,GT.syntax.all,logger.syntax
+   %{cmas}
+   pr_dump.cmx
+   -o
+   %{targets}
+   -)))
+
+(rule
+ (targets pp5+gt+plugins+dump.exe)
+ (deps
+  ;%{project_root}/config/package-doc.cfg
+  (package GT))
+ (action
+  (run
+   mkcamlp5.opt
+   -package
+   camlp5,camlp5.pa_o,camlp5.macro,camlp5.pr_dump,GT.syntax,GT.syntax.all
+   ;%{read-lines:../config/package-doc.cfg}
+   ;s%{deps}
+   -o
+   %{targets})))
+
+(rule
+ (targets pp5+dump.exe)
+ ;(deps %{project_root}/config/package-doc.cfg)
+ (action
+  (run
+   mkcamlp5.opt
+   -package
+   camlp5.pa_o,camlp5.pr_o,camlp5.pr_dump,camlp5.extend,camlp5.quotations
+   -linkall
+   ; %{read-lines:../config/package-doc.cfg}
+   -o
+   %{targets})))

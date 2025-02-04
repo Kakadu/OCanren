@@ -1,0 +1,28 @@
+lib: [
+  "_build/install/default/lib/MiniKanren-ppx/META"
+  "_build/install/default/lib/MiniKanren-ppx/dune-package"
+  "_build/install/default/lib/MiniKanren-ppx/opam"
+  "_build/install/default/lib/MiniKanren-ppx/ppx_fresh/ppx_fresh.a" {"ppx_fresh/ppx_fresh.a"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_fresh/ppx_fresh.cma" {"ppx_fresh/ppx_fresh.cma"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_fresh/ppx_fresh.cmi" {"ppx_fresh/ppx_fresh.cmi"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_fresh/ppx_fresh.cmt" {"ppx_fresh/ppx_fresh.cmt"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_fresh/ppx_fresh.cmx" {"ppx_fresh/ppx_fresh.cmx"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_fresh/ppx_fresh.cmxa" {"ppx_fresh/ppx_fresh.cmxa"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_fresh/ppx_fresh.ml" {"ppx_fresh/ppx_fresh.ml"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_repr/ppx_repr.a" {"ppx_repr/ppx_repr.a"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_repr/ppx_repr.cma" {"ppx_repr/ppx_repr.cma"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_repr/ppx_repr.cmi" {"ppx_repr/ppx_repr.cmi"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_repr/ppx_repr.cmt" {"ppx_repr/ppx_repr.cmt"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_repr/ppx_repr.cmx" {"ppx_repr/ppx_repr.cmx"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_repr/ppx_repr.cmxa" {"ppx_repr/ppx_repr.cmxa"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_repr/ppx_repr.ml" {"ppx_repr/ppx_repr.ml"}
+]
+libexec: [
+  "_build/install/default/lib/MiniKanren-ppx/ppx_fresh/ppx.exe" {"ppx_fresh/ppx.exe"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_fresh/ppx_fresh.cmxs" {"ppx_fresh/ppx_fresh.cmxs"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_repr/ppx.exe" {"ppx_repr/ppx.exe"}
+  "_build/install/default/lib/MiniKanren-ppx/ppx_repr/ppx_repr.cmxs" {"ppx_repr/ppx_repr.cmxs"}
+]
+doc: [
+  "_build/install/default/doc/MiniKanren-ppx/README.md"
+]
