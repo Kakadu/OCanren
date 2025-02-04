@@ -1,6 +1,11 @@
+(env
+ (_
+  (flags
+   (:standard -warn-error -unused-value-declaration))))
+
 (library
  (name MiniKanren)
- (package MiniKanren)
+ (public_name MiniKanren)
  (modules MiniKanren MiniKanrenStd)
  (wrapped false)
  (libraries GT)

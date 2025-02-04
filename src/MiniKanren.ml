@@ -16,6 +16,17 @@
  * (enclosed in the file COPYING).
  *)
 
+[@@@ocaml.warning "-unused-rec-flag"]
+[@@@ocaml.warning "-unused-var"]
+[@@@ocaml.warning "-unused-var-strict"]
+[@@@ocaml.warning "-unused-value-declaration"]
+[@@@ocaml.warning "-unused-type-declaration"]
+[@@@ocaml.warnerror "-partial-match"]
+[@@@ocaml.warning "-labels-omitted"]
+[@@@ocaml.warning "-unused-constructor"]
+[@@@ocaml.warning "-missing-record-field-pattern"]
+
+
 open Printf
 
 let printfn fmt = kprintf (printf "%s\n%!") fmt
@@ -123,7 +134,7 @@ module MKStream =
 
     let step gs =
       assert (closure_tag = tag @@ repr gs);
-      !!!gs ()
+      Obj.magic gs ()
 
     let rec mplus : t -> t -> t  = fun cinf (gs: t) ->
       assert (closure_tag = tag @@ repr gs);
@@ -153,9 +164,9 @@ module MKStream =
                 bind r g
               end)
         ~f3:(fun c ->
-              (!!!g c) )
+              (Obj.magic g c) )
         ~f4:(fun c f ->
-              let arg1 = !!!g c in
+              let arg1 = Obj.magic g c in
               mplus arg1 @@
                     inc begin fun () ->
                       bind (step f) g
@@ -175,8 +186,8 @@ module Stream =
 
     let rec of_mkstream : MKStream.t -> 'a t = fun xs ->
       let rec helper xs =
-        !!!MKStream.case_inf !!!xs
-          ~f1:(fun () -> !!!Nil)
+        Obj.magic @@ MKStream.case_inf (Obj.magic xs)
+          ~f1:(fun () -> Obj.magic Nil)
           ~f2:(fun f  ->
               !!! (from_fun (fun () ->
                 helper @@ f ())) )
@@ -251,8 +262,8 @@ let rec bprintf_logic: Buffer.t -> ('a -> unit) -> 'a logic -> unit = fun b f x 
   in
   helper x
 
-let logic = {logic with
- gcata = ();
+let logic = {
+ GT.gcata = ();
  fix = ();
  plugins =
    object
@@ -262,23 +273,22 @@ let logic = {logic with
      method compare = logic.plugins#compare
      method foldl   = logic.plugins#foldl
      method foldr   = logic.plugins#foldr
+
      method show fa x =
-       GT.transform(logic)
-          (fun fself -> object 
-            inherit ['a, _] @logic[show] (GT.lift fa) fself
-            method c_Var _ s i cs =
-              (* I have some issues with callign show_logic there, so copy-paste*)
-              (* show_logic (fun _ -> assert false) (Var(_token,i,cs)) *)
-              let c = match cs with
-              | [] -> ""
-              | _  -> sprintf " %s" (GT.show(GT.list) (fun l -> "=/= " ^ fself () l) cs)
-              in
-              sprintf "_.%d%s" i c
-            method c_Value _ _ x = fa x
-           end)
-          ()
-          x
-   end
+      GT.transform(logic)
+        (fun fself -> object
+           inherit ['a, _] @logic[show]  (GT.lift fa) fself
+           method! c_Var _ _ i cs =
+             let c = match cs with
+             | [] -> ""
+             | _  -> sprintf " %s" (GT.show(GT.list) (fun l -> "=/= " ^ fself () l) cs)
+             in
+             sprintf "_.%d%s" i c
+           method! c_Value _ _ x = fa x
+         end)
+        ()
+        x
+      end
 }
 ;;
 (* miniKanren-related stuff starts here *)
@@ -442,7 +452,7 @@ let from_logic = function
 
 let (!!) x = inj (lift x)
 
-module Int = struct type t = int let compare : int -> int -> int = Pervasives.compare end
+module Int = struct type t = int let compare : int -> int -> int = Stdlib.compare end
 module MultiIntMap : sig
   type key = Int.t
   type 'a t

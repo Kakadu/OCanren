@@ -18,6 +18,12 @@ module ManualReifiers : sig
 end;;
 (** {2 Standart relational library } *)
 
+module Pair : sig
+  @type ('a,'b) t = 'a * 'b with show,gmap
+end;;
+
+
+
 (** {3 Predefined types (lists, nats, bools etc.)} *)
 
 (** Abstract list type *)
