@@ -1,5 +1,12 @@
 lib: [
   "_build/install/default/lib/MiniKanren/META"
+  "_build/install/default/lib/MiniKanren/MiniKanren.a"
+  "_build/install/default/lib/MiniKanren/MiniKanren.cma"
+  "_build/install/default/lib/MiniKanren/MiniKanren.cmxa"
+  "_build/install/default/lib/MiniKanren/MiniKanren.ml"
+  "_build/install/default/lib/MiniKanren/MiniKanren.mli"
+  "_build/install/default/lib/MiniKanren/MiniKanrenStd.ml"
+  "_build/install/default/lib/MiniKanren/MiniKanrenStd.mli"
   "_build/install/default/lib/MiniKanren/Tester/tester.a" {"Tester/tester.a"}
   "_build/install/default/lib/MiniKanren/Tester/tester.cma" {"Tester/tester.cma"}
   "_build/install/default/lib/MiniKanren/Tester/tester.cmi" {"Tester/tester.cmi"}
@@ -7,22 +14,15 @@ lib: [
   "_build/install/default/lib/MiniKanren/Tester/tester.cmx" {"Tester/tester.cmx"}
   "_build/install/default/lib/MiniKanren/Tester/tester.cmxa" {"Tester/tester.cmxa"}
   "_build/install/default/lib/MiniKanren/Tester/tester.ml" {"Tester/tester.ml"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/.public_cmi/miniKanren.cmi" {"__private__/MiniKanren/.public_cmi/miniKanren.cmi"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/.public_cmi/miniKanren.cmt" {"__private__/MiniKanren/.public_cmi/miniKanren.cmt"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/.public_cmi/miniKanren.cmti" {"__private__/MiniKanren/.public_cmi/miniKanren.cmti"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/.public_cmi/miniKanrenStd.cmi" {"__private__/MiniKanren/.public_cmi/miniKanrenStd.cmi"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/.public_cmi/miniKanrenStd.cmt" {"__private__/MiniKanren/.public_cmi/miniKanrenStd.cmt"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/.public_cmi/miniKanrenStd.cmti" {"__private__/MiniKanren/.public_cmi/miniKanrenStd.cmti"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/MiniKanren.a" {"__private__/MiniKanren/MiniKanren.a"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/MiniKanren.cma" {"__private__/MiniKanren/MiniKanren.cma"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/MiniKanren.cmxa" {"__private__/MiniKanren/MiniKanren.cmxa"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/MiniKanren.ml" {"__private__/MiniKanren/MiniKanren.ml"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/MiniKanren.mli" {"__private__/MiniKanren/MiniKanren.mli"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/MiniKanrenStd.ml" {"__private__/MiniKanren/MiniKanrenStd.ml"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/MiniKanrenStd.mli" {"__private__/MiniKanren/MiniKanrenStd.mli"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/miniKanren.cmx" {"__private__/MiniKanren/miniKanren.cmx"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/miniKanrenStd.cmx" {"__private__/MiniKanren/miniKanrenStd.cmx"}
   "_build/install/default/lib/MiniKanren/dune-package"
+  "_build/install/default/lib/MiniKanren/miniKanren.cmi"
+  "_build/install/default/lib/MiniKanren/miniKanren.cmt"
+  "_build/install/default/lib/MiniKanren/miniKanren.cmti"
+  "_build/install/default/lib/MiniKanren/miniKanren.cmx"
+  "_build/install/default/lib/MiniKanren/miniKanrenStd.cmi"
+  "_build/install/default/lib/MiniKanren/miniKanrenStd.cmt"
+  "_build/install/default/lib/MiniKanren/miniKanrenStd.cmti"
+  "_build/install/default/lib/MiniKanren/miniKanrenStd.cmx"
   "_build/install/default/lib/MiniKanren/opam"
   "_build/install/default/lib/MiniKanren/syntax/pa_minikanren.ml" {"syntax/pa_minikanren.ml"}
   "_build/install/default/lib/MiniKanren/syntax/pa_ocanren.a" {"syntax/pa_ocanren.a"}
@@ -37,8 +37,8 @@ lib: [
   "_build/install/default/lib/MiniKanren/syntax/pa_ocanren__Pa_minikanren.cmx" {"syntax/pa_ocanren__Pa_minikanren.cmx"}
 ]
 libexec: [
+  "_build/install/default/lib/MiniKanren/MiniKanren.cmxs"
   "_build/install/default/lib/MiniKanren/Tester/tester.cmxs" {"Tester/tester.cmxs"}
-  "_build/install/default/lib/MiniKanren/__private__/MiniKanren/MiniKanren.cmxs" {"__private__/MiniKanren/MiniKanren.cmxs"}
   "_build/install/default/lib/MiniKanren/syntax/pa_ocanren.cmxs" {"syntax/pa_ocanren.cmxs"}
 ]
 doc: [

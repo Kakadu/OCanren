@@ -1,6 +1,7 @@
 (library
  (name MiniKanren)
- (package MiniKanren)
+ ;(package MiniKanren)
+ (public_name MiniKanren)
  (modules MiniKanren MiniKanrenStd)
  (wrapped false)
  (libraries GT)
