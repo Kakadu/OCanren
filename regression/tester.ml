@@ -3,6 +3,8 @@
 open Printf
 open MiniKanren
 
+[@@@ocaml.warning "-unused-var-strict"]
+
 (** {3 Helper functions to provide names for top-level variables } *)
 
 let qh    = fun qs          -> ["q", qs]

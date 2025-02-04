@@ -16,6 +16,16 @@
  * (enclosed in the file COPYING).
  *)
 
+[@@@ocaml.warning "-unused-rec-flag"]
+[@@@ocaml.warning "-unused-var"]
+[@@@ocaml.warning "-unused-var-strict"]
+[@@@ocaml.warning "-unused-value-declaration"]
+[@@@ocaml.warning "-unused-type-declaration"]
+[@@@ocaml.warnerror "-partial-match"]
+[@@@ocaml.warning "-labels-omitted"]
+[@@@ocaml.warning "-unused-constructor"]
+[@@@ocaml.warning "-missing-record-field-pattern"]
+
 open Printf
 
 let printfn fmt = kprintf (printf "%s\n%!") fmt
@@ -30,7 +40,7 @@ let is_valid_tag t =
     [lazy_tag; closure_tag; object_tag; infix_tag; forward_tag; no_scan_tag;
      abstract_tag; custom_tag; custom_tag; unaligned_tag; out_of_heap_tag])
 
-let rec wrap (x : Obj.t) =
+let wrap (x : Obj.t) =
   Obj.(
     let is_unboxed obj =
       is_int obj ||
@@ -123,7 +133,7 @@ module MKStream =
 
     let step gs =
       assert (closure_tag = tag @@ repr gs);
-      !!!gs ()
+      Obj.magic gs ()
 
     let rec mplus : t -> t -> t  = fun cinf (gs: t) ->
       assert (closure_tag = tag @@ repr gs);
@@ -153,9 +163,9 @@ module MKStream =
                 bind r g
               end)
         ~f3:(fun c ->
-              (!!!g c) )
+              (Obj.magic g c) )
         ~f4:(fun c f ->
-              let arg1 = !!!g c in
+              let arg1 = Obj.magic g c in
               mplus arg1 @@
                     inc begin fun () ->
                       bind (step f) g
@@ -173,9 +183,9 @@ module Stream =
 
     let cons h t = Cons (h, t)
 
-    let rec of_mkstream : MKStream.t -> 'a t = fun xs ->
+    let of_mkstream : MKStream.t -> 'a t = fun xs ->
       let rec helper xs =
-        !!!MKStream.case_inf !!!xs
+        Obj.magic @@ MKStream.case_inf (Obj.magic xs)
           ~f1:(fun () -> !!!Nil)
           ~f2:(fun f  ->
               !!! (from_fun (fun () ->
@@ -242,7 +252,7 @@ module Stream =
 | Var   of GT.int * 'a logic GT.list
 | Value of 'a with show, gmap, html, eq, compare, foldl, foldr
 
-let rec bprintf_logic: Buffer.t -> ('a -> unit) -> 'a logic -> unit = fun b f x ->
+let bprintf_logic: Buffer.t -> ('a -> unit) -> 'a logic -> unit = fun b f x ->
   let rec helper = function
   | Value x -> f x
   | Var (i,cs) ->
@@ -251,8 +261,9 @@ let rec bprintf_logic: Buffer.t -> ('a -> unit) -> 'a logic -> unit = fun b f x 
   in
   helper x
 
-let logic = {logic with
- gcata = ();
+let logic = {
+ GT.gcata = ();
+ fix = ();
  plugins =
    object
      method gmap    = logic.plugins#gmap
@@ -261,22 +272,28 @@ let logic = {logic with
      method compare = logic.plugins#compare
      method foldl   = logic.plugins#foldl
      method foldr   = logic.plugins#foldr
-     method show fa x =
-       GT.transform(logic)
-          (GT.lift fa)
-          (object inherit ['a] @logic[show]
-            method c_Var _ s i cs =
-              (* I have some issues with callign show_logic there, so copy-paste*)
-              (* show_logic (fun _ -> assert false) (Var(_token,i,cs)) *)
-              let c = match cs with
-              | [] -> ""
-              | _  -> sprintf " %s" (GT.show(GT.list) (fun l -> "=/= " ^ s.GT.f () l) cs)
-              in
-              sprintf "_.%d%s" i c
-            method c_Value _ _ x = x.GT.fx ()
-           end)
-          ()
-          x
+     (* method fmt fa =
+      let rec self ppf = function
+      | Value a -> fa ppf a
+      | Var (n, []) -> Format.fprintf ppf "_.%d" n
+      | Var (n, cs) -> Format.fprintf ppf "_.%d =/= [ %a ]" n (Format.pp_print_list self) cs
+      in
+      self *)
+
+    method show fa x =
+      GT.transform(logic)
+        (fun fself -> object
+           inherit ['a, _] @logic[show]  (GT.lift fa) fself
+           method! c_Var _ _ i cs =
+             let c = match cs with
+             | [] -> ""
+             | _  -> sprintf " %s" (GT.show(GT.list) (fun l -> "=/= " ^ fself () l) cs)
+             in
+             sprintf "_.%d%s" i c
+           method! c_Value _ _ x = fa x
+         end)
+        ()
+        x
    end
 }
 ;;
@@ -468,7 +485,7 @@ let from_logic = function
 
 let (!!) x = inj (lift x)
 
-module Int = struct type t = int let compare : int -> int -> int = Pervasives.compare end
+module Int = struct type t = int let compare : int -> int -> int = Stdlib.compare end
 module MultiIntMap : sig
   type key = Int.t
   type 'a t

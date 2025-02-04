@@ -98,7 +98,7 @@ let rec fact = function 0 -> 1 | n -> n * fact (n-1)
 
 (* Making permutations from relational sorting *)
 let perm l =
-  run q (fun q -> sorto q @@ inj_nat_list (List.sort Pervasives.compare l))
+  run q (fun q -> sorto q @@ inj_nat_list (List.sort Stdlib.compare l))
         (fun qs ->
           qs |> Stream.take ~n:(fact @@ List.length l) |>
           List.map (fun rr -> rr#refine (List.reify Nat.reify) ~inj:(fun _ -> assert false) ))

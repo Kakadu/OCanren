@@ -31,18 +31,19 @@
 
 (**/**)
 
-#load "pa_extend.cmo";;
-#load "q_MLast.cmo";;
+(* #load "pa_extend.cmo";; *)
+(* #load "q_MLast.cmo";; *)
+
+[@@@ocaml.warning "-8"]
 
 open Pcaml
-open Printf
 
 let rec fold_right1 f = function
 | [h]  -> h
 | h::t -> f h (fold_right1 f t)
 ;;
 
-let rec fold_left1 f xs = List.fold_left f (List.hd xs) (List.tl xs)
+let fold_left1 f xs = List.fold_left f (List.hd xs) (List.tl xs)
 
 EXTEND
   GLOBAL: expr;

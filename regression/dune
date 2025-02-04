@@ -1,0 +1,36 @@
+(env
+ (_
+  (flags
+   (:standard
+    -w
+    -27
+    -rectypes
+    -warn-error
+    -unused-open
+    -warn-error
+    -unused-value-declaration
+    -warn-error
+    -unused-type-declaration))))
+
+(library
+ (name tester)
+ (modules tester)
+ (public_name MiniKanren.Tester)
+ (libraries MiniKanren)
+ (flags
+  (:standard -rectypes)))
+
+(library
+ (name stlc)
+ ;(public_name -)
+ (modules stlc)
+ (libraries MiniKanren)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file})))
+ (preprocessor_deps
+  (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)))
+
+(include dune.tests)

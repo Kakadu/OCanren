@@ -145,7 +145,7 @@ let lelo n m =
     (ltlo n m)
   ]
 
-let rec lto n m =
+let lto n m =
   conde [
     (ltlo n m);
     ?& [
@@ -255,7 +255,7 @@ let rec exp2 n b q =
       (exp2 nh b2 q1)
   ]
 
-let rec logo n b q r =
+let logo n b q r =
   conde [
     ((!< !1) === n) &&& (poso b) &&& (nil() === q) &&& (nil() === r);
     (nil() === q) &&& (lto n b) &&& (pluso r (!< !1) n);

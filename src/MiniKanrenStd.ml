@@ -1,8 +1,18 @@
 open MiniKanren
+[@@@ocaml.warning "-unused-rec-flag"]
+[@@@ocaml.warning "-unused-var"]
+[@@@ocaml.warning "-unused-var-strict"]
+[@@@ocaml.warning "-unused-value-declaration"]
+[@@@ocaml.warning "-unused-type-declaration"]
+[@@@ocaml.warnerror "-partial-match"]
+[@@@ocaml.warning "-labels-omitted"]
+[@@@ocaml.warning "-unused-constructor"]
+[@@@ocaml.warning "-missing-record-field-pattern"]
 
-external inj_int : int -> (int, int logic) injected = "%identity";;
+(* external inj_int : int -> (int, int logic) injected = "%identity";; *)
 
 module Pair = struct
+  @type ('a,'b) t = 'a * 'b with show,gmap
   module X = struct
     type ('a,'b) t = 'a * 'b
     let fmap f g (x,y) = (f x, g y)
@@ -23,7 +33,7 @@ let inj_triple : ('a, 'd) injected -> ('b,'e) injected -> ('c,'f) injected
   fun x y z -> inj @@ Tuple3.distrib (x, y, z)
 
 module ManualReifiers = struct
-  
+
   let bool : helper -> (bool, bool logic) injected -> bool logic = simple_reifier
 
   let int : helper -> (int, int logic) injected -> int logic = simple_reifier
@@ -61,8 +71,9 @@ module Bool =
 
     let ground = {
       GT.gcata = ();
+      GT.fix = ();
       GT.plugins =
-        object(this)
+        object
           method html    n   = GT.html   (GT.bool) n
           method eq      n m = GT.eq     (GT.bool) n m
           method compare n m = GT.compare(GT.bool) n m
@@ -77,8 +88,9 @@ module Bool =
 
     let logic = {
       GT.gcata = ();
+      GT.fix = ();
       GT.plugins =
-        object(this)
+        object
           method html    n   = GT.html   (logic') (GT.html   (ground)) n
           method eq      n m = GT.eq     (logic') (GT.eq     (ground)) n m
           method compare n m = GT.compare(logic') (GT.compare(ground)) n m
@@ -168,6 +180,7 @@ module Nat = struct
 
     let ground = {
       GT.gcata = ();
+      GT.fix = ();
       GT.plugins =
         object(this)
           method html    n = GT.html   (lnat) this#html    n
@@ -182,6 +195,7 @@ module Nat = struct
 
     let logic = {
       GT.gcata = ();
+      GT.fix = ();
       GT.plugins =
         object(this)
           method html    n   = GT.html   (logic') (GT.html   (lnat) this#html   ) n
@@ -302,6 +316,7 @@ module List =
 
     let ground = {
       GT.gcata = ();
+      GT.fix = ();
       GT.plugins =
         object(this)
           method html    fa l = GT.html   (llist) fa (this#html    fa) l
@@ -313,11 +328,10 @@ module List =
           method show    fa l = "[" ^
             let rec inner l =
               (GT.transform(llist)
-                 (GT.lift fa)
-                 (GT.lift inner)
-                 (object inherit ['a,'a ground] @llist[show]
-                    method c_Nil   _ _      = ""
-                    method c_Cons  i s x xs = x.GT.fx () ^ (match xs.GT.x with Nil -> "" | _ -> "; " ^ xs.GT.fx ())
+                 (fun fself -> object
+                    inherit ['a, 'a ground, _] @llist[show] (GT.lift fa) (GT.lift inner) fself
+                    method! c_Nil   _ _      = ""
+                    method! c_Cons () _s x xs = fa x ^ (match xs with Nil -> "" | _ -> "; " ^ fself () xs)
                   end)
                  ()
                  l
@@ -327,36 +341,34 @@ module List =
     }
 
     let logic = {
-      GT.gcata = ();
-      GT.plugins =
-        object(this)
-          method compare fa l = GT.compare (logic') (GT.compare (llist) fa (this#compare fa)) l
-          method gmap    fa l = GT.gmap    (logic') (GT.gmap    (llist) fa (this#gmap    fa)) l
-          method eq      fa l = GT.eq      (logic') (GT.eq      (llist) fa (this#eq      fa)) l
-          method foldl   fa l = GT.foldl   (logic') (GT.foldl   (llist) fa (this#foldl   fa)) l
-          method foldr   fa l = GT.foldr   (logic') (GT.foldr   (llist) fa (this#foldr   fa)) l
-          method html    fa l = GT.html    (logic') (GT.html    (llist) fa (this#html    fa)) l
-
-          (* We override default implementation to show list as semicolon-separated *)
-          method show : ('a -> string) -> 'a logic -> GT.string = fun fa l ->
-            GT.show(logic')
-              (fun l -> "[" ^
-                 let rec inner l =
-                    GT.transform(llist)
-                      (GT.lift fa)
-                      (GT.lift (GT.show(logic) inner))
-                      (object inherit ['a,'a logic] @llist[show]
-                         method c_Nil   _ _      = ""
-                         method c_Cons  i s x xs =
-                           x.GT.fx () ^ (match xs.GT.x with Value Nil -> "" | _ -> "; " ^ xs.GT.fx ())
-                       end)
-
-                    () l
-                   in inner l ^ "]"
-              )
-              l
-        end
-    }
+  logic with
+  GT.plugins =
+    object(this)
+      method compare fa l = GT.compare (MiniKanren.logic) (GT.compare (llist) fa (this#compare fa)) l
+      method gmap    fa l = GT.gmap    (MiniKanren.logic) (GT.gmap    (llist) fa (this#gmap    fa)) l
+      method eq      fa l = GT.eq      (MiniKanren.logic) (GT.eq      (llist) fa (this#eq      fa)) l
+      method foldl   fa l = GT.foldl   (MiniKanren.logic) (GT.foldl   (llist) fa (this#foldl   fa)) l
+      method foldr   fa l = GT.foldr   (MiniKanren.logic) (GT.foldr   (llist) fa (this#foldr   fa)) l
+      method html    fa l = GT.html    (MiniKanren.logic) (GT.html    (llist) fa (this#html    fa)) l
+      (* method fmt fa fmt l = Format.fprintf fmt "%s" (this#show (Format.asprintf "%a" fa) l) *)
+      method show fa : _ logic -> _ =
+        let rec loop ?(is_head=false): ('a, 'a logic) t -> string = function
+          | Cons (h, (Var _ as tl)) ->
+              String.concat "" [if is_head then "" else "; "; fa h; " | "; loop_logic tl]
+          | Cons (h, Value tl) ->
+              String.concat "" [if is_head then "" else "; "; fa h; loop tl]
+          | Nil -> ""
+        and loop_whole x = "[" ^ loop ~is_head:true x ^ "]"
+        and loop_logic = function
+            | Value v -> loop v
+            | Var _ as l -> GT.show(MiniKanren.logic) loop_whole l
+        and toplevel _fa = function
+          | Var _ as l -> GT.show(MiniKanren.logic) loop_whole l
+          | Value v -> loop_whole v
+        in
+        toplevel fa
+    end
+}
 
     let rec of_list : ('a -> 'b) -> 'a list -> 'b ground = fun f -> function
     | []    -> Nil
@@ -380,6 +392,7 @@ module List =
 
     let groundi =
       { GT.gcata = ()
+      ; GT.fix = ()
       ; plugins = object
           method show : ('a -> string) -> ('a,_) groundi -> string = fun fa l ->
           (* we expect no free variables here *)

@@ -1,0 +1,11 @@
+(library
+ (name MiniKanren)
+ (package MiniKanren)
+ (modules MiniKanren MiniKanrenStd)
+ (wrapped false)
+ (libraries GT)
+ (flags
+  (:standard -rectypes))
+ (preprocess
+  (action
+   (run %{project_root}/camlp5/pp5+gt+plugins+dump.exe %{input-file}))))

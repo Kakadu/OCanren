@@ -97,6 +97,7 @@ type goal = MKStream.t goal'
 
 (** {3 Logical values and injections} *)
 
+[@@@ocaml.warning "-32"]
 
 (** A type of abstract logic values *)
 @type 'a logic =
@@ -113,7 +114,7 @@ val logic :
      foldl   : ('syn -> 'a -> 'syn) -> 'syn -> 'a logic -> 'syn;
      foldr   : ('syn -> 'a -> 'syn) -> 'syn -> 'a logic -> 'syn;
      gmap    : ('a -> 'sa) -> 'a logic -> 'sa logic
-   >) GT.t
+   >, unit) GT.t
 
 (** [lift x] injects [x] into itself *)
 val lift : 'a -> ('a, 'a) injected
