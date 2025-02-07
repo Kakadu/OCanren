@@ -235,4 +235,4 @@
 
 (cram
    (applies_to test016)
-   (deps ./test016.exe))
+   (deps ./test016sorto.exe))
