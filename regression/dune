@@ -5,6 +5,8 @@
     -w
     -27
     -rectypes
+    -w
+    -33-32-34
     -warn-error
     -unused-open
     -warn-error
