@@ -145,7 +145,7 @@ val call_fresh : (('a, 'b) injected -> goal) -> goal
 val report_counters : unit -> unit
 
 (** [x === y] creates a goal, which performs a unification of [x] and [y] *)
-val (===) : ?loc:string -> ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal
+val (===) : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal
 
 (** [x =/= y] creates a goal, which introduces a disequality constraint for [x] and [y] *)
 val (=/=) : ('a, 'b logic) injected -> ('a, 'b logic) injected -> goal

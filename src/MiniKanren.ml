@@ -1071,10 +1071,8 @@ let report_counters () =
   printfn "total diseq calls : %d" !diseq_counter;
   printfn "logged diseq calls : %d" !logged_diseq_counter
 
-let (===) ?loc (x: _ injected) y (env, subst, constr, scope) =
+let (===) (x: _ injected) y (env, subst, constr, scope) =
   (* we should always unify two injected types *)
-  (* incr unif_counter; *)
-
   match Subst.unify env x y scope subst with
   | None -> MKStream.nil
   | Some (prefix, s) ->
