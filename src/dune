@@ -6,7 +6,7 @@
 (library
  (name MiniKanren)
  (public_name MiniKanren)
- (modules MiniKanren MiniKanrenStd)
+ (modules MiniKanren MiniKanrenStd MKStream)
  (wrapped false)
  (libraries GT)
  (flags

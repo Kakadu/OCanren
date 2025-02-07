@@ -171,7 +171,7 @@ val conde : goal list -> goal
 (** [?& [s1; s2; ...; sk]] calculates [s1 &&& s2 && ... &&& sk] for a non-empty list of goals *)
 val (?&) : goal list -> goal
 
-val bind_star : goal list -> goal
+(* val bind_star : goal list -> goal *)
 
 (** {2 Some predefined goals} *)
 

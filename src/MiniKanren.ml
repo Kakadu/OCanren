@@ -88,91 +88,7 @@ let list_filter_map ~f xs =
 
 
 (* miniKanren-like streams, the most unsafe implementation *)
-module MKStream =
-  struct
-    open Obj
-    (*
-      Very unsafe implementation of streams
-      * false -- an empty list
-      * closure -- delayed list
-      * block with tag 1 -- single value
-      * (x,closure)   -- a value and continuation (pair has tag 0)
-    *)
-
-    type t = Obj.t
-
-    let nil : t = !!!false
-    let is_nil s = (s = !!!false)
-
-    let inc (f: unit -> t) : t =
-      Obj.repr f
-
-    let from_fun = inc
-
-    type wtf = Dummy of int*string | Single of Obj.t
-    let () = assert (Obj.tag @@ repr (Single !!![]) = 1)
-
-    let single : 'a -> t = fun x ->
-      Obj.repr @@ Obj.magic (Single !!!x)
-
-    let choice a f =
-      assert (closure_tag = tag@@repr f);
-      Obj.repr @@ Obj.magic (a,f)
-
-    let case_inf xs ~f1 ~f2 ~f3 ~f4 : Obj.t =
-      if is_int xs then f1 ()
-      else
-        let tag = Obj.tag (repr xs) in
-        if tag = Obj.closure_tag
-        then f2 (!!!xs: unit -> Obj.t)
-        else if tag = 1 then f3 (field (repr xs) 0)
-        else
-          (* let () = assert (0 = tag) in
-          let () = assert (2 = size (repr xs)) in *)
-          f4 (field (repr xs) 0) (!!!(field (repr xs) 1): unit -> Obj.t)
-      (* [@@inline ] *)
-
-    let step gs =
-      assert (closure_tag = tag @@ repr gs);
-      Obj.magic gs ()
-
-    let rec mplus : t -> t -> t  = fun cinf (gs: t) ->
-      assert (closure_tag = tag @@ repr gs);
-      case_inf cinf
-        ~f1:(fun () ->
-              step gs)
-        ~f2:(fun f ->
-              inc begin fun () ->
-                let r = step gs in
-                mplus r !!!f
-              end)
-        ~f3:(fun c ->
-              choice c gs
-          )
-        ~f4:(fun c ff ->
-              choice c (inc @@ fun () -> mplus (step gs) !!!ff)
-          )
-
-    let rec bind cinf g =
-      case_inf cinf
-        ~f1:(fun () ->
-                nil)
-        ~f2:(fun f ->
-              (* delay here because miniKanren has it *)
-              inc begin fun () ->
-                let r = f () in
-                bind r g
-              end)
-        ~f3:(fun c ->
-              (Obj.magic g c) )
-        ~f4:(fun c f ->
-              let arg1 = Obj.magic g c in
-              mplus arg1 @@
-                    inc begin fun () ->
-                      bind (step f) g
-                    end
-          )
-  end
+module MKStream = MKStream
 
 module Stream =
   struct
@@ -185,6 +101,9 @@ module Stream =
     let cons h t = Cons (h, t)
 
     let rec of_mkstream : MKStream.t -> 'a t = fun xs ->
+      (* match MKStream.msplit xs with
+      | None -> Obj.magic Nil
+      | Some (h, s) -> Obj.magic @@ Cons (h, Lazy (lazy (of_mkstream s))) *)
       let rec helper xs =
         Obj.magic @@ MKStream.case_inf (Obj.magic xs)
           ~f1:(fun () -> Obj.magic Nil)
@@ -1182,25 +1101,14 @@ let conj f g st = MKStream.bind (f st) g
 
 let (&&&) = conj
 
-let disj f g st =
-  let open MKStream in
-  mplus (f st) (MKStream.from_fun (fun () -> g st))
-
-let (|||) = disj
-
-(* mplus_star *)
-let rec (?|) = function
-| []    -> failwith "wrong argument of ?|"
-| [h]   -> h
-| h::tl -> h ||| (?| tl)
-
 (* "bind*" *)
-let rec (?&) = function
-| []   -> failwith "wrong argument of ?&"
-| [h]  -> h
-| x::y::tl -> ?& ((x &&& y)::tl)
-
-let bind_star = (?&)
+(* This is actual clone of Scheme implementation *)
+let (?&) gs st =
+  match gs with
+  | [h] -> h st
+  | h::tl ->
+    List.fold_left (fun acc x -> MKStream.bind acc x) (h st) tl
+  | [] -> assert false
 
 let list_fold ~f ~initer xs =
   match xs with
@@ -1214,14 +1122,25 @@ let list_fold_right0 ~f ~initer xs =
   in
   helper (List.rev xs)
 
-let conde: goal list -> goal = fun xs st ->
+let disj_base f g st = MKStream.mplus (f st) (MKStream.from_fun (fun () -> g st))
+
+let disj f g st =
   let st = State.incr_scope st in
-  list_fold_right0 ~initer:(fun x -> x)
-    xs
-    ~f:(fun g acc st ->
-          MKStream.mplus (g st) @@ MKStream.inc (fun () -> acc st)
-      )
-  |> (fun g -> MKStream.inc (fun ()  -> g st))
+  disj_base f g |> (fun g -> MKStream.from_fun (fun () -> g st))
+
+let (|||) = disj
+
+(* mplus_star *)
+let (?|) gs st =
+  let st = State.incr_scope st in
+  let rec inner = function
+  | [g]   -> g
+  | g::gs -> disj_base g (inner gs)
+  | [] -> failwith "Wrong argument of (?!)"
+  in
+  inner gs |> (fun g -> MKStream.from_fun (fun () -> g st))
+
+let conde = (?|)
 
 module Fresh =
   struct
