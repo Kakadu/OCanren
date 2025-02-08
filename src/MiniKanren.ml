@@ -100,11 +100,11 @@ module Stream =
 
     let cons h t = Cons (h, t)
 
-    let rec of_mkstream : MKStream.t -> 'a t = fun xs ->
-      (* match MKStream.msplit xs with
+    let rec of_mkstream : 'a MKStream.t -> 'a t = fun xs ->
+      match MKStream.msplit xs with
       | None -> Obj.magic Nil
-      | Some (h, s) -> Obj.magic @@ Cons (h, Lazy (lazy (of_mkstream s))) *)
-      let rec helper xs =
+      | Some (h, s) -> Obj.magic @@ Cons (h, Lazy (lazy (of_mkstream s)))
+      (* let rec helper xs =
         Obj.magic @@ MKStream.case_inf (Obj.magic xs)
           ~f1:(fun () -> Obj.magic Nil)
           ~f2:(fun f  ->
@@ -113,7 +113,7 @@ module Stream =
           ~f3:(fun a -> !!!(cons a Nil) )
           ~f4:(fun a f -> !!!(cons a @@ from_fun (fun () -> helper @@ f ())) )
       in
-      !!!(helper !!!xs)
+      !!!(helper !!!xs) *)
 
     let rec is_empty = function
     | Nil    -> true
@@ -1054,7 +1054,7 @@ module State =
   end
 
 type 'a goal' = State.t -> 'a
-type goal = MKStream.t goal'
+type goal = State.t MKStream.t goal'
 
 let call_fresh f : State.t -> _ = fun (env, subst, constr, scope) ->
   let x, env' = Env.fresh ~scope env in

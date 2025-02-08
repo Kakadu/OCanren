@@ -1,94 +1,199 @@
-[@@@ocaml.warning "-unused-constructor"]
-
-let (!!!) = Obj.magic
-open Obj
+(* SPDX-License-Identifier: LGPL-2.1-or-later *)
 (*
-  Very unsafe implementation of streams
-  * false -- an empty list
-  * closure -- delayed list
-  * block with tag 1 -- single value
-  * (x,closure)   -- a value and continuation (pair has tag 0)
-*)
+ * OCanren.
+ * Copyright (C) 2015-2025
+ * Dmitri Boulytchev, Dmitry Kosarev, Alexey Syomin, Evgeny Moiseenko
+ * St.Petersburg State University, JetBrains Research
+ *
+ * This software is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License version 2, as published by the Free Software Foundation.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See the GNU Library General Public License version 2 for more details
+ * (enclosed in the file COPYING).
+ *)
 
-type t = Obj.t
+IFDEF STATS THEN
+type stat = {
+    mutable unwrap_suspended_counter : int;
+    mutable force_counter            : int;
+    mutable from_fun_counter         : int;
+    mutable bind_counter             : int;
+    mutable mplus_counter            : int
+}
 
+let stat = {
+    unwrap_suspended_counter = 0;
+    force_counter            = 0;
+    from_fun_counter         = 0;
+    bind_counter             = 0;
+    mplus_counter            = 0
+}
 
+let unwrap_suspended_counter () = stat.unwrap_suspended_counter
+let unwrap_suspended_counter_incr () = stat.unwrap_suspended_counter <- stat.unwrap_suspended_counter + 1
 
+let force_counter () = stat.force_counter
+let force_counter_incr () = stat.force_counter <- stat.force_counter + 1
 
-let nil : t = !!!false
-let is_nil s = (s = !!!false)
+let from_fun_counter () = stat.from_fun_counter
+let from_fun_counter_incr () = stat.from_fun_counter <- stat.from_fun_counter + 1
 
-let inc (f: unit -> t) : t =
-  Obj.repr f
+let bind_counter () = stat.bind_counter
+let bind_counter_incr () = stat.bind_counter <- stat.bind_counter + 1
 
-let from_fun = inc
+let mplus_counter () = stat.mplus_counter
+let mplus_counter_incr () = stat.mplus_counter <- stat.mplus_counter + 1
 
-type wtf = Dummy of int*string | Single of Obj.t
-let () = assert (Obj.tag @@ repr (Single !!![]) = 1)
+END
 
-let single : 'a -> t = fun x ->
-  Obj.repr @@ Obj.magic (Single !!!x)
+(* to avoid clash with Std.List (i.e. logic list) *)
+module List = Stdlib.List
 
-let choice a f =
-  assert (closure_tag = tag@@repr f);
-  Obj.repr @@ Obj.magic (a,f)
+type 'a t =
+  | Nil
+  | Cons    of 'a * ('a t)
+  | Thunk   of 'a thunk
+  | Waiting of 'a suspended list
+and 'a thunk =
+  unit -> 'a t
+and 'a suspended =
+  {is_ready: unit -> bool; zz: 'a thunk}
 
-let case_inf xs ~f1 ~f2 ~f3 ~f4  =
-  if is_int xs then f1 ()
-  else
-    let tag = Obj.tag (repr xs) in
-    if tag = Obj.closure_tag
-    then f2 (!!!xs: unit -> Obj.t)
-    else if tag = 1 then f3 (field (repr xs) 0)
-    else
-      (* let () = assert (0 = tag) in
-      let () = assert (2 = size (repr xs)) in *)
-      f4 (field (repr xs) 0) (!!!(field (repr xs) 1): unit -> Obj.t)
-  (* [@@inline ] *)
+let nil         = Nil
+let single x    = Cons (x, Nil)
+let cons x s    = Cons (x, s)
+let from_fun zz =
+  let () = IFDEF STATS THEN from_fun_counter_incr () ELSE () END in
+  Thunk zz
 
-let rec msplit : t -> ('a *  t) option = fun xs ->
-  case_inf xs ~f1:(fun () -> None)
-    ~f2:(fun f -> msplit (f ()))
-    ~f3:(fun ans -> Some (Obj.magic ans, nil))
-    ~f4:(fun ans tl -> Some (!!!ans, (!!!tl: t)))
+let suspend ~is_ready f = Waiting [{is_ready; zz=f}]
 
-let step gs =
-  assert (closure_tag = tag @@ repr gs);
-  Obj.magic gs ()
+let rec of_list = function
+| []    -> Nil
+| x::xs -> Cons (x, of_list xs)
 
-let rec mplus : t -> t -> t  = fun cinf (gs: t) ->
-  assert (closure_tag = tag @@ repr gs);
-  case_inf cinf
-    ~f1:(fun () ->
-          step gs)
-    ~f2:(fun f ->
-          inc begin fun () ->
-            let r = step gs in
-            mplus r !!!f
-          end)
-    ~f3:(fun c ->
-          choice c gs
-      )
-    ~f4:(fun c ff ->
-          choice c (inc @@ fun () -> mplus (step gs) !!!ff)
-      )
+let force x =
+  let () = IFDEF STATS THEN force_counter_incr () ELSE () END in
+  match x with
+  | Thunk zz  -> zz ()
+  | xs        -> xs
 
-let rec bind cinf g =
-  case_inf cinf
-    ~f1:(fun () ->
-            nil)
-    ~f2:(fun f ->
-          (* delay here because miniKanren has it *)
-          inc begin fun () ->
-            let r = f () in
-            bind r g
-          end)
-    ~f3:(fun c ->
-          (Obj.magic g c) )
-    ~f4:(fun c f ->
-          let arg1 = Obj.magic g c in
-          mplus arg1 @@
-                inc begin fun () ->
-                  bind (step f) g
-                end
-      )
+let rec mplus xs ys =
+  let () = IFDEF STATS THEN mplus_counter_incr () ELSE () END in
+  match xs with
+  | Nil           -> force ys
+  | Cons (x, xs)  -> cons x (from_fun @@ fun () -> mplus (force ys) xs)
+  | Thunk   _     -> from_fun (fun () -> mplus (force ys) xs)
+  | Waiting ss    ->
+    let ys = force ys in
+    (* handling waiting streams is tricky *)
+    match unwrap_suspended ss, ys with
+    (* if [xs] has no ready streams and [ys] is also a waiting stream then we merge them  *)
+    | Waiting ss, Waiting ss' -> Waiting (ss @ ss')
+    (* if [xs] has no ready streams but [ys] is not a waiting stream then we swap them,
+       pushing waiting stream to the back of the new stream *)
+    | Waiting ss, _           -> mplus ys @@ from_fun (fun () -> xs)
+    (* if [xs] has ready streams then [xs'] contains some lazy stream that is ready to produce new answers *)
+    | xs', _ -> mplus xs' ys
+
+and unwrap_suspended ss =
+  let () = IFDEF STATS THEN unwrap_suspended_counter_incr () ELSE () END in
+  let rec find_ready prefix = function
+    | ({is_ready; zz} as s)::ss ->
+      if is_ready ()
+      then Some (from_fun zz), (List.rev prefix) @ ss
+      else find_ready (s::prefix) ss
+    | [] -> None, List.rev prefix
+  in
+  match find_ready [] ss with
+    | Some s, [] -> s
+    | Some s, ss -> mplus (force s) @@ Waiting ss
+    | None , ss  -> Waiting ss
+
+let rec bind s f =
+  let () = IFDEF STATS THEN bind_counter_incr () ELSE () END in
+  match s with
+  | Nil           -> Nil
+  | Cons (x, s)   -> mplus (f x) (from_fun (fun () -> bind (force s) f))
+  | Thunk zz      -> from_fun (fun () -> bind (zz ()) f)
+  | Waiting ss    ->
+    match unwrap_suspended ss with
+    | Waiting ss ->
+      let helper {zz} as s = {s with zz = fun () -> bind (zz ()) f} in
+      Waiting (List.map helper ss)
+    | s          -> bind s f
+
+let rec msplit = function
+| Nil           -> None
+| Cons (x, xs)  -> Some (x, xs)
+| Thunk zz      -> msplit @@ zz ()
+| Waiting ss    ->
+  match unwrap_suspended ss with
+  | Waiting _ -> None
+  | xs        -> msplit xs
+
+let is_empty s =
+  match msplit s with
+  | Some _  -> false
+  | None    -> true
+
+let rec map f = function
+| Nil          -> Nil
+| Cons (x, xs) -> Cons (f x, map f xs)
+| Thunk zzz    -> from_fun (fun () -> map f @@ zzz ())
+| Waiting ss   ->
+  let helper {zz} as s = {s with zz = fun () -> map f (zz ())} in
+  Waiting (List.map helper ss)
+
+let mapi f =
+  let rec helper i xs = match msplit xs with
+    | None -> Nil
+    | Some (h, tl) -> Cons (f i h, from_fun (fun () -> helper (1+i) tl))
+  in
+  helper 0
+
+let rec iter f s =
+  match msplit s with
+  | Some (x, s) -> f x; iter f s
+  | None        -> ()
+
+let rec filter p s =
+  match msplit s with
+  | Some (x, s) when p x -> Cons (x, from_fun (fun () -> filter p s))
+  | Some (x, s) -> from_fun (fun () -> filter p s)
+  | None        -> Nil
+
+let rec fold f acc s =
+  match msplit s with
+  | Some (x, s) -> fold f (f acc x) s
+  | None        -> acc
+
+let rec zip xs ys =
+  match msplit xs, msplit ys with
+  | None,         None          -> Nil
+  | Some (x, xs), Some (y, ys)  -> Cons ((x, y), zip xs ys)
+  | _                           -> invalid_arg "OCanren fatal (Stream.zip): streams have different lengths"
+
+let hd s =
+  match msplit s with
+  | Some (x, _) -> x
+  | None        -> invalid_arg "OCanren fatal (Stream.hd): empty stream"
+
+let tl s =
+  match msplit s with
+  | Some (_, xs) -> xs
+  | None         -> Nil
+
+let rec retrieve ?(n=(-1)) s =
+  if n = 0
+  then [], s
+  else match msplit s with
+  | None          -> [], Nil
+  | Some (x, s)  -> let xs, s = retrieve ~n:(n-1) s in x::xs, s
+
+let take ?n s = fst @@ retrieve ?n s
