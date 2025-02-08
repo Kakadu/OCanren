@@ -1185,7 +1185,7 @@ let report_counters () =
   printfn "total diseq calls : %d" !diseq_counter;
   printfn "logged diseq calls : %d" !logged_diseq_counter
 
-let (===) ?loc (x: _ injected) y (env, subst, constr, scope) =
+let (===) (x: _ injected) y (env, subst, constr, scope) =
   (* we should always unify two injected types *)
   (* incr unif_counter; *)
 
@@ -1215,18 +1215,6 @@ let conj f g st = MKStream.bind (f st) g
 
 let (&&&) = conj
 
-let disj f g st =
-  let open MKStream in
-  mplus (f st) (MKStream.from_fun (fun () -> g st))
-
-let (|||) = disj
-
-(* mplus_star *)
-let rec (?|) = function
-| []    -> failwith "wrong argument of ?|"
-| [h]   -> h
-| h::tl -> h ||| (?| tl)
-
 (* "bind*" *)
 let rec (?&) = function
 | []   -> failwith "wrong argument of ?&"
@@ -1235,26 +1223,31 @@ let rec (?&) = function
 
 let bind_star = (?&)
 
-let list_fold ~f ~initer xs =
-  match xs with
-  | [] -> failwith "bad argument"
-  | start::xs -> ListLabels.fold_left ~init:(initer start) ~f xs
+let disj_base f g st = MKStream.mplus (f st) (MKStream.from_fun (fun () -> g st))
 
-let list_fold_right0 ~f ~initer xs =
-  let rec helper = function
-  | [] -> failwith "bad_argument"
-  | x::xs -> list_fold ~initer ~f:(fun acc x -> f x acc) (x::xs)
-  in
-  helper (List.rev xs)
-
-let conde: goal list -> goal = fun xs st ->
+let disj f g st =
   let st = State.incr_scope st in
-  list_fold_right0 ~initer:(fun x -> x)
-    xs
-    ~f:(fun g acc st ->
-          MKStream.mplus (g st) @@ MKStream.inc (fun () -> acc st)
-      )
-  |> (fun g -> MKStream.inc (fun ()  -> g st))
+  disj_base f g |> (fun g -> MKStream.from_fun (fun () -> g st))
+
+let (|||) = disj
+
+(* mplus_star *)
+(* let rec (?|) = function
+| []    -> failwith "wrong argument of ?|"
+| [h]   -> h
+| h::tl -> h ||| (?| tl) *)
+
+
+let (?|) gs st =
+  let st = State.incr_scope st in
+  let rec inner = function
+  | [g]   -> g
+  | g::gs -> disj_base g (inner gs)
+  | [] -> failwith "Wrong argument of (?!)"
+  in
+  inner gs |> (fun g -> MKStream.from_fun (fun () -> g st))
+
+let conde = (?|)
 
 module Fresh =
   struct
