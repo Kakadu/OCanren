@@ -90,9 +90,14 @@ let logic = {
     end
 }
 
-type 'a groundi = ('a, 'a groundi) t Logic.ilogic
-type 'a injected = 'a groundi
-let reify : 'a 'b . ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t =
+type ('a, 'b) injected = ('a ground, 'b logic) Logic.injected
+
+include Fmap2(struct
+    type nonrec ('a , 'b) t = ('a, 'b) list
+    let fmap eta = GT.gmap list eta
+end )
+
+let reify : 'a 'b . ('a, 'b) Reifier.t -> ('a ground, 'b logic) Reifier.t =
   fun ra ->
     let open Env.Monad.Syntax in
     Reifier.fix (fun self ->
@@ -106,7 +111,7 @@ let reify : 'a 'b . ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t =
         Env.Monad.return foo
       ))
 
-let rec prj_exn : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t =
+let rec prj_exn : ('a, 'b) Reifier.t -> ('a ground, 'b ground) Reifier.t =
   fun ra ->
     let open Env.Monad.Syntax in
     Reifier.fix (fun rself ->
@@ -115,7 +120,7 @@ let rec prj_exn : ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t =
       let* fr = rself in
       Env.Monad.return (fun x -> GT.gmap t fa fr x)))
 
-let prj_to_list_exn : ('a, 'b) Reifier.t -> ('a groundi, 'b GT.list) Reifier.t =
+let prj_to_list_exn : ('a, 'b) Reifier.t -> ('a ground, 'b GT.list) Reifier.t =
   let gmap fa fb = function
     | Nil -> Stdlib.List.([])
     | Cons (h, tl) -> Stdlib.List.cons (fa h) (fb tl)
@@ -126,7 +131,7 @@ let prj_to_list_exn : ('a, 'b) Reifier.t -> ('a groundi, 'b GT.list) Reifier.t =
     let open Env.Monad.Syntax in
     Reifier.fix (fun self -> Logic.Reifier.prj_exn <..> chain (fmapt ra self))
 
-let rec prj : (int -> _ ground) -> ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t =
+let rec prj : (int -> _ ground) -> ('a, 'b) Reifier.t -> ('a ground, 'b ground) Reifier.t =
   fun onvar ra ->
     let ( >>= ) = Env.Monad.bind in
     Reifier.fix (fun self ->
@@ -135,9 +140,9 @@ let rec prj : (int -> _ ground) -> ('a, 'b) Reifier.t -> ('a groundi, 'b ground)
      self >>= fun fr ->
      Env.Monad.return (fun x -> GT.gmap t fa fr x)))
 
-let nil () : 'a groundi = Logic.inj Nil
-let cons : 'a -> 'a groundi -> 'a groundi = fun x y ->
-  Logic.inj (Cons (x, y))
+let nil () : (_,_) injected = Logic.inj (distrib Nil)
+let cons : ('a, 'b) Logic.injected  -> ('a, 'b) injected -> ('a, 'b) injected =
+  fun x y -> Logic.inj (distrib @@ Cons (x, y))
 
 let rec of_list f = function
 | []    -> Nil
@@ -149,9 +154,11 @@ let rec to_list f = function
 
 let rec inj f xs = to_logic (GT.gmap list f (inj f) xs)
 
-let rec list = function
+let rec list : 'a 'b . ('a, 'b) Logic.injected GT.list -> ('a, 'b) injected = function
 | []    -> nil ()
-| x::xs -> cons x (list xs);;
+| x::xs ->
+    assert false
+    (* cons x (list xs) *)
 
 let rec logic_to_ground_exn f = function
   | Var (_, _) -> failwith "List.logic_to_ground_exn: variables inside"
@@ -207,7 +214,7 @@ let rec lookupo p xs mx =
       ])
     )
   ]
-
+(*
 let rec assoco x xs v =
    Fresh.three (fun a b tl ->
      (xs === (Pair.pair a b) % tl) &&&
@@ -229,7 +236,7 @@ let rec lengtho l n =
       (n === (Nat.s n')) &&&
       (lengtho xs n')
     )
-  ]
+  ] *)
 
 let rec appendo a b ab =
   conde [
@@ -262,7 +269,7 @@ let rec membero l a =
 
 let nullo q : goal = (q === nil())
 
-let caro : 'a groundi -> _ -> goal = fun xs h -> call_fresh (fun tl -> xs === (h % tl))
-let cdro : 'a Logic.ilogic groundi -> _ -> goal = fun xs tl -> call_fresh (fun h  -> xs === (h % tl))
+let caro : _ injected -> _ -> goal = fun xs h -> call_fresh (fun tl -> xs === (h % tl))
+let cdro : _ injected -> _ -> goal = fun xs tl -> call_fresh (fun h  -> xs === (h % tl))
 let hdo = caro
 let tlo = cdro

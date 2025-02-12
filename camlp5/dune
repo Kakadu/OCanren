@@ -225,5 +225,5 @@
    GT.ppx_all
    --
    -pp
-   camlp5/pp5+gt+plugins+ocanren+logger+dump.exe))
+   MiniKanren/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe))
  (libraries OCanren OCanren.tester))

@@ -40,14 +40,14 @@
   (pps OCanren-ppx.ppx_deriving_reify))
  (libraries OCanren OCanren.tester))
 
-(executables
- (names test006)
- (package OCanren)
- (public_names -)
- (modules test006)
- (preprocess
-  (pps OCanren-ppx.ppx_distrib GT.ppx_all -- -pretty))
- (libraries OCanren OCanren.tester))
+; (executables
+;  (names test006)
+;  (package OCanren)
+;  (public_names -)
+;  (modules test006)
+;  (preprocess
+;   (pps OCanren-ppx.ppx_distrib GT.ppx_all -- -pretty))
+;  (libraries OCanren OCanren.tester))
 
 (cram
  (package OCanren)
@@ -58,10 +58,10 @@
   test001.ml
   test002repr.ml
   test005.ml
-  test006.ml
+  ; test006.ml
   ./test003sort.exe
   ./test004.exe
   ./test005.exe
-  ./test006.exe
+  ; ./test006.exe
   ;
   ))

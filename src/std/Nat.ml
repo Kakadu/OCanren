@@ -30,9 +30,7 @@ with show, gmap, html, eq, compare, foldl, foldr, fmt
 @type logic   = logic t Logic.logic
 with show, gmap, html, eq, compare, foldl, foldr, fmt
 
-type groundi = groundi t Logic.ilogic
-
-type injected = groundi
+type injected = (ground, logic) Logic.injected
 
 let logic = {
   logic with
@@ -54,32 +52,34 @@ let rec to_int   = function O -> 0 | S n -> 1 + to_int n
 
 let rec inj n = to_logic (GT.(gmap t) inj n)
 
-let reify =
-  let open Env.Monad.Syntax in
-  Reifier.fix (fun self ->
-  Reifier.compose Reifier.reify
-      (
-        let* fr = self in
-        let rec foo = function
-          | Var (v, xs) ->
-            Var (v, Stdlib.List.map foo xs)
-          | Value x -> Value (GT.gmap t fr x)
-        in
-        Env.Monad.return foo
-    ))
 
-let prj_exn : (groundi, ground) Reifier.t =
-  let ( >>= ) = Env.Monad.bind in
+include Fmap1(struct
+    type nonrec 'a t = 'a t
+    let fmap eta = GT.gmap t eta
+end)
+
+let fmapt fa subj =
+  let open Env.Monad in
+  Env.Monad.return (GT.gmap t) <*> fa <*> subj
+
+let reify: (ground, logic) Reifier.t =
+  let open Env.Monad in
   Reifier.fix (fun self ->
-    Reifier.compose Reifier.prj_exn
-    ( self >>= fun fr ->
-      Env.Monad.return (fun x -> GT.gmap t fr x))
+    Reifier.reify <..>
+      chain (Reifier.zed (Reifier.rework ~fv:(fmapt self)))
     )
 
-let o   = Logic.inj O
-let s x = Logic.inj (S x)
+let prj_exn : (ground, ground) Reifier.t =
+  let open Env.Monad in
+  Reifier.fix (fun self ->
+    Reifier.prj_exn <..> chain (fmapt self)
+    )
 
-let rec nat n = Logic.inj @@ (GT.gmap t) nat n
+
+let o : injected  = Logic.inj @@ distrib O
+let s x = Logic.inj (distrib (S x))
+
+let rec nat n = Logic.inj @@ distrib (GT.gmap t nat n)
 
 let zero = o
 let one  = s o
@@ -140,7 +140,7 @@ let maxo x y z = conde [
   (z === x) &&& (x >= y);
   (z === y) &&& (x <  y)
 ]
-               
+
 let mino x y z = conde [
   (z === x) &&& (x <= y);
   (z === y) &&& (x >  y)

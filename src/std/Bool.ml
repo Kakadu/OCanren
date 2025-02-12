@@ -27,7 +27,7 @@ module List = Stdlib.List
 @type t         = GT.bool                  with show, html, eq, compare, foldr, foldl, gmap, fmt
 @type logic     = GT.bool Logic.logic           with show, html, eq, compare, foldr, foldl, gmap , fmt
 
-type groundi   = ground ilogic
+type injected   = (bool, bool Logic.logic) Logic.injected
 
 let logic = {
   logic with
@@ -46,11 +46,11 @@ let logic = {
 
 let inj = to_logic
 
-let reify : (bool ilogic, bool Logic.logic) Reifier.t = Logic.reify
-let prj_exn : (bool ilogic, bool) Reifier.t = Logic.prj_exn
+let reify : (bool, bool Logic.logic) Reifier.t = Logic.reify
+let prj_exn : (bool, bool) Reifier.t = Logic.prj_exn
 
-let falso = Logic.inj false
-let truo  = Logic.inj true
+let falso = Logic.(inj (lift  false))
+let truo  = Logic.(inj (lift true))
 
 let (|^) a b c =
   conde [

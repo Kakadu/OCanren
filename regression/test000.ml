@@ -3,15 +3,16 @@ open OCanren
 open OCanren.Std
 open Tester
 open Printf
-open GT
 
-let show_int       = show(int)
-let show_int_opt   = show(option) (show(int))
-let show_intl      = show(logic)  (show(int))
-let show_intl_optl = show(logic)  (show(option) (show(logic) (show(int))))
+let show_int       = GT.show(GT.int)
+let show_int_opt   = GT.show(GT.option) (GT.show(GT.int))
+let show_intl      = GT.show(logic)  (GT.show(GT.int))
+let show_intl_optl = GT.show(logic)  (GT.show(GT.option) (GT.show(logic) (GT.show(GT.int))))
 
 let run_opt eta = run_r (Option.reify OCanren.reify) show_intl_optl eta
 let run_int eta = run_r OCanren.prj_exn show_int eta
+
+let (!!) x = inj (lift x)
 
 let _ = Option.(
     run_int 1 q qh (REPR(fun q -> q === !!5));
@@ -25,45 +26,72 @@ module Result = struct
   @type ('a, 'b) t = ('a, 'b) Result.t =
     | Ok of 'a | Error of 'b
     with gmap,show
+  let fmap eta = GT.gmap t eta;;
 
   @type ('a, 'b) logic = ('a, 'b)  t OCanren.logic
     with gmap,show
+  module A = OCanren.Fmap2(struct
+    type ('a, 'b) t = ('a, 'b) Result.t
+    let fmap = fmap
+  end )
+  include A
 
-  type ('a, 'b) groundi = ('a, 'b) t ilogic
-
-  let reify : ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t -> (('a,'c) groundi, ('b,'d) logic) Reifier.t =
-    fun ra rb ->
-    let ( >>= ) = Env.Monad.bind in
-    Reifier.compose Reifier.reify
-    (Reifier.reify >>= fun r ->
-    ra >>= fun fa ->
-    rb >>= fun fb ->
-    let rec foo x =
-      match x with
-      | Var (v, xs) ->
-        Var (v, Stdlib.List.map foo xs)
-      | Value x -> Value (GT.gmap t fa fb x)
-      in
-    Env.Monad.return foo)
-
-  let prj_exn : 'a 'b. ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t -> (('a,'c) groundi, ('b,'d) t) Reifier.t
-      =
-    fun ra rb ->
-      let ( >>= ) = Env.Monad.bind in
-      Reifier.prj_exn >>= fun r ->
-      ra >>= fun fa ->
-      rb >>= fun fb ->
-        Env.Monad.return (fun x -> GT.gmap t fa fb (r x))
-
-  let ok x    = inj (Ok x)
-  let error x = inj (Error x)
+  type ('a, 'b, 'c, 'd) i = (('a, 'b) Result.t, ('c,'d) Result.t OCanren.logic) injected
+  let ok x    : _ i = inj @@ distrib(Ok x)
+  let error : _ -> _ i = fun x -> inj @@ distrib (Error x)
+  let _1 : unit -> ((int, int) Result.t, (int OCanren.logic, int OCanren.logic) Result.t OCanren.logic) Reifier.t = fun () ->
+    reify OCanren.reify OCanren.reify
 end
+(*
+include struct
+  let () =
+    print_endline "AAA";
+    let run_option rel =
+      OCanren.(run q) rel (fun rr ->
+        rr#reify (Option.reify OCanren.reify))
+        |> OCanren.Stream.iter (fun x ->
+          print_endline @@ GT.show(logic) (GT.show(Option.t)
+          (GT.show(logic) (GT.show GT.int))) x )
+    in
+    run_option (fun q -> q === q);
+    run_option (fun q -> q === Option.some !!1);
+    run_option (fun q -> q === Option.none ());
+    ()
 
-let show1 = show(Result.t) (show(int)) (show(option) (show(int)))
+    let () =
+    print_endline "BBB";
+    let run_option rel =
+      OCanren.(run q) rel (fun rr ->
+        rr#reify (Option.prj_exn OCanren.prj_exn))
+        |> OCanren.Stream.iter (fun x ->
+          print_endline @@ (GT.show(Option.t) (GT.show GT.int)) x)
+    in
+    run_option (fun q -> q === Option.some !!1);
+    run_option (fun q -> q === Option.none ());
+    ()
+  let () =
+    print_endline "CCC";
+    let run_option rel =
+      let show = GT.show(logic) (GT.show(Result.t)
+                  (GT.show(logic) (GT.show GT.int))
+                  (GT.show(logic) (GT.show GT.int))
+                  )
+      in
+      OCanren.(run q) rel (fun rr ->
+        rr#reify (Result.reify OCanren.reify OCanren.reify))
+        |> OCanren.Stream.iter (fun x ->
+          print_endline @@ show x)
+    in
+    run_option (fun q -> q === Result.ok !!1);
+    run_option (fun q -> q === Result.error !!2);
+    ()
+end *)
+
+let show1 = GT.show(Result.t) (GT.show(GT.int)) (GT.show(GT.option) (GT.show(GT.int)))
 let show1logic =
-  show(logic) (show(Result.t)
-    (show(logic) (show int))
-    (show(logic) (show int)) )
+  GT.show(logic) (GT.show(Result.t)
+    (GT.show(logic) (GT.show GT.int))
+    (GT.show(logic) (GT.show GT.int)) )
 
 let runResult n =
   run_r (Result.reify OCanren.reify OCanren.reify) show1logic n

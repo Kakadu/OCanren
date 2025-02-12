@@ -17,6 +17,8 @@
  * (enclosed in the file COPYING).
  *)
 
+open Stdlib
+
 type stat = {mutable walk_count : int}
 
 let stat = {walk_count = 0}

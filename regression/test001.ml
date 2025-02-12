@@ -4,11 +4,12 @@ open OCanren.Std
 open Tester
 open Printf
 
-let ilist xs = list (!!) xs
+let (!!) x = inj (lift x)
+let ilist xs = OCanren.Std.list (!!) xs
 let just_a a = a === !!5
 
 let occurs x =
-  (x === List.cons !!1 x)
+  (x === OCanren.Std.List.cons !!1 x)
 
 let two_vars x y = x===y
 let a_and_b a =

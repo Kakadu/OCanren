@@ -65,18 +65,20 @@ let from_logic = function
 
 type 'a ilogic
 
-external inji : 'a -> 'a ilogic = "%identity"
-let inj = inji
+type ('a, 'b) injected = 'a
+
+external lift: 'a -> ('a, 'a) injected = "%identity"
+let inj: ('a, 'b) injected -> ('a, 'b logic) injected = fun x -> Obj.magic (Value x)
 
 let (!!) = inj
 
 module Reifier = struct
   type ('a, 'b) t = ('a -> 'b) Env.Monad.t
 
-  let rec reify : ('a ilogic -> 'a logic) Env.Monad.t =
+  let rec reify : ('a, 'a logic) t =
     fun env t ->
       match Term.var t with
-      | None -> Value (Obj.magic t)
+      | None -> (Obj.magic t)
       | Some v ->
         let i, cs = Term.Var.reify (reify env) v in
         Var (i, cs)
@@ -86,6 +88,7 @@ module Reifier = struct
     * but for demonstration purposes this implementation is okay
     *)
   let prj_exn env t =
+    (* Printf.printf "Reifier.prj_exn: %s\n" (Term.show (Obj.magic t)); *)
     match reify env t with
     | Value x -> x
     | Var (v, _) -> raise Not_a_value
@@ -130,17 +133,110 @@ end
 
 let reify = Reifier.reify
 let prj_exn = Reifier.prj_exn
-(* let prj = Reifier.prj *)
 
-class type ['a] reified = object
-  method is_open : bool
-  method reify   : 'b . ('a ilogic, 'b) Reifier.t -> 'b
+module type T0 =
+  sig
+    type t
+    val fmap : t -> t
+  end
+module type T1 =
+  sig
+    type 'a t
+    val fmap : ('a -> 'b) -> 'a t -> 'b t
+  end
+
+module type T2 =
+  sig
+   type ('a, 'b) t
+   val fmap : ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) t -> ('c, 'd) t
+  end
+
+module type T3 =
+  sig
+    type ('a, 'b, 'c) t
+    val fmap : ('a -> 'q) -> ('b -> 'r) -> ('c -> 's) -> ('a, 'b, 'c) t -> ('q, 'r, 's) t
+  end
+
+module type T4 =
+sig
+  type ('a, 'b, 'c, 'd) t
+  val fmap : ('a -> 'q) -> ('b -> 'r) -> ('c -> 's) -> ('d -> 't) -> ('a, 'b, 'c, 'd) t -> ('q, 'r, 's, 't) t
 end
 
-let make_rr : Env.t -> 'a ilogic -> 'a reified  = fun env x ->
+module type T5 =
+sig
+  type ('a, 'b, 'c, 'd, 'e) t
+  val fmap : ('a -> 'q) -> ('b -> 'r) -> ('c -> 's) -> ('d -> 't) -> ('e -> 'u) -> ('a, 'b, 'c, 'd, 'e) t -> ('q, 'r, 's, 't, 'u) t
+end
+
+module type T6 =
+sig
+  type ('a, 'b, 'c, 'd, 'e, 'f) t
+  val fmap : ('a -> 'q) -> ('b -> 'r) -> ('c -> 's) -> ('d -> 't) -> ('e -> 'u) -> ('f -> 'v) -> ('a, 'b, 'c, 'd, 'e, 'f) t -> ('q, 'r, 's, 't, 'u, 'v) t
+end
+
+type helper = Env.t
+
+module Fmap1 (T : T1) = struct
+  external distrib : ('a,'b) injected T.t -> ('a T.t, 'b T.t) injected = "%identity"
+
+  let fmapt fa subj =
+    let open Env.Monad in
+    Env.Monad.return T.fmap <*> fa <*> subj
+
+  let reify:
+    'a 'b . ('a, 'b) Reifier.t -> ('a T.t, 'b T.t logic) Reifier.t
+    = fun arg1 -> Reifier.fix (fun self ->
+      let open Env.Monad in
+        reify
+        <..> chain
+               (Reifier.zed
+                  (Reifier.rework
+                     ~fv:(fmapt arg1))))
+
+  let prj_exn:
+        'a 'b . ('a, 'b) Reifier.t -> ('a T.t, 'b T.t) Reifier.t =
+    fun arg ->
+      let open Env.Monad in
+      Reifier.fix (fun self ->
+        prj_exn <..> chain (fmapt arg) )
+
+end
+module Fmap2 (T : T2) = struct
+  external distrib : (('a,'c) injected, ('b,'d) injected) T.t -> (('a, 'b) T.t, ('c, 'd) T.t) injected = "%identity"
+
+  let fmapt fa fb subj =
+    let open Env.Monad in
+    Env.Monad.return T.fmap <*> fa <*> fb <*> subj
+
+  let reify:
+    'a 'b .  ('a, 'c) Reifier.t -> ('b, 'd) Reifier.t -> (('a, 'b) T.t, ('c, 'd) T.t logic) Reifier.t
+    = fun arg1 arg2 -> Reifier.fix (fun _ ->
+      let open Env.Monad in
+        reify
+        <..> chain
+               (Reifier.zed
+                  (Reifier.rework
+                     ~fv:(fmapt arg1 arg2))))
+
+  let prj_exn:
+    'a 'b .  ('a, 'c) Reifier.t -> ('b, 'd) Reifier.t -> (('a, 'b) T.t, ('c, 'd) T.t) Reifier.t =
+  fun arg1 arg2 ->
+    let open Env.Monad in
+    Reifier.fix (fun self ->
+      prj_exn <..> chain (fmapt arg1 arg2) )
+end
+
+
+class type ['a, 'b] reified = object
+  method is_open : bool
+  method reify   : 'b . ('a, 'b) Reifier.t -> 'b
+end
+
+let make_rr : Env.t -> ('a, 'b) injected -> ('a, 'b) reified  = fun env x ->
   object (self)
     method is_open            = Env.is_open env x
-    method reify : 'b . ('a ilogic, 'b) Reifier.t -> 'b = fun reifier ->
+    method reify : 'b . ('a, 'b) Reifier.t -> 'b = fun reifier ->
       Reifier.apply reifier (env, x)
   end
 

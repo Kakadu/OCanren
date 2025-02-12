@@ -18,10 +18,12 @@
  *)
 
 include Logic
+let _ = List.(%<)
 include Core
 
 module Stream  = Stream
 module Runconf = Runconf
+module Term = Term
 
 (** See also {!Install_timer} *)
 module Timer   = Timer
@@ -39,8 +41,6 @@ module Std =
     (** Logic Peano natural numbers *)
     module Nat     = Nat
 
-    (** Logic lists *)
-    module List    = List
 
     let eqo x y t =
       conde [
@@ -54,7 +54,9 @@ module Std =
         (x === y) &&& (t === Bool.falso);
       ]
 
-    let nat n = Nat.nat (Nat.of_int n)
+    (* let nat n = Nat.nat (Nat.of_int n) *)
+
+    module List = List
 
     (** An alias for {!OCanren.Std.List.cons}. *)
     let (%)  = List.cons
@@ -72,23 +74,23 @@ module Std =
     | []    -> nil ()
     | x::xs -> List.cons (f x) (list f xs)
 
-    let rec nat_list = function
+    (* let rec nat_list = function
     | []    -> nil ()
-    | x::xs -> nat x % nat_list xs
+    | x::xs -> nat x % nat_list xs *)
 
     (** An alias for {!OCanren.Std.Option.some}. *)
     let some = Option.some
 
     (** An alias for {!OCanren.Std.Option.none}. *)
     let none = Option.none
-
+(*
     (** An alias for {!OCanren.Std.Pair.pair}. *)
     let pair = Pair.pair
 
 
     let structural = Core.structural
     let debug_var = Core.debug_var
-    let only_head = Core.only_head
+    let only_head = Core.only_head *)
 
 
   end

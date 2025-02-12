@@ -17,6 +17,7 @@
  * (enclosed in the file COPYING).
  *)
 
+open Stdlib
 (* [Term] encapsulates unsafe operations on untyped OCaml's values extended with the logic variables *)
 
 (* [Var] logic variables and operations on them *)
