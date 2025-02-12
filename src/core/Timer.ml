@@ -16,6 +16,8 @@
  * (enclosed in the file COPYING).
  *)
 
+open Stdlib
+
 type span = { ms: float; s: float }
 
 let empty_span = { ms=0.0; s=0.0 }

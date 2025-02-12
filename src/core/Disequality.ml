@@ -16,6 +16,7 @@
  * (enclosed in the file COPYING).
  *)
 
+open Stdlib
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
 

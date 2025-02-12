@@ -3,6 +3,8 @@
 (** In this module you can find convenience functions to speedup your introduction to OCanren.
     In real projects, more likely you will need more low-level interface like {!OCanren.run}. *)
 
+open OCanren
+
 (**
   The call [run_r reifier to_string count num num_handler ("description", goal)] should be used
   to a goal [goal], get [count] answers, reify all of them using [reifier], and print them using
@@ -29,14 +31,21 @@
   In scheme
 *)
 val run_r :
-  ('a OCanren.ilogic, 'b) OCanren.Reifier.t ->
-  ('b -> string) ->
+('a, 'c) OCanren.Reifier.t ->
+  ('c -> string) ->
   int ->
   (unit ->
-   ('c -> OCanren.State.t -> 'd) * ('e -> OCanren.Env.t -> 'f) *
-   ('d -> 'e * OCanren.State.t OCanren.Stream.t) * ('g -> 'f -> unit -> unit)) ->
-  ((int -> string -> 'a OCanren.reified -> unit) -> 'g) ->
-  string * 'c -> unit
+  ('d -> State.t -> 'e)
+  * ('f -> Env.t -> 'g)
+  * ('e -> 'f * State.t OCanren.Stream.t)
+  * ('h -> 'g -> unit -> unit)) ->
+  ((int ->
+   string ->
+   ('a, 'b) OCanren.reified ->
+   unit) ->
+  'h) ->
+  string * 'd ->
+  unit
 
 (** More general combinator. The {! run_r} is implemented using it. Unlikely will be used in practice
   *)

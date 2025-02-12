@@ -42,40 +42,40 @@ open Core
 (** Logic injection (for reification) *)
 val inj : ground -> logic
 
-(** A synonym for injected boolean; use [Logic.inji] operator to make a [groundi] from a regular [bool] *)
-type groundi = ground ilogic
+(** A synonym for injected boolean; use [Logic.inji] operator to make a [injected] from a regular [bool] *)
+type injected = (bool, bool Logic.logic) Logic.injected
 
 (** Reifier *)
-val reify: (bool ilogic, bool Logic.logic) Reifier.t
+val reify: (bool, bool Logic.logic) Reifier.t
 
 (** Shallow reifier *)
-val prj_exn: (bool ilogic, bool) Reifier.t
+val prj_exn: (bool  , bool) Reifier.t
 
 (** Synonyms to comply with the generic naming scheme *)
-val reify_bool   : (bool ilogic, bool Logic.logic) Reifier.t
-val prj_exn_bool : (bool ilogic, bool) Reifier.t
+val reify_bool   : (bool, bool Logic.logic) Reifier.t
+val prj_exn_bool : (bool, bool) Reifier.t
 
 (** Constants *)
-val falso : groundi
-val truo  : groundi
+val falso : injected
+val truo  : injected
 
 (** Sheffer stroke *)
-val (|^) : groundi -> groundi -> groundi -> goal
+val (|^) : injected -> injected -> injected -> goal
 
 (** Negation *)
-val noto : groundi -> groundi -> goal
+val noto : injected -> injected -> goal
 
 (** Negation as a goal *)
-val (~~) : groundi -> goal
+val (~~) : injected -> goal
 
 (** Disjunction *)
-val oro : groundi -> groundi -> groundi -> goal
+val oro : injected -> injected -> injected -> goal
 
 (** Disjunction as a goal *)
-val (||) : groundi -> groundi -> goal
+val (||) : injected -> injected -> goal
 
 (** Conjunction *)
-val ando : groundi -> groundi -> groundi -> goal
+val ando : injected -> injected -> injected -> goal
 
 (** Conjunction as a goal *)
-val (&&) : groundi -> groundi -> goal
+val (&&) : injected -> injected -> goal

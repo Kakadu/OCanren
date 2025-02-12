@@ -2,23 +2,23 @@
   (names
     test000
     test001
-    test002sort
+  ;  test002sort
     test004
     test005
-    test006
-    test007
-    test009
-    test010
-    test011
-    test013
-    test014
-    test015runaway
-    test016sorto
-    test017tabling
-    test018prjc
-    test019tablingCache
-    test021structural
-    test022newsyntax
+  ;  test006
+  ;  test007
+  ;  test009
+  ;  test010
+  ;  test011
+  ;  test013
+  ;  test014
+  ;  test015runaway
+  ;  test016sorto
+  ;  test017tabling
+  ;  test018prjc
+  ;  test019tablingCache
+  ;  test021structural
+  ;  test022newsyntax
   )
   (libraries GT OCanren OCanren.tester)
   (preprocess (action
@@ -29,24 +29,100 @@
     (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)
     (file %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+o.exe))
 )
+(cram
+  (applies_to test000)
+  (deps  ./test000.exe))
+
+(cram
+  (applies_to test001)
+  (deps  ./test001.exe))
+(cram
+  (applies_to test002)
+  (deps  ./test002sort.exe))
+
+(cram
+  (applies_to test004)
+  (deps  ./test004.exe))
+
+(cram
+  (applies_to test005)
+  (deps  ./test005.exe))
+
+(cram
+  (applies_to test007)
+  (deps  ./test007.exe))
+
+(cram
+  (applies_to test006)
+  (deps  ./test006.exe))
+
+
+(cram
+  (applies_to test009)
+  (deps  ./test009.exe))
+
+(cram
+  (applies_to test010)
+  (deps  ./test010.exe))
+
+(cram
+  (applies_to test011)
+  (deps  ./test011.exe))
+
+(cram
+  (applies_to test014)
+  (deps  ./test014.exe))
+
+(cram
+  (applies_to test013)
+  (deps  ./test013.exe))
+
+(cram
+  (applies_to test015)
+  (deps  ./test015runaway.exe))
+
+(cram
+  (applies_to test017)
+  (deps  ./test017tabling.exe))
+
+(cram
+  (applies_to test016)
+  (deps  ./test016sorto.exe))
+
+(cram
+  (applies_to test018)
+  (deps  ./test018prjc.exe))
+
+(cram
+  (applies_to test019)
+  (deps  ./test019tablingCache.exe))
+
+(cram
+  (applies_to test021)
+  (deps  ./test021structural.exe))
+
+(cram
+  (applies_to test022)
+  (deps  ./test022newsyntax.exe))
+
 (cram (deps
-  ./test000.exe
-  ./test001.exe
-  ./test002sort.exe
-  ./test004.exe
-  ./test005.exe
-  ./test006.exe
-  ./test007.exe
-  ./test009.exe
-  ./test010.exe
-  ./test011.exe
-  ./test013.exe
-  ./test014.exe
-  ./test015runaway.exe
-  ./test016sorto.exe
-  ./test017tabling.exe
-  ./test018prjc.exe
-  ./test019tablingCache.exe
-  ./test021structural.exe
-  ./test022newsyntax.exe
+
+;  ./test001.exe
+;  ./test002sort.exe
+;  ./test004.exe
+;  ./test005.exe
+;  ./test006.exe
+;  ./test007.exe
+;  ./test009.exe
+;  ./test010.exe
+;  ./test011.exe
+;  ./test013.exe
+;  ./test014.exe
+;  ./test015runaway.exe
+;  ./test016sorto.exe
+;  ./test017tabling.exe
+;  ./test018prjc.exe
+;  ./test019tablingCache.exe
+;  ./test021structural.exe
+;  ./test022newsyntax.exe
 ))

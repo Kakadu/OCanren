@@ -17,6 +17,8 @@
  * (enclosed in the file COPYING).
  *)
 
+open Stdlib
+
 IFDEF STATS THEN
 type stat = {
     mutable unwrap_suspended_counter : int;

@@ -55,9 +55,6 @@ let (unification_incr,unification_time_incr,conj_counter_incr,disj_counter_incr,
     (unification_incr,unification_time_incr,conj_counter_incr,disj_counter_incr,delay_counter_incr)
 END
 
-(* to avoid clash with Std.List (i.e. logic list) *)
-module List = Stdlib.List
-
 module Answer :
   sig
 
@@ -122,7 +119,7 @@ module Answer :
           with Not_found ->
             let new_var = Env.fresh ~scope:Term.Var.non_local_scope env' in
             Term.VarTbl.add vartbl v new_var ;
-            let ctr = List.map helper v.Term.Var.constraints |> List.sort Term.compare in
+            let ctr = Stdlib.List.map helper v.Term.Var.constraints |> Stdlib.List.sort Term.compare in
             { new_var with Term.Var.constraints = ctr }
         end
       in
@@ -139,6 +136,7 @@ module Answer :
     let hash (_, t) = Term.hash t
   end
 
+(*
 module Prunes : sig
 
   type rez = Violated | NonViolated
@@ -240,6 +238,7 @@ module PrunesControl = struct
     ans
     )
 end
+*)
 
 (*
 let do_skip_prunes = ref false
@@ -253,12 +252,11 @@ let set_skip_prunes_count n =
 
 module State =
   struct
-
     type t =
       { env   : Env.t
       ; subst : Subst.t
       ; ctrs  : Disequality.t
-      ; prunes: Prunes.t
+      ; prunes: unit
       ; scope : Term.Var.scope
       }
 
@@ -268,7 +266,7 @@ module State =
       { env   = Env.empty ()
       ; subst = Subst.empty
       ; ctrs  = Disequality.empty
-      ; prunes = Prunes.empty
+      ; prunes = ()
       ; scope = Term.Var.new_scope ()
       }
 
@@ -281,7 +279,7 @@ module State =
     let fresh {env; scope} = Env.fresh ~scope env
 
     let new_scope st = {st with scope = Term.Var.new_scope ()}
-
+(*
     let unify x y ({ env ; subst ; ctrs ; scope } as st) =
       match Subst.unify ~scope env subst x y with
       | None -> None
@@ -301,14 +299,26 @@ module State =
             let () = PrunesControl.incr () in
             Some next_state
           end
+*)
+    let unify x y ({env; subst; ctrs; scope} as st) =
+        match Subst.unify ~scope env subst x y with
+        | None -> None
+        | Some (prefix, subst) ->
+          match Disequality.recheck env subst ctrs prefix with
+          | None      -> None
+          | Some ctrs ->
+            let next_state = {st with subst; ctrs} in
+            Some next_state
+
 
     let diseq x y ({ env ; subst ; ctrs ; scope } as st) =
       match Disequality.add env subst ctrs x y with
       | None      -> None
       | Some ctrs ->
-        match Prunes.recheck (prunes st) env subst with
+        (* match Prunes.recheck (prunes st) env subst with
         | Prunes.Violated -> None
-        | NonViolated -> Some { st with ctrs }
+        | NonViolated ->  *)
+          Some {st with ctrs}
 
     (* always returns non-empty list *)
     let reify x { env ; subst ; ctrs } =
@@ -320,16 +330,16 @@ module State =
           ~fvar:begin fun v -> Term.repr @@
             if Term.VarSet.mem v forbidden then v
             else { v with Term.Var.constraints = Disequality.Answer.extract diseq v
-                |> List.filter begin fun dt ->
+                |> Stdlib.List.filter begin fun dt ->
                   match Env.var env dt with
                   | Some u -> not @@ Term.VarSet.mem u forbidden
                   | None   -> true
                 end
-                |> List.map (fun x -> helper (Term.VarSet.add v forbidden) x)
+                |> Stdlib.List.map (fun x -> helper (Term.VarSet.add v forbidden) x)
                 (* TODO: represent [Var.constraints] as [Set];
                  * TODO: hide all manipulations on [Var.t] inside [Var] module;
                  *)
-                |> List.sort Term.compare
+                |> Stdlib.List.sort Term.compare
               }
           end
         in
@@ -337,7 +347,7 @@ module State =
       end
   end
 
-let (!!!) = Obj.magic
+let (!!!) = Stdlib.Obj.magic
 
 type 'a goal' = State.t -> 'a
 
@@ -385,20 +395,20 @@ let conj f g st =
   Stream.bind (f st) g
 
 let debug_var v reifier call = fun st ->
-  let xs = List.map (fun answ ->
+  let xs = Stdlib.List.map (fun answ ->
     reifier (Answer.env answ) (Obj.magic @@ Answer.ctr_term answ)
     ) (State.reify v st)
   in
   call xs st
 
-let structural : 'a  ->
+(* let structural : 'a  ->
   ('a , 'b) Reifier.t ->
   ('b -> bool) ->
   goal = fun term rr k st ->
   let new_constraints = Prunes.extend (State.prunes st) (Obj.magic term) rr k in
   match Prunes.check_last new_constraints (State.env st) (State.subst st) with
   | Prunes.Violated -> failure st
-  | NonViolated -> success { st with State.prunes = new_constraints }
+  | NonViolated -> success { st with State.prunes = new_constraints } *)
 
 (*
 include (struct
@@ -465,7 +475,7 @@ let (?&) gs st =
   match gs with
   | [h] -> h st
   | h::tl ->
-    List.fold_left (fun acc x -> Stream.bind acc x) (h st) tl
+    Stdlib.List.fold_left (fun acc x -> Stream.bind acc x) (h st) tl
   | [] -> assert false
   (* TODO: Maybe introduce a special multiconjunction without corner case?*)
 
@@ -550,14 +560,20 @@ module Uncurry =
     let succ k f (x,y) = k (f x) y
   end
 
-module LogicAdder :
-  sig
-    val zero : goal -> goal
-    val succ : ('a -> State.t -> 'd) -> ('e ilogic -> 'a) -> State.t -> 'e ilogic * 'd
-  end = struct
+module type X = sig
+  type ('a, 'b) t
+  val call_fresh: ( ('a,'b) t -> State.t -> 'k) -> State.t -> 'k
+end
+module X1 = struct
+  type ('a, 'b) t = ('a, 'b) injected
+  let call_fresh = call_fresh
+end
+module LogicAdderF(M: X) =
+  struct
     let zero f      = f
-    let succ prev f = call_fresh (fun logic st -> (logic, prev (f logic) st))
+    let succ prev f = M.call_fresh (fun logic st -> (logic, prev (f logic) st))
   end
+module LogicAdder = LogicAdderF(X1)
 
 module ReifyTuple = struct
   let one x env = make_rr env x
@@ -565,40 +581,38 @@ module ReifyTuple = struct
 end
 
 module NUMERAL_TYPS = struct
-  type ('a, 'c, 'e, 'f, 'g) one = unit ->
-           (('a ilogic -> goal) ->
-            State.t -> 'a ilogic * State.t Stream.t) *
-           ('c ilogic -> Env.t -> 'c reified) * ('e -> 'e) *
-           (('f -> 'g) -> 'f -> 'g)
-  type ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j) two = unit ->
-           (('a Logic.ilogic -> 'b Logic.ilogic -> goal) ->
-            State.t -> 'a Logic.ilogic * ('b Logic.ilogic * State.t Stream.t)) *
-           ('c Logic.ilogic * 'd Logic.ilogic ->
-            Env.t -> 'c Logic.reified * 'd Logic.reified) *
-           ('e * ('f * 'g) -> ('e * 'f) * 'g) *
-           (('h -> 'i -> 'j) -> 'h * 'i -> 'j)
-  type ('a,'c,'e,'g,'i,'k,'m,'n,'o,'p,'q,'r,'s,'t) three = unit ->
-           (('a ilogic -> 'c ilogic -> 'e ilogic -> goal) ->
-            State.t ->
-            'a ilogic *
-            ('c ilogic *
-             ('e ilogic * State.t Stream.t))) *
-           ('g ilogic * ('i ilogic * 'k ilogic) ->
-            Env.t ->
-            'g reified * ('i reified * 'k reified)) *
-           ('m * ('n * ('o * 'p)) -> ('m * ('n * 'o)) * 'p) *
-           (('q -> 'r -> 's -> 't) -> 'q * ('r * 's) -> 't)
+  type ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) one = unit ->
+    ((('a, 'b) injected -> 'c goal') ->
+    State.t ->
+    ('a, 'b) injected * 'c)
+    * (('d, 'e) injected -> Env.t -> ('d, 'e) reified)
+    * ('f -> 'f)
+    * (('g -> 'h) -> 'g -> 'h)
+  type ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l, 'm, 'n, 'o) two = unit ->
+    ((('a, 'b) injected -> ('c, 'd) injected -> State.t -> 'e) ->
+    State.t ->
+    ('a, 'b) injected * (('c, 'd) injected * 'e))
+    * (('f, 'g) injected * ('h, 'i) injected ->
+      Env.t ->
+      ('f, 'g) reified * ('h, 'i) reified)
+    * ('j * ('k * 'l) -> ('j * 'k) * 'l)
+    * (('m -> 'n -> 'o) -> 'm * 'n -> 'o)
 
-  type ('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o,'p,'q,'r) four = unit ->
-         (('a ilogic -> 'b ilogic -> 'c ilogic -> 'd ilogic -> goal) ->
-          State.t ->
-          'a ilogic *
-          ('b ilogic * ('c ilogic * ('d ilogic * State.t Stream.t)))) *
-         ('e ilogic * ('f ilogic * ('g ilogic * 'h ilogic)) ->
-          Env.t -> 'e reified * ('f reified * ('g reified * 'h reified))) *
-         ('i * ('j * ('k * ('l * 'm))) -> ('i * ('j * ('k * 'l))) * 'm) *
-         (('n -> 'o -> 'p -> 'q -> 'r) -> 'n * ('o * ('p * 'q)) -> 'r)
+  type ('a,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o,'p,'q,'r,'s,'t,'u,'v) three = unit ->
+    ((('a, 'c) injected ->
+     ('d, 'e) injected ->
+     ('f, 'g) injected ->
+     'h goal') ->
+    State.t ->
+    ('a, 'c) injected
+    * (('d, 'e) injected * (('f, 'g) injected * 'h)))
+    * (('i, 'j) injected * (('k, 'l) injected * ('m, 'n) injected) ->
+      Env.t ->
+      ('i, 'j) reified * (('k, 'l) reified * ('m, 'n) reified))
+    * ('o * ('p * ('q * 'r)) -> ('o * ('p * 'q)) * 'r)
+    * (('s -> 't -> 'u -> 'v) -> 's * ('t * 'u) -> 'v)
 
+  (* type ('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o,'p,'q,'r) four = int *)
 
 end
 
@@ -606,15 +620,15 @@ let succ n () =
   let adder, app, ext, uncurr = n () in
   (LogicAdder.succ adder, ReifyTuple.succ app, ExtractDeepest.succ ext, Uncurry.succ uncurr)
 
-let one : (_,_,_,_,_) NUMERAL_TYPS.one = fun () ->
+let one   = fun () ->
    (LogicAdder.(succ zero)), ReifyTuple.one, ExtractDeepest.ext2, Uncurry.one
-let two  : (_,_,_,_,_,_,_,_,_,_) NUMERAL_TYPS.two = fun () -> succ one   ()
+let two    = fun () -> succ one   ()
 let three () = succ two   ()
 let four () = succ three ()
 let five () = succ four  ()
 
 let q     = one
-let qr : (_,_,_,_,_,_,_,_,_,_) NUMERAL_TYPS.two = two
+let qr  = two
 let qrs   = three
 let qrst  = four
 let qrstu = five
@@ -627,164 +641,6 @@ let run n g h =
     uncurr h @@ reifier (Obj.magic @@ Answer.ctr_term answ) (Answer.env answ)
   )
 
-(** ************************************************************************* *)
-(** Tabling primitives                                                        *)
-
-module Table :
-  sig
-    (* Type of table.
-     * Table is a map from answer term to the set of answer terms,
-     * i.e. Answer.t -> [Answer.t]
-     *)
-    type t
-
-    val create   : unit -> t
-
-    val call : t -> ('a -> goal) -> 'a -> goal
-  end = struct
-
-    module H = Hashtbl.Make(Answer)
-
-    module Cache :
-      sig
-        type t
-
-        val create    : unit -> t
-
-        val add       : t -> Answer.t -> unit
-        val contains  : t -> Answer.t -> bool
-        val consume   : t -> 'a -> goal
-      end =
-      struct
-        (* Cache is a pair of queue-like list of answers plus hashtbl of answers;
-         * Queue is used because new answers may arrive during the search,
-         * we store this new answers to the end of the queue while read from the beginning.
-         * Hashtbl is used for a quick check that new added answer is not already contained in the cache.
-         *)
-        type t = Answer.t list ref * unit H.t
-
-        let create () = (ref [], H.create 11)
-
-        let add (cache, tbl) answ =
-          cache := List.cons answ !cache;
-          H.add tbl answ ()
-
-        let contains (_, tbl) answ =
-          try
-            H.find tbl answ;
-            true
-          with Not_found -> false
-
-        let consume (cache, _) args =
-          let open State in fun {env; subst; scope} as st ->
-          let st = State.new_scope st in
-          (* [helper start curr seen] consumes answer terms from cache one by one
-           *   until [curr] (i.e. current pointer into cache list) is not equal to [seen]
-           *   (i.e. to the head of seen part of the cache list)
-           *)
-          let rec helper start curr seen =
-            if curr == seen then
-              (* update `seen` - pointer to already seen part of cache *)
-              let seen = start in
-              (* delayed check that current head of cache is not equal to head of seen part *)
-              let is_ready () = seen != !cache  in
-              (* delayed thunk starts to consume unseen part of cache  *)
-              Stream.suspend ~is_ready @@ fun () -> helper !cache !cache seen
-            else
-              (* consume one answer term from cache and `lift` it to the current environment *)
-              let answ, tail = (Answer.lift env @@ List.hd curr), List.tl curr in
-              match State.unify (Obj.repr args) (Answer.unctr_term answ) st with
-                | None -> helper start tail seen
-                | Some ({subst=subst'; ctrs=ctrs'} as st') ->
-                  begin
-                  (* check `answ` disequalities against external substitution *)
-                  let ctrs = ListLabels.fold_left (Answer.disequality answ) ~init:Disequality.empty
-                    ~f:(let open Subst.Binding in fun acc {var; term} ->
-                      match Disequality.add env Subst.empty acc (Term.repr var) term with
-                      (* we should not violate disequalities *)
-                      | None     -> assert false
-                      | Some acc -> acc
-                    )
-                  in
-                  match Disequality.recheck env subst' ctrs (Subst.split subst') with
-                  | None      -> helper start tail seen
-                  | Some ctrs ->
-                    let st' = {st' with ctrs = Disequality.merge_disjoint env subst' ctrs' ctrs} in
-                    Stream.(cons st' (from_fun @@ fun () -> helper start tail seen))
-                  end
-          in
-          helper !cache !cache []
-
-      end
-
-    type t = Cache.t H.t
-
-    let make_answ args st =
-      match State.reify args st with
-      | [answ] ->
-          let env = Env.create ~anchor:Term.Var.tabling_env in
-          Answer.lift env answ
-      | _      -> failwith "should not happen"
-
-    let create () = H.create 1031
-
-    let call tbl g args = let open State in fun ({env; subst; ctrs} as st) ->
-      (* we abstract away disequality constraints before lookup in the table *)
-      let abs_st = {st with ctrs = Disequality.empty} in
-      let key = make_answ args abs_st in
-      try
-        (* slave call *)
-        Cache.consume (H.find tbl key) args st
-      with Not_found ->
-        (* master call *)
-        let cache = Cache.create () in
-        H.add tbl key cache;
-        (* auxiliary goal for addition of new answer to the cache  *)
-        let hook ({env=env'; subst=subst'; ctrs=ctrs'} as st') =
-          let answ = make_answ args st' in
-          if not (Cache.contains cache answ) then begin
-            Cache.add cache answ;
-            (* TODO: we only need to check diff, i.e. [subst' \ subst] *)
-            match Disequality.recheck env subst' ctrs (Subst.split subst') with
-            | None      -> failure ()
-            | Some ctrs ->
-              success {st' with ctrs = Disequality.merge_disjoint env subst' ctrs ctrs'}
-          end
-          else failure ()
-        in
-        ((g args) &&& hook) abs_st
-  end
-
-module Tabling =
-  struct
-    let succ n () =
-      let currier, uncurrier = n () in
-      let sc = (Curry.succ : (('a -> 'b) -> 'c) -> ((((_) ilogic as 'k) * 'a -> 'b) -> 'k -> 'c)) in
-      (sc currier, Uncurry.succ uncurrier)
-
-    let one () = ((Curry.(one) : ((_) ilogic -> _) as 'x -> 'x), Uncurry.one)
-
-    let two   () = succ one ()
-    let three () = succ two ()
-    let four  () = succ three ()
-    let five  () = succ four ()
-
-    let tabled n g =
-      let tbl = Table.create () in
-      let currier, uncurrier = n () in
-      currier (Table.call tbl @@ uncurrier g)
-
-    let tabledrec n g_norec =
-      let tbl = Table.create () in
-      let currier, uncurrier = n () in
-      let g = ref (fun _ -> assert false) in
-      let g_rec args = uncurrier (g_norec !g) args in
-      let g_tabled = Table.call tbl g_rec in
-      g := currier g_tabled;
-      !g
-  end
-
-
 let reify_in_empty reifier x =
   let st = State.empty () in
   reifier (State.env st) x
@@ -792,4 +648,3 @@ let reify_in_empty reifier x =
 let trace_diseq : goal = fun st ->
   Format.printf "%a\n%!" Disequality.pp (State.constraints st) ;
   success st
-

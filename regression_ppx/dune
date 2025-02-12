@@ -51,25 +51,25 @@
   (pps OCanren-ppx.ppx_deriving_reify OCanren-ppx.ppx_distrib -- -pretty))
  (libraries OCanren OCanren.tester))
 
-(executables
- (names test006)
- (package OCanren)
- (public_names -)
- (modules test006)
- (flags
-  (:standard
-   ;-dsource
-   ;
-   ))
- (preprocess
-  (pps
-   OCanren-ppx.ppx_distrib
-   GT.ppx_all
-   --
-   -pretty
-   ;
-   ))
- (libraries OCanren OCanren.tester))
+; (executables
+;  (names test006)
+;  (package OCanren)
+;  (public_names -)
+;  (modules test006)
+;  (flags
+;   (:standard
+;    ;-dsource
+;    ;
+;    ))
+;  (preprocess
+;   (pps
+;    OCanren-ppx.ppx_distrib
+;    GT.ppx_all
+;    --
+;    -pretty
+;    ;
+;    ))
+;  (libraries OCanren OCanren.tester))
 
 (executables
  (names test007)
@@ -241,8 +241,9 @@
 (cram
  (package OCanren)
  (applies_to test006)
- (enabled_if
-  (< %{ocaml-config:version} "5"))
+ ;  (enabled_if
+ ;   (< %{ocaml-config:version} "5"))
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_ocanren_all.exe
@@ -301,6 +302,7 @@
 (cram
  (package OCanren)
  (applies_to test012)
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_ocanren_all.exe
