@@ -17,6 +17,8 @@
  * (enclosed in the file COPYING).
  *)
 
+open Stdlib
+
 (** {3 Logic values} *)
 
 (** A type of a logic value *)
@@ -40,7 +42,7 @@ val from_logic : 'a logic -> 'a
     The conversions from ['a ilogic] to ['a] is performed via {i reifiers}.
 
     @canonical OCanren.ilogic *)
-type 'a ilogic
+type ('a, 'b) injected
 
 module Reifier : sig
   (** Reifier from type ['a] into type ['b] is an ['a -> 'b] function
@@ -56,17 +58,14 @@ module Reifier : sig
   (** A few predefined reifiers from which other reifiers will be composed *)
 
   (* this one transforms implicit logic value into regular logic value. *)
-  val reify : ('a ilogic, 'a logic) t
+  val reify : ( 'a, 'a logic) t
 
   (** This one projects implicit logic into the underlying type,
     raising exception {!Not_a_value} if it finds a variable.
   *)
-  val prj_exn : ('a ilogic, 'a) t
+  val prj_exn : ('a, 'a) t
 
-  (** [prj onvar] Projects implicit logic into the underlying type,
-   *  handling logic variables with [onvar]
-   *)
-  val prj : (int -> 'a) -> ('a ilogic, 'a) t
+  val prj : (int -> 'a) -> ('a, 'a) t
 
   (* Interesting part --- we can apply a reifier to a value dipped into `State.t` comonad *)
   (* val apply : ('a, 'b) t -> 'a State.t -> 'b *)
@@ -95,23 +94,23 @@ module Reifier : sig
   val zed: (('a -> 'b) -> 'a -> 'b) -> 'a -> 'b
 end
 
-(** [inj x] injects [x] into logical [x]. *)
-val inj : 'a -> 'a ilogic
+val lift : 'a -> ('a, 'a) injected
 
-(* TODO: If we expose that [inj] is identity, will it work faster? *)
+(** [inj x] injects [x] into logical [x]. *)
+val inj : ('a, 'b) injected -> ('a, 'b logic) injected
 
 (** A synonym for {!inj} (for non-parametric types). *)
-val (!!) : 'a -> 'a ilogic
+val (!!) :  ('a, 'b) injected -> ('a, 'b logic) injected
 
 (** [prj_exn x] returns a regular value from injected representation.
     Raises exception [Not_a_value] if [x] contains free variables
  *)
-val prj_exn : ('a ilogic, 'a) Reifier.t
+val prj_exn : ('a, 'a) Reifier.t
 
 (* val prj : (int -> 'a) -> ('a ilogic, 'a) Reifier.t *)
 
 (** A default shallow reifier. An alias of {!Reifier.reify}. *)
-val reify : ('a ilogic, 'a logic) Reifier.t
+val reify : ('a, 'a logic) Reifier.t
 
 (** The exception is raised when we try to extract a regular term from the answer with some free variables. *)
 exception Not_a_value
@@ -119,13 +118,71 @@ exception Not_a_value
 (** Reification result.
 
     @canonical OCanren.reified *)
-class type ['a] reified =
+class type ['a, 'b] reified =
 object
   (** Returns [true] if the term has any free logic variable inside. *)
   method is_open: bool
 
   (** Gets the answer as a logic value using provided reifier. *)
-  method reify: 'b . ('a ilogic, 'b) Reifier.t -> 'b
+  method reify: 'b . ('a, 'b) Reifier.t -> 'b
 end
 
-val make_rr : Env.t -> 'a ilogic -> 'a reified
+val make_rr : Env.t -> ('a, 'b) injected -> ('a, 'b) reified
+
+
+(** {2 Building reifiers compositionally } *)
+module type T0 =
+  sig
+    type t
+    val fmap : t -> t
+  end
+module type T1 =
+  sig
+    type 'a t
+    val fmap : ('a -> 'b) -> 'a t -> 'b t
+  end
+
+module type T2 =
+  sig
+   type ('a, 'b) t
+   val fmap : ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) t -> ('c, 'd) t
+  end
+
+module type T3 =
+  sig
+    type ('a, 'b, 'c) t
+    val fmap : ('a -> 'q) -> ('b -> 'r) -> ('c -> 's) -> ('a, 'b, 'c) t -> ('q, 'r, 's) t
+  end
+
+module type T4 =
+sig
+  type ('a, 'b, 'c, 'd) t
+  val fmap : ('a -> 'q) -> ('b -> 'r) -> ('c -> 's) -> ('d -> 't) -> ('a, 'b, 'c, 'd) t -> ('q, 'r, 's, 't) t
+end
+
+module type T5 =
+sig
+  type ('a, 'b, 'c, 'd, 'e) t
+  val fmap : ('a -> 'q) -> ('b -> 'r) -> ('c -> 's) -> ('d -> 't) -> ('e -> 'u) -> ('a, 'b, 'c, 'd, 'e) t -> ('q, 'r, 's, 't, 'u) t
+end
+
+module type T6 =
+sig
+  type ('a, 'b, 'c, 'd, 'e, 'f) t
+  val fmap : ('a -> 'q) -> ('b -> 'r) -> ('c -> 's) -> ('d -> 't) -> ('e -> 'u) -> ('f -> 'v) -> ('a, 'b, 'c, 'd, 'e, 'f) t -> ('q, 'r, 's, 't, 'u, 'v) t
+end
+
+module Fmap1 :  functor (T : T1) -> sig
+  external distrib : ('a, 'b) injected T.t -> ('a T.t, 'b T.t) injected = "%identity"
+
+  val reify :
+    ('a, 'b) Reifier.t -> ('a T.t, 'b T.t logic) Reifier.t
+  val prj_exn :
+  ('a, 'b) Reifier.t -> ('a T.t, 'b T.t) Reifier.t
+end
+
+module Fmap2 (T : T2) : sig
+  external distrib : (('a,'c) injected, ('b,'d) injected) T.t -> (('a, 'b) T.t, ('c, 'd) T.t) injected = "%identity"
+  val reify : ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t -> (('a, 'c) T.t, ('b, 'd) T.t logic) Reifier.t
+  val prj_exn: ('a, 'c) Reifier.t -> ('b, 'd) Reifier.t -> (('a, 'b) T.t, ('c, 'd) T.t) Reifier.t
+end

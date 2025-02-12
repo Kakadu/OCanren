@@ -14,7 +14,6 @@ module Impl : T = struct
     let s = ms /. 1000.0 in
     {s; ms }
 
-
 end
 
 let () = OCanren.Timer.install_timer (module Impl)

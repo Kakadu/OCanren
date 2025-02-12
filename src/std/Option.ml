@@ -52,33 +52,20 @@ let t = ground
 
 let inj f x = to_logic (GT.(gmap option) f x)
 
-type 'a injected = 'a ground ilogic
-type 'a groundi = 'a injected
+type ('a, 'b) groundi = ('a option, 'b option Logic.logic) Logic.injected
 
-let rec reify : 'a 'b . ('a, 'b) Reifier.t -> ('a groundi, 'b logic) Reifier.t =
-  fun ra ->
-  let open Env.Monad.Syntax in
-  let* r = Reifier.reify in
-  let* fa = ra in
-  Reifier.compose Reifier.reify (
-    let rec foo = function
-    | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
-    | Value t -> Value (GT.gmap ground fa t)
-    in
-    Env.Monad.return foo
-  )
 
-let prj_exn : 'a 'b. ('a, 'b) Reifier.t -> ('a groundi, 'b ground) Reifier.t =
-  fun ra ->
-    let open Env.Monad.Syntax in
-    let* r = Reifier.prj_exn in
-    let* fa = ra in
-    Env.Monad.return (fun x -> GT.gmap ground fa (r x))
+module T =
+  struct
+    type 'a t = 'a option
+    let fmap f x = GT.(gmap option) f x
+  end
 
-let reify_option = reify
-let prj_exn_option = prj_exn
 
-let some x  = Logic.inj (Some x)
-let none () = Logic.inj None
+include Fmap1(T)
+
+let some x  = Logic.inj @@ distrib (Some x)
+let none () = Logic.inj @@ distrib None
+
 
 let option = function None -> none () | Some x -> some x

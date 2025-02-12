@@ -17,6 +17,8 @@
  * (enclosed in the file COPYING).
  *)
 
+open Stdlib
+
 type t = {anchor : Term.Var.env; mutable next : int}
 
 (* TODO: document next two values *)

@@ -43,32 +43,32 @@ open Core
 val inj : ('a -> 'b) -> 'a ground -> 'b logic
 
 (** A synonym for injected option *)
-type 'a injected = 'a ground ilogic
-
-type 'a groundi = 'a injected
+type ('a, 'b) groundi = ('a option, 'b option Logic.logic) Logic.injected
 
 (** Make injected [option] from ground one with injected value *)
-val option : 'a ilogic ground -> 'a ilogic injected
+val option : ('a, 'b) Logic.injected option -> ('a option, 'b option Logic.logic) Logic.injected
 
 (** {3 Reifiers} *)
 
 (** Reifier *)
-val reify : ('a, 'b) Reifier.t -> ('a injected, 'b logic) Reifier.t
+val reify : ('a, 'b) Reifier.t -> ('a option, 'b option Logic.logic) Reifier.t
 
 (* Shallow non-variable projection *)
-val prj_exn : ('a, 'b) Reifier.t -> ('a injected, 'b ground) Reifier.t
+val prj_exn : ('a, 'b) Reifier.t -> ('a option, 'b option) Reifier.t
 
-(** Synonyms to comply with the generic naming scheme *)
-val reify_option   : ('a, 'b) Reifier.t -> ('a injected, 'b logic) Reifier.t
-val prj_exn_option : ('a, 'b) Reifier.t -> ('a injected, 'b ground) Reifier.t
+
 
 (** {3 Constructors} *)
-
+(*
 (** Logic dual of constructor [Some] from {!Stdlib.Option}. *)
-val some : 'a -> 'a injected
+val some : 'a -> 'a option
 
 (** Logic dual of constructor [None] from {!Stdlib.Option}.
     It has an extra unit argument to workaround weak type variables.
 
     {!Stdlib.Option.t} test *)
-val none : unit -> 'a injected
+val none : unit -> 'a option
+*)
+
+val some: ('a, 'b) injected -> ('a option, 'b option Logic.logic) injected
+val none: unit -> ('a option, 'b option Logic.logic) injected

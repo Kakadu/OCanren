@@ -16,6 +16,10 @@
  * (enclosed in the file COPYING).
  *)
 
+open Stdlib
+(* to avoid clash with Std.List (i.e. logic list) *)
+module List = Stdlib.List
+
 let log fmt =
   if false
   then Format.kasprintf (Format.printf "%s\n%!") fmt

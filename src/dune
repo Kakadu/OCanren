@@ -20,8 +20,8 @@
   Option
   Bool
   Nat
-  Pair
-  Triple
+  ; Pair
+  ; Triple
   List
   Timer
   Peep
