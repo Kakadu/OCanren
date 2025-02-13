@@ -20,7 +20,7 @@
   Option
   Bool
   Nat
-  ; Pair
+  Pair
   ; Triple
   List
   Timer

@@ -70,15 +70,13 @@ let reify: (ground, logic) Reifier.t =
   let open Env.Monad in
   Reifier.fix (fun self ->
     Reifier.reify <..>
-      chain (Reifier.zed (Reifier.rework ~fv:(fmapt self)))
-    )
+      chain (Reifier.zed (Reifier.rework ~fv:(fmapt self))))
 
 let reify_nat = reify
 let prj_exn : (ground, ground) Reifier.t =
   let open Env.Monad in
   Reifier.fix (fun self ->
-    Reifier.prj_exn <..> chain (fmapt self)
-    )
+    Reifier.prj_exn <..> chain (fmapt self))
 
 
 let o : injected  = Logic.inj @@ distrib O

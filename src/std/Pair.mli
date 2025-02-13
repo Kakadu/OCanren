@@ -41,26 +41,24 @@ open Core
 val inj : ('a -> 'c) -> ('b -> 'd) -> ('a, 'b) ground -> ('c, 'd) logic
 
 (** A synonym for injected pair *)
-type ('a, 'b) groundi = ('a * 'b) ilogic
-
-type ('a, 'b) injected = ('a, 'b) groundi
+type ('a, 'b, 'c, 'd) injected = ('a * 'b, ('c * 'd) Logic.logic) Logic.injected
 
 (** Make injected pair from ground one with injected components *)
-val pair : 'a ilogic -> 'b ilogic -> ('a ilogic, 'b ilogic) groundi
+val pair : ('a, 'b) Logic.injected  -> ('c, 'd) Logic.injected -> ('a, 'c, 'b, 'd) injected
 
 (** {3:reifiers Reifiers} *)
 val reify : ('a,'b) Reifier.t -> ('c,'d) Reifier.t ->
-  ( ('a, 'c) groundi, ('b, 'd) logic ) Reifier.t
+  ( ('a * 'c), ('b * 'd) Logic.logic ) Reifier.t
 
 val prj_exn :
   ('a, 'b) Reifier.t -> ('c,'d) Reifier.t ->
-  ( ('a, 'c) groundi, ('b, 'd) ground) Reifier.t
+  ( ('a * 'c) , ('b, 'd) ground) Reifier.t
 
 (** Synonyms to comply with the generic naming scheme *)
-val reify_pair : ('a,'b) Reifier.t -> ('c,'d) Reifier.t ->
+(* val reify_pair : ('a,'b) Reifier.t -> ('c,'d) Reifier.t ->
   ( ('a, 'c) groundi, ('b, 'd) logic ) Reifier.t
 
 val prj_exn_pair :
   ('a, 'b) Reifier.t -> ('c,'d) Reifier.t ->
-  ( ('a, 'c) groundi, ('b, 'd) ground) Reifier.t
+  ( ('a, 'c) groundi, ('b, 'd) ground) Reifier.t *)
 

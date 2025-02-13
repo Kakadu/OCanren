@@ -79,10 +79,10 @@ val nil : unit -> ('a ground, 'b logic) Logic.injected
 val cons : ('a, 'b) Logic.injected  -> ('a, 'b) injected -> ('a, 'b) injected
 
 (** Infix synonym for {!cons} *)
-val (%) : ('a, 'b) Logic.injected  -> ('a ground, 'b logic) Logic.injected -> ('a ground, 'b logic) Logic.injected
+val (%) : ('a, 'b) Logic.injected  -> ('a, 'b) injected -> ('a, 'b) injected
 
 (** [x %< y] is a synonym for [cons x (cons y (nil ()))] *)
-val (%<) : ('a, 'b) Logic.injected  -> ('a, 'b) Logic.injected -> ('a , 'b ) injected
+val (%<) : ('a, 'b) Logic.injected  -> ('a, 'b) Logic.injected -> ('a, 'b) injected
 
 (** [!< x] is a synonym for [cons x (nil ())] *)
 val (!<) : ('a, 'b) Logic.injected  -> ('a, 'b) injected
@@ -103,36 +103,57 @@ val ground_prj_exn : ('a, 'b) Reifier.t -> ('a ground, 'b ground) Reifier.t
 (* val prj : (int -> 'b ground) -> ('a, 'b) Reifier.t -> ('a ground, 'b ground) Reifier.t *)
 
 (** {3 Built-in relations} *)
-(*
+
 (** Relational foldr *)
 val foldro :
-  ('x ilogic as 'a -> 'acc ilogic -> 'acc ilogic -> goal) ->
-  'acc ilogic ->
-  'a groundi ->
-  'acc ilogic -> goal
+  (('a, 'b) Logic.injected ->
+    ('c, 'd) Logic.injected ->
+    ('c, 'd) Logic.injected ->
+    goal) ->
+  ('c, 'd) Logic.injected ->
+    ('a ground, 'b logic) Logic.injected ->
+    ('c, 'd) Logic.injected ->
+goal
 
 (** Relational map *)
-val mapo : ('x ilogic as 'a -> ('y ilogic as 'b) -> goal) -> 'a groundi -> 'b groundi -> goal
+val mapo : (('a, 'b) Logic.injected -> ('c, 'd) Logic.injected -> goal) ->
+    ('a, 'b) injected -> ('c, 'd) injected -> goal
+
 
 (** Relational filter *)
-val filtero : ('x ilogic as 'a -> Bool.groundi -> goal) -> 'a groundi -> 'a groundi -> goal
+val filtero : (('a, 'b) Logic.injected -> OCanren__Bool.injected -> goal) ->
+    ('a ground, 'b logic) Logic.injected ->
+    ('a ground, 'b logic) Logic.injected ->
+    goal
 
 (** Relational lookup *)
-val lookupo : ('x ilogic as 'a -> Bool.groundi -> goal) -> 'a groundi -> 'a Option.groundi -> goal
+val lookupo : (('a, 'b) Logic.injected -> OCanren__Bool.injected -> goal) ->
+    ('a ground, 'b logic) Logic.injected ->
+    ('a option, 'b option Logic.logic) Logic.injected ->
+    goal
 
 (** Relational association list lookup *)
-val assoco : 'a ilogic -> ('a ilogic, 'c ilogic ) Pair.groundi groundi -> 'c ilogic -> goal
+val assoco : ('a, 'b) Logic.injected ->
+    (('a * 'c) ground, ('b * 'd) Logic.logic logic) Logic.injected ->
+    ('c, 'd) Logic.injected ->
+    goal
+
 
 (** Boolean list disjunctions *)
-val anyo : Bool.groundi groundi -> Bool.groundi -> goal
+val anyo : (bool, bool Logic.logic) injected ->
+    (bool, bool Logic.logic) Logic.injected ->
+    goal
 
 (** Boolean list conjunction *)
-val allo : Bool.groundi groundi -> Bool.groundi -> goal
-
+val allo : (bool, bool Logic.logic) injected ->
+    (bool, bool Logic.logic) Logic.injected ->
+    goal
 
 (** Relational length *)
-val lengtho : 'a ilogic groundi -> Nat.groundi -> goal
-
+val lengtho : ('a ground, 'b logic) Logic.injected ->
+    (Nat.ground, Nat.logic) Logic.injected ->
+    goal
+(*
 (** Relational append *)
 val appendo : (_ ilogic as 'a) groundi -> 'a groundi -> 'a groundi -> goal
 
@@ -143,16 +164,16 @@ val reverso : (_ ilogic as 'a)groundi -> 'a groundi -> goal
 val membero : 'a ilogic groundi  -> 'a ilogic  -> goal
 *)
 (** Relational check for empty list *)
-val nullo : (_,_) injected -> goal
+val nullo : ('a, 'b) injected -> goal
 
 (** Relational head of the list *)
-val caro  : ('a,'b) injected -> ('a,'b) Logic.injected -> goal
+val caro  : ('a, 'b) injected -> ('a, 'b) Logic.injected -> goal
 
 (** Alias for [caro] *)
-(* val hdo   : 'a injected -> 'a -> goal *)
+val hdo   : ('a, 'b) injected -> ('a, 'b) Logic.injected -> goal
 
 (** Relational tail of the list *)
-val cdro  : ('a,'b) injected -> ('a,'b) injected -> goal
+val cdro  : ('a, 'b) injected -> ('a, 'b) injected -> goal
 
 (** Alias for [cdro] *)
-val tlo   : ('a,'b) injected -> ('a,'b) injected -> goal
+val tlo   : ('a, 'b) injected -> ('a, 'b) injected -> goal
