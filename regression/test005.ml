@@ -16,37 +16,34 @@ module GTyp = struct
 
   let fmap f g x = gmap(t) f g x
 
-  type rtyp = (string, rtyp) t
-  type ltyp = (string logic, ltyp) t logic
-  type injected = (string ilogic, injected) t ilogic
+  include Fmap2(struct 
+    type nonrec ('a, 'b) t = ('a, 'b) t
+    let fmap eta = GT.gmap t eta
+  end)
+  type ground = (string, ground) t
+  type logic = (string OCanren.logic, logic) t OCanren.logic
+  type injected = (ground, logic) OCanren.injected
 
-  let p s     : injected = inj @@ P s
-  let arr x y : injected = inj @@ Arr (x,y)
+  let p s     : injected = inj @@ distrib @@ P s
+  let arr x y : injected = inj @@ distrib @@ Arr (x,y)
 
   let rec show_rtyp typ = show(t) (show string) show_rtyp typ
   let rec show_ltyp typ = show(logic) (show(t) (show(logic) @@ show string) show_ltyp) typ
 
-  let reify : (injected, ltyp) Reifier.t =
-    let ( >>= ) = Env.Monad.bind in
-    Reifier.fix (fun fself ->
-      Reifier.compose Reifier.reify
-        (Reifier.reify >>= fun rstring ->
-        fself >>= fun fr ->
-        let rec foo = function
-          | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
-          | Value x -> Value (GT.gmap t rstring fr x)
-        in
-        Env.Monad.return foo
-    ))
+  let fmapt fa fb subj =
+    let open Env.Monad in
+    Env.Monad.return (GT.gmap t) <*> fa <*> fb <*> subj
 
-  let prj_exn : (injected, rtyp) Reifier.t =
-    let ( >>= ) = Env.Monad.bind in
-    Reifier.fix (fun self ->
-      Reifier.compose Reifier.prj_exn
-      ( self >>= fun fr ->
-        Reifier.prj_exn >>= fun rstring ->
-        Env.Monad.return (fun x -> GT.gmap t rstring fr x))
-      )
+  let reify: (ground, logic) Reifier.t =
+  let open Env.Monad in
+  Reifier.fix (fun self ->
+    Reifier.reify <..>
+      chain (Reifier.zed (Reifier.rework ~fv:(fmapt OCanren.reify self))))
+
+let prj_exn : (ground, ground) Reifier.t =
+  let open Env.Monad in
+  Reifier.fix (fun self ->
+    Reifier.prj_exn <..> chain (fmapt OCanren.prj_exn self))
 end
 
 open GLam

@@ -3,7 +3,7 @@ open OCanren
 open OCanren.Std
 open Tester
 
-let (!) = (!!)
+let (!) (x: int) = inj (lift x)
 let (!!) = List.list
 
 let show_int_list   = GT.(show List.ground @@ show int)
