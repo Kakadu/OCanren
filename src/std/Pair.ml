@@ -35,9 +35,7 @@ let fmap f g x = GT.gmap(t) f g x;;
 @type ('a, 'b) pair            = ('a, 'b) ground                            with show, gmap, html, eq, compare, foldl, foldr, fmt
 @type ('a, 'b) pair_logic      = ('a, 'b) logic                             with show, gmap, html, eq, compare, foldl, foldr, fmt
 
-type ('a, 'b) groundi = ('a * 'b) ilogic
-
-type ('a, 'b) injected = ('a, 'b) groundi
+type ('a, 'b, 'c, 'd) injected = ('a * 'b, ('c * 'd) Logic.logic) Logic.injected
 
 let logic = {
   logic with
@@ -56,32 +54,31 @@ let logic = {
 
 let inj f g p = to_logic (GT.gmap(ground) f g p)
 
-let pair x y = Logic.inj (x, y)
+include Fmap2(struct
+    type nonrec ('a,'b) t = ('a,'b) t
+    let fmap eta = GT.gmap t eta
+end)
 
-let reify : 'a 'b 'c 'd . ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t ->
-  (('a,'c) groundi, ('b, 'd) logic) Reifier.t =
+let fmapt fa fb subj =
+  let open Env.Monad in
+  Env.Monad.return (GT.gmap t) <*> fa <*> fb <*> subj
+
+let pair x y = Logic.inj @@ distrib (x, y)
+
+let reify : 'a 'b 'c 'd . ('a,'b) Reifier.t -> ('c,'d) Reifier.t ->
+  ( ('a * 'c), ('b * 'd) Logic.logic ) Reifier.t =
   fun ra rb ->
-    let ( >>= ) = Env.Monad.bind in
+    let open Env.Monad in
+  Reifier.fix (fun self ->
+    Reifier.reify <..>
+      chain (Reifier.zed (Reifier.rework ~fv:(fmapt ra rb)))
+    )
+
+let prj_exn : 'a 'b 'c 'd . ('a, 'b) Reifier.t -> ('c,'d) Reifier.t ->
+  ( ('a * 'c), ('b * 'd)) Reifier.t =
+  fun ra rb ->
+    let open Env.Monad in
     Reifier.fix (fun self ->
-      Reifier.compose Reifier.reify
-       ( ra >>= fun fa ->
-         rb >>= fun fb ->
-          let rec foo = function
-              | Var (v, xs) ->
-                Var (v, Stdlib.List.map foo xs)
-              | Value x -> Value (GT.gmap t fa fb x)
-          in
-          Env.Monad.return foo
-        ))
-
-let prj_exn : 'a 'b 'c 'd . ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t ->
-  (('a, 'c) groundi, ('b, 'd) ground) Reifier.t =
-  fun ra rb ->
-    let ( >>= ) = Env.Monad.bind in
-    Reifier.compose Reifier.prj_exn
-    (ra >>= fun fa ->
-     rb >>= fun fb ->
-     Env.Monad.return (fun x -> GT.gmap t fa fb x))
-
+      Reifier.prj_exn <..> chain (fmapt ra rb))
 let reify_pair = reify
 let prj_exn_pair = prj_exn

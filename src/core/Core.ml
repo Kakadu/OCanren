@@ -625,7 +625,27 @@ module NUMERAL_TYPS = struct
     * ('o * ('p * ('q * 'r)) -> ('o * ('p * 'q)) * 'r)
     * (('s -> 't -> 'u -> 'v) -> 's * ('t * 'u) -> 'v)
 
-  (* type ('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o,'p,'q,'r) four = int *)
+  type ('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o,'p,'q,'r,'s,'t,'u,'v,'w,'x,'y,'z,'a1) four =unit ->
+    ((('a, 'b) injected ->
+     ('c, 'd) injected ->
+     ('e, 'f) injected ->
+     ('g, 'h) injected ->
+     'i goal') ->
+    State.t ->
+    ('a, 'b) injected
+    * (('c, 'd) injected
+      * (('e, 'f) injected * (('g, 'h) injected * 'i))))
+    * (('j, 'k) injected
+       * (('l, 'm) injected
+         * (('n, 'o) injected * ('p, 'q) injected)) ->
+      Env.t ->
+      ('j, 'k) reified
+      * (('l, 'm) reified * (('n, 'o) reified * ('p, 'q) reified)))
+    * ('r * ('s * ('t * ('u * 'v))) ->
+      ('r * ('s * ('t * 'u))) * 'v)
+    * (('w -> 'x -> 'y -> 'z -> 'a1) ->
+      'w * ('x * ('y * 'z)) ->
+      'a1)
 
 end
 
