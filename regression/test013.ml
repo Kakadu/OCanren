@@ -3,6 +3,7 @@ open OCanren
 open OCanren.Std
 open Tester
 
+let (!!) x = inj(lift x)
 let show_nat        = GT.show(Nat.ground)
 let show_bool       = GT.show(Bool.ground)
 

@@ -6,7 +6,7 @@ open Printf
 
 let ilist xs = list (!!) xs
 
-let runaway_cell: int ilogic List.groundi ref = Stdlib.ref (Obj.magic ())
+let runaway_cell: (int, int logic) List.injected ref = Stdlib.ref (Obj.magic ())
 
 let demo1 q =
   call_fresh (fun r ->
@@ -16,7 +16,7 @@ let demo1 q =
 
 let demo2 q =
   call_fresh (fun r ->
-    (r === !!5) &&&
+    (r === inj (lift 5)) &&&
     conde [ (*(q === nil())
           ; *)(q === !runaway_cell)
           ]

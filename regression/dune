@@ -7,3 +7,63 @@
    (:standard -rectypes))))
 
 (include dune.tests)
+
+(cram
+ (applies_to test005)
+ (deps test005.exe))
+
+(executable
+ (name test005)
+ (modules test005)
+ (libraries stlc OCanren OCanren.tester)
+ (preprocessor_deps
+  %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file}))))
+
+(cram
+ (applies_to test006)
+ (deps test006.exe))
+
+(executable
+ (name test006)
+ (modules test006)
+ (libraries stlc OCanren OCanren.tester)
+ (preprocessor_deps
+  %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file}))))
+
+(cram
+ (applies_to test007)
+ (deps test007.exe))
+
+(executable
+ (name test007)
+ (modules test007)
+ (libraries stlc OCanren OCanren.tester)
+ (preprocessor_deps
+  %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file}))))
+
+(library
+ (name stlc)
+ (modules stlc)
+ (libraries OCanren)
+ (preprocessor_deps
+  %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe)
+ (preprocess
+  (action
+   (run
+    %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+    %{input-file}))))

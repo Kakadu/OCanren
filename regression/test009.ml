@@ -6,6 +6,7 @@ open Tester
 
 @type token = Id | Add | Mul with show
 
+let (!!) x = inj (lift x)
 let show_token = show(token)
 
 module GExpr = struct
@@ -14,41 +15,40 @@ module GExpr = struct
   @type 'self t  = I | A of 'self * 'self | M of 'self * 'self
     with show, gmap
 
-  let fmap f x = gmap(t) f x
+  include Fmap1(struct 
+    type nonrec 'a t = 'a t
+    let fmap f x = gmap(t) f x
+  end)
 
-  type  expr = expr t
-  type lexpr = lexpr t logic
-  type fexpr = fexpr t ilogic
+  type ground = ground t
+  type logic = logic t OCanren.logic
+  type fexpr = (ground, logic) OCanren.injected
 
   let rec show_expr  e = show t show_expr e
   let rec show_lexpr e = show(logic) (show t show_lexpr) e
 
-  let reify : (fexpr, lexpr) Reifier.t =
-    let ( >>= ) = Env.Monad.bind in
-    Reifier.fix (fun fself ->
-      Reifier.compose Reifier.reify
-        (fself >>= fun fr ->
-        let rec foo = function
-          | Var (v, xs) -> Var (v, Stdlib.List.map foo xs)
-          | Value x -> Value (GT.gmap t fr x)
-        in
-        Env.Monad.return foo
-    ))
-
-  let prj_exn : (fexpr, expr) Reifier.t =
-    let ( >>= ) = Env.Monad.bind in
+  let fmapt fa  subj =
+    let open Env.Monad in
+    Env.Monad.return (GT.gmap t) <*> fa <*> subj
+  
+  let reify: (ground, logic) Reifier.t =
+    let open Env.Monad in
     Reifier.fix (fun self ->
-      Reifier.compose Reifier.prj_exn
-      ( self >>= fun fr ->
-        Env.Monad.return (fun x -> GT.gmap t fr x))
-      )
+      Reifier.reify <..>
+        chain (Reifier.zed (Reifier.rework ~fv:(fmapt self))))
+
+  let prj_exn : (ground, ground) Reifier.t =
+    let open Env.Monad in
+    Reifier.fix (fun self ->
+      Reifier.prj_exn <..> chain (fmapt self))
+  let i ()  : fexpr = inj @@ distrib I
+  let a a b : fexpr = inj @@ distrib @@ A (a,b)
+  let m a b : fexpr = inj @@ distrib @@ M (a,b)
+
 end
 
 open GExpr
 
-let i ()  : fexpr = inj @@ I
-let a a b : fexpr = inj @@ A (a,b)
-let m a b : fexpr = inj @@ M (a,b)
 
 let sym t i i' =
   fresh (x xs)
@@ -64,7 +64,7 @@ let (|>) x y = fun i i'' r'' ->
 let (<|>) x y = fun i i' r ->
   conde [x i i' r; y i i' r]
 
-let rec pId n n' r = (sym !!Id n n') &&& (r === i())
+let rec pId n n' r = (sym (inj (lift Id)) n n') &&& (r === i())
 and pAdd i i' r = (pMulPlusAdd <|> pMul) i i' r
 and pMulPlusAdd i i' r = (
       pMul |>
