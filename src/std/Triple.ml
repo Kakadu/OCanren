@@ -1,7 +1,7 @@
 (* SPDX-License-Identifier: LGPL-2.1-or-later *)
 (*
  * OCanren.
- * Copyright (C) 2015-2025
+ * Copyright (C) 2015-2022
  * Dmitri Boulytchev, Dmitry Kosarev, Alexey Syomin, Evgeny Moiseenko
  * St.Petersburg State University, JetBrains Research
  *
@@ -21,22 +21,19 @@ open Logic
 open Core
 
 (* to avoid clash with Std.List (i.e. logic list) *)
-module List = Stdlib.List
+module List = Stdlib.List;;
+
+@type 'a logic'                = 'a logic                                   with show, gmap, html, eq, compare, foldl, foldr, fmt
 
 let logic' = logic;;
 
-type ('a, 'b, 'c) t = 'a * 'b * 'c
-[@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
-let fmap f g h x = GT.gmap(t) f g h x;;
+@type ('a, 'b, 'c) t = 'a * 'b * 'c with show, gmap, html, eq, compare, foldl, foldr, fmt
+let fmap f g x = GT.gmap(t) f g x;;
 
-type ('a, 'b, 'c) ground          = 'a * 'b * 'c
-[@@deriving gt ~options:{ show; gmap; (* html; *) eq; compare; foldl; foldr; fmt }]
-type ('a, 'b, 'c) logic           = ('a * 'b * 'c) Logic.logic
-[@@deriving gt ~options:{ show; gmap;  eq; compare; foldl; foldr; fmt }]
+@type ('a, 'b, 'c) ground          = 'a * 'b * 'c                                    with show, gmap, html, eq, compare, foldl, foldr, fmt
+@type ('a, 'b, 'c) logic           = ('a * 'b * 'c) logic'                           with show, gmap, html, eq, compare, foldl, foldr, fmt
 
-type ('a, 'b, 'c) groundi = ('a * 'b * 'c) ilogic
-
-type ('a, 'b, 'c) injected = ('a, 'b, 'c) groundi
+type ('a, 'b, 'c, 'd, 'e, 'f) injected = ('a * 'b * 'c, ('d * 'e * 'f) Logic.logic) Logic.injected
 
 let logic = {
   logic with
@@ -47,41 +44,37 @@ let logic = {
       method eq            = logic.GT.plugins#eq
       method foldl         = logic.GT.plugins#foldl
       method foldr         = logic.GT.plugins#foldr
-      (* method html          = logic.GT.plugins#html *)
+      method html          = logic.GT.plugins#html
       method fmt           = logic.GT.plugins#fmt
-      method show fa fb fc = GT.show(logic') (fun l -> GT.show(ground) fa fb fc l)
+      method show    fa fb fc = GT.show(logic') (fun l -> GT.show(ground) fa fb fc l)
     end
 }
 
-let inj f g h p = to_logic (GT.gmap(ground) f g h p)
+let inj f g p x = to_logic (GT.gmap(ground) f g p x)
 
-let make x y z = Logic.inj (x, y, z)
+include Fmap3(struct
+    type nonrec ('a,'b,'c) t = ('a,'b,'c) t
+    let fmap eta = GT.gmap t eta
+end)
 
-let triple = make
+let fmapt fa fb fc subj =
+  let open Env.Monad in
+  Env.Monad.return (GT.gmap t) <*> fa <*> fb <*> fc <*> subj
 
-let reify : 'a 'b 'c 'd . ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t -> ('e, 'f) Reifier.t ->
-  (('a, 'c, 'e) groundi, ('b, 'd, 'f) logic) Reifier.t =
+let make x y z = Logic.inj @@ distrib (x, y, z)
+
+let reify : 'a 'b 'c 'd . ('a,'d) Reifier.t -> ('b,'e) Reifier.t -> ('c,'f) Reifier.t ->
+  ( ('a * 'b * 'c), ('d * 'e * 'f) Logic.logic ) Reifier.t =
   fun ra rb rc ->
-    let ( >>= ) = Env.Monad.bind in
+    let open Env.Monad in
+  Reifier.fix (fun self ->
+    Reifier.reify <..>
+      chain (Reifier.zed (Reifier.rework ~fv:(fmapt ra rb rc)))
+    )
+
+let prj_exn : 'a 'b 'c 'd . ('a, 'd) Reifier.t -> ('b,'e) Reifier.t -> ('c,'f) Reifier.t ->
+  ( ('a * 'b * 'c), ('d * 'e * 'f)) Reifier.t =
+  fun ra rb rc ->
+    let open Env.Monad in
     Reifier.fix (fun self ->
-      Reifier.compose Reifier.reify
-       ( ra >>= fun fa ->
-         rb >>= fun fb ->
-         rc >>= fun fc ->
-          let rec foo = function
-              | Var (v, xs) ->
-                Var (v, Stdlib.List.map foo xs)
-              | Value x -> Value (GT.gmap t fa fb fc x)
-          in
-          Env.Monad.return foo
-        ))
-
-let prj_exn : ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t -> ('e, 'f) Reifier.t ->
-  (('a, 'c, 'e) groundi, ('b, 'd, 'f) ground) Reifier.t =
-  fun ra rb rc ->
-    let ( >>= ) = Env.Monad.bind in
-    Reifier.compose Reifier.prj_exn
-    (ra >>= fun fa ->
-     rb >>= fun fb ->
-     rc >>= fun fc ->
-     Env.Monad.return (fun x -> GT.gmap t fa fb fc x))
+      Reifier.prj_exn <..> chain (fmapt ra rb rc))

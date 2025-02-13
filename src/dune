@@ -21,7 +21,7 @@
   Bool
   Nat
   Pair
-  ; Triple
+  Triple
   List
   Timer
   Peep
@@ -33,8 +33,7 @@
  ; Later we are going to use PPX everywhere.
  (preprocess
   (per_module
-   ((pps GT.ppx_all)
-    Triple)
+   ;  ((pps GT.ppx_all))
    ((action
      (run
       %{project_root}/camlp5/pp5+gt+plugins+dump.exe
@@ -47,6 +46,7 @@
     Bool
     Nat
     Pair
+    Triple
     List
     Logic
     Peep
