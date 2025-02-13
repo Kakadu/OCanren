@@ -34,6 +34,7 @@ module Std =
   struct
     (** Logic pairs *)
     module Pair    = Pair
+    module Triple = Triple
     (** Logic optional values *)
     module Option  = Option
     module Bool    = Bool
@@ -86,6 +87,7 @@ module Std =
 
     (** An alias for {!OCanren.Std.Pair.pair}. *)
     let pair = Pair.pair
+    let triple = Triple.make
 
 (*
 

@@ -199,9 +199,9 @@ module Fmap1 (T : T1) = struct
     fun arg ->
       let open Env.Monad in
       Reifier.fix (fun self ->
-        prj_exn <..> chain (fmapt arg) )
-
+        prj_exn <..> chain (fmapt arg))
 end
+
 module Fmap2 (T : T2) = struct
   external distrib : (('a,'c) injected, ('b,'d) injected) T.t -> (('a, 'b) T.t, ('c, 'd) T.t) injected = "%identity"
 
@@ -225,6 +225,34 @@ module Fmap2 (T : T2) = struct
     let open Env.Monad in
     Reifier.fix (fun self ->
       prj_exn <..> chain (fmapt arg1 arg2) )
+end
+
+module Fmap3 (T : T3) = struct
+  external distrib :
+    (('a,'d) injected, ('b,'e) injected, ('c, 'f) injected) T.t -> (('a, 'b, 'c) T.t, ('d, 'e, 'f) T.t) injected = "%identity"
+
+  let fmapt fa fb fc subj =
+    let open Env.Monad in
+    Env.Monad.return T.fmap <*> fa <*> fb <*> fc <*> subj
+
+  let reify:
+      ('a, 'd) Reifier.t -> ('b, 'e) Reifier.t -> ('c, 'f) Reifier.t ->
+        (('a, 'b, 'c) T.t, ('d, 'e, 'f) T.t logic) Reifier.t
+    = fun arg1 arg2 arg3 -> Reifier.fix (fun _ ->
+      let open Env.Monad in
+        reify
+        <..> chain
+               (Reifier.zed
+                  (Reifier.rework
+                     ~fv:(fmapt arg1 arg2 arg3))))
+
+  let prj_exn:
+  ('a, 'd) Reifier.t -> ('b, 'e) Reifier.t -> ('c, 'f) Reifier.t ->
+    (('a, 'b, 'c) T.t, ('d, 'e, 'f) T.t) Reifier.t =
+  fun arg1 arg2 arg3 ->
+    let open Env.Monad in
+    Reifier.fix (fun self ->
+      prj_exn <..> chain (fmapt arg1 arg2 arg3) )
 end
 
 
