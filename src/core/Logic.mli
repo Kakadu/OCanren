@@ -186,3 +186,12 @@ module Fmap2 (T : T2) : sig
   val reify : ('a, 'b) Reifier.t -> ('c, 'd) Reifier.t -> (('a, 'c) T.t, ('b, 'd) T.t logic) Reifier.t
   val prj_exn: ('a, 'c) Reifier.t -> ('b, 'd) Reifier.t -> (('a, 'b) T.t, ('c, 'd) T.t) Reifier.t
 end
+
+module Fmap3 (T : T3) : sig
+  external distrib : (('a,'d) injected, ('b,'e) injected, ('c, 'f) injected) T.t -> (('a, 'b, 'c) T.t, ('d, 'e, 'f) T.t) injected = "%identity"
+  val reify : ('a, 'd) Reifier.t -> ('b, 'e) Reifier.t -> ('c, 'f) Reifier.t ->
+    (('a, 'b, 'c) T.t, ('d, 'e, 'f) T.t logic) Reifier.t
+  val prj_exn: ('a, 'd) Reifier.t -> ('b, 'e) Reifier.t -> ('c, 'f) Reifier.t ->
+    (('a, 'b, 'c) T.t, ('d, 'e, 'f) T.t) Reifier.t
+end
+

@@ -87,7 +87,7 @@ module Std =
 
     (** An alias for {!OCanren.Std.Pair.pair}. *)
     let pair = Pair.pair
-    (* let triple = Triple.triple *)
+    let triple = Triple.make
 
 (*
 
