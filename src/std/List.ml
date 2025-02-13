@@ -156,9 +156,7 @@ let rec inj f xs = to_logic (GT.gmap list f (inj f) xs)
 
 let rec list : 'a 'b . ('a, 'b) Logic.injected GT.list -> ('a, 'b) injected = function
 | []    -> nil ()
-| x::xs ->
-    assert false
-    (* cons x (list xs) *)
+| x::xs -> cons x (list xs)
 
 let rec logic_to_ground_exn f = function
   | Var (_, _) -> failwith "List.logic_to_ground_exn: variables inside"
@@ -214,7 +212,7 @@ let rec lookupo p xs mx =
       ])
     )
   ]
-(*
+
 let rec assoco x xs v =
    Fresh.three (fun a b tl ->
      (xs === (Pair.pair a b) % tl) &&&
@@ -236,7 +234,7 @@ let rec lengtho l n =
       (n === (Nat.s n')) &&&
       (lengtho xs n')
     )
-  ] *)
+  ] 
 
 let rec appendo a b ab =
   conde [

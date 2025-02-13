@@ -196,23 +196,43 @@ module NUMERAL_TYPS : sig
       ('i, 'j) reified * (('k, 'l) reified * ('m, 'n) reified))
     * ('o * ('p * ('q * 'r)) -> ('o * ('p * 'q)) * 'r)
     * (('s -> 't -> 'u -> 'v) -> 's * ('t * 'u) -> 'v)
-  (* type ('a,'c,'e,'g,'i,'k,'m,'n,'o,'p,'q,'r,'s,'t) three = int *)
 
-  (* type ('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o,'p,'q,'r) four = int *)
+  type ('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o,'p,'q,'r,'s,'t,'u,'v,'w,'x,'y,'z,'a1) four =unit ->
+    ((('a, 'b) injected ->
+     ('c, 'd) injected ->
+     ('e, 'f) injected ->
+     ('g, 'h) injected ->
+     'i goal') ->
+    State.t ->
+    ('a, 'b) injected
+    * (('c, 'd) injected
+      * (('e, 'f) injected * (('g, 'h) injected * 'i))))
+    * (('j, 'k) injected
+       * (('l, 'm) injected
+         * (('n, 'o) injected * ('p, 'q) injected)) ->
+      Env.t ->
+      ('j, 'k) reified
+      * (('l, 'm) reified * (('n, 'o) reified * ('p, 'q) reified)))
+    * ('r * ('s * ('t * ('u * 'v))) ->
+      ('r * ('s * ('t * 'u))) * 'v)
+    * (('w -> 'x -> 'y -> 'z -> 'a1) ->
+      'w * ('x * ('y * 'z)) ->
+      'a1)
+
 end
 
 (** {3 Predefined numerals (one to five)} *)
 val one : (_, _, _, _, _, _, _, _) NUMERAL_TYPS.one
 val two : (_, _, _, _, _, _, _, _, _, _, _, _, _, _, _) NUMERAL_TYPS.two
 val three : (_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) NUMERAL_TYPS.three
-(* val four : (_, _, _, _, _, _, _, _, _, _, _, _, _, _,_,_,_,_) NUMERAL_TYPS.four *)
+val four : (_, _, _, _, _, _, _, _, _, _, _, _, _, _,_,_,_,_, _, _, _, _, _,_,_,_,_) NUMERAL_TYPS.four
 
 
 (** {3 The same numerals with conventional names} *)
 val q : (_, _, _,  _, _, _,  _, _) NUMERAL_TYPS.one
 val qr : (_, _, _, _, _, _, _, _, _, _, _, _, _, _, _) NUMERAL_TYPS.two
 val qrs : (_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) NUMERAL_TYPS.three
-(* val qrst : (_, _, _, _, _, _, _, _, _, _, _, _, _, _,_,_,_,_) NUMERAL_TYPS.four *)
+val qrst : (_, _, _, _, _, _, _, _, _, _, _, _, _, _,_,_,_,_, _, _, _, _, _,_,_,_,_) NUMERAL_TYPS.four
 
 IFDEF STATS THEN
 val unification_counter : unit -> int

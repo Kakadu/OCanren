@@ -18,7 +18,7 @@
  *)
 
 include Logic
-let _ = List.(%<)
+
 include Core
 
 module Stream  = Stream
@@ -54,7 +54,7 @@ module Std =
         (x === y) &&& (t === Bool.falso);
       ]
 
-    (* let nat n = Nat.nat (Nat.of_int n) *)
+    let nat n = Nat.nat (Nat.of_int n)
 
     module List = List
 
@@ -74,19 +74,20 @@ module Std =
     | []    -> nil ()
     | x::xs -> List.cons (f x) (list f xs)
 
-    (* let rec nat_list = function
+    let rec nat_list = function
     | []    -> nil ()
-    | x::xs -> nat x % nat_list xs *)
+    | x::xs -> nat x % nat_list xs
 
     (** An alias for {!OCanren.Std.Option.some}. *)
     let some = Option.some
 
     (** An alias for {!OCanren.Std.Option.none}. *)
     let none = Option.none
-(*
+
     (** An alias for {!OCanren.Std.Pair.pair}. *)
     let pair = Pair.pair
 
+(*
 
     let structural = Core.structural
     let debug_var = Core.debug_var
