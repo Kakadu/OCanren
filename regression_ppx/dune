@@ -4,10 +4,10 @@
    (:standard -rectypes))))
 
 (executables
- (names test001 test002repr)
- (modules test001 test002repr)
+ (names test001)
+ (modules test001)
  (package OCanren)
- (public_names - -)
+ (public_names -)
  (flags
   (:standard
    ;-dsource

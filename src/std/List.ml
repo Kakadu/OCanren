@@ -142,11 +142,15 @@ let rec prj : (int -> _ ground) -> ('a, 'b) Reifier.t -> ('a ground, 'b ground) 
 
 let of_list = List.map
 
-let to_list = List.map
+let rec to_logic f: _ ground -> _ logic = function
+| [] -> Value Nil
+|  (x::xs) -> Value (Cons (f x, to_logic f xs))
 
-let rec inj f = function
-| []    -> Value Nil
-| x::xs -> Value (Cons (f x, inj f xs))
+let rec to_list f = function
+| Nil -> []
+| Cons (x,xs) -> f x :: to_list f xs
+
+let rec inj = to_logic
 
 (* let rec list = function
 | []    -> nil ()

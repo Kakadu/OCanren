@@ -54,8 +54,8 @@ val of_list : ('a -> 'b) -> 'a GT.list -> 'b ground
 
 (** The [to_list g] converts OCanren list [g] into regular OCaml list. See [of_list]
     for a reverse conversion. *)
-val to_list : ('a -> 'b) -> 'a ground -> 'b GT.list
-[@@deprecated "Use Stdlib.List.map instead"]
+(* val to_list : ('a -> 'b) -> 'a ground -> 'b GT.list *)
+(* [@@deprecated "Use Stdlib.List.map instead"] *)
 
 (** The [inj x] makes a logic list from a ground one. See [logic_to_ground_exn]
     for a partial reverse conversion. *)
@@ -69,6 +69,8 @@ val logic_to_ground_exn: ('a -> 'b) -> 'a logic -> 'b ground
     is availble only through reifiers (see {!section-reifiers} for details). *)
 (* val list : 'a GT.list -> 'a injected *)
 (* val list : ('a, 'b) Logic.injected GT.list -> ('a, 'b) injected *)
+
+val to_logic: ('a -> 'b) -> 'a ground -> 'b logic
 
 (** {3 Constructors} *)
 
