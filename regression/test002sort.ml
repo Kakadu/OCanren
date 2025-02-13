@@ -62,9 +62,9 @@ let rec sorto x y =
         (smallesto x s xs)   (* 2 *)
     ]
 
-let _ : (Nat.groundi List.groundi, Nat.logic List.logic) Reifier.t =
+let _ : (Nat.ground List.ground, Nat.logic List.logic) Reifier.t =
   List.reify Nat.reify
-let _ : (Nat.groundi List.groundi, Nat.ground List.ground) Reifier.t =
+let _ : (Nat.ground List.ground, Nat.ground List.ground) Reifier.t =
   List.prj_exn Nat.prj_exn
 
 let _ = Stream.take ~n:10 @@

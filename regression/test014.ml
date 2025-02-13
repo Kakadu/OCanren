@@ -4,11 +4,14 @@ open OCanren
 open OCanren.Std
 open Tester
 
+let (!) x = inj (lift x)
+let (!!) = (!)
+
 let rec build_num =
   function
   | 0                   -> nil()
-  | n when n mod 2 == 0 -> (inj 0) % build_num (n / 2)
-  | n                   -> (inj 1) % build_num (n / 2)
+  | n when n mod 2 == 0 -> (!!0) % build_num (n / 2)
+  | n                   -> (!!1) % build_num (n / 2)
 
 let rec appendo l s out =
   conde [
@@ -27,7 +30,7 @@ let gt1o q =
   fresh (h t tt)
     (q === h % (t % tt))
 
-let (!) = (!!)
+
 let full_addero b x y r c =
   conde [
     (!0 === b) &&& (!0 === x) &&& (!0 === y) &&& (!0 === r) &&& (!0 === c);
@@ -323,7 +326,7 @@ let test27 b q r =
 let show_int_list   = GT.(show List.ground @@ show int)
 let show_intl_List = GT.(show List.logic @@ show logic @@ show int)
 
-let _ : int ilogic Std.List.groundi -> _ = multo
+let _ : (int, int logic) Std.List.injected -> _ = multo
 let run_num n = run_r (List.prj_exn prj_exn) show_int_list n
 
 let _ffoo _ =

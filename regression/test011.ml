@@ -3,8 +3,8 @@ open OCanren
 open OCanren.Std
 open Tester
 
-let (!) = (!!)
-let (!!) = Std.list Fun.id
+let (!) (x: int) = inj (lift x)
+let (!!) = List.list
 
 let show_int_list   = GT.(show List.ground @@ show int)
 let show_intl_List = GT.(show List.logic @@ show logic @@ show int)

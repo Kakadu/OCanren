@@ -7,11 +7,11 @@ let () = Printexc.record_backtrace false
 module X = struct
   @type 'a t = A of 'a | Var1 of int with show,gmap
   type nonrec 'a logic = 'a t logic
-  type nonrec 'a ilogic = 'a t ilogic
+  type nonrec ('a,'b) injected = ('a t, 'b logic) injected
 
   let fmap f x = gmap(t) f x
 
-  let prj_exn : 'a 'b. ('a, 'b) Reifier.t -> ('a ilogic, 'b t) Reifier.t
+  let prj_exn : 'a 'b. ('a, 'b) Reifier.t -> ('a t, 'b logic) Reifier.t
         =
      fun ra ->
       let ( >>= ) = Env.Monad.bind in
