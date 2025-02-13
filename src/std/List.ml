@@ -148,11 +148,15 @@ let rec of_list f = function
 | []    -> Nil
 | x::xs -> Cons (f x, of_list f xs)
 
+let rec to_logic f: _ ground -> _ logic = function 
+| Nil -> Value Nil 
+| Cons (x,xs) -> Value (Cons (f x, to_logic f xs))
+
 let rec to_list f = function
 | Nil -> []
 | Cons (x,xs) -> f x :: to_list f xs
 
-let rec inj f xs = to_logic (GT.gmap list f (inj f) xs)
+let rec inj = to_logic
 
 let rec list : 'a 'b . ('a, 'b) Logic.injected GT.list -> ('a, 'b) injected = function
 | []    -> nil ()
