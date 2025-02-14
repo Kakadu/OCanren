@@ -68,7 +68,7 @@ type 'a ilogic
 type ('a, 'b) injected = 'a
 
 external lift: 'a -> ('a, 'a) injected = "%identity"
-let inj: ('a, 'b) injected -> ('a, 'b logic) injected = fun x -> Obj.magic (Value x)
+let inj: ('a, 'b) injected -> ('a, 'b logic) injected = fun x -> Obj.magic x
 
 let (!!) = inj
 
@@ -78,7 +78,7 @@ module Reifier = struct
   let rec reify : ('a, 'a logic) t =
     fun env t ->
       match Term.var t with
-      | None -> (Obj.magic t)
+      | None -> (Obj.magic (Value t))
       | Some v ->
         let i, cs = Term.Var.reify (reify env) v in
         Var (i, cs)
