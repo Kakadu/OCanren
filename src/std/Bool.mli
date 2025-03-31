@@ -25,17 +25,17 @@ open Core
 (** {2 GT-related API} *)
 
 (** Synonym for boolean type *)
-@type t = GT.bool with show, html, eq, compare, foldr, foldl, gmap, fmt
+type t = GT.bool  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** Ground boolean (the regular one) *)
-@type ground = GT.bool with show, html, eq, compare, foldr, foldl, gmap, fmt
+type ground = GT.bool  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** Logic boolean *)
-@type logic = GT.bool Logic.logic with show, html, eq, compare, foldr, foldl, gmap, fmt
+type logic = GT.bool Logic.logic  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** Type synonyms to comply with the generic naming scheme *)
-@type bool       = ground with show, html, eq, compare, foldr, foldl, gmap, fmt
-@type bool_logic = logic  with show, html, eq, compare, foldr, foldl, gmap, fmt
+type bool       = ground  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type bool_logic = logic   [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** {2 Relational API} *)
 

@@ -24,16 +24,16 @@ open Core
 
 (** {2 GT-related API} *)
 
-@type ('a, 'b) t = 'a * 'b with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ('a, 'b) t = 'a * 'b  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
-@type ('a, 'b) ground = 'a * 'b with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ('a, 'b) ground = 'a * 'b  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** Logic option *)
-@type ('a, 'b) logic = ('a * 'b) Logic.logic with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ('a, 'b) logic = ('a * 'b) Logic.logic  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** Type synonyms to comply with the generic naming scheme *)
-@type ('a, 'b) pair       = ('a, 'b) ground with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type ('a, 'b) pair_logic = ('a, 'b) logic  with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ('a, 'b) pair       = ('a, 'b) ground  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type ('a, 'b) pair_logic = ('a, 'b) logic   [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** {2 Relational API} *)
 

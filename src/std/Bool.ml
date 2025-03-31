@@ -23,12 +23,12 @@ open Core
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
 
-@type ground     = GT.bool              with show, html, eq, compare, foldr, foldl, gmap, fmt
-@type t          = GT.bool              with show, html, eq, compare, foldr, foldl, gmap, fmt
-@type logic      = GT.bool Logic.logic  with show, html, eq, compare, foldr, foldl, gmap, fmt
+type ground     = GT.bool               [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type t          = GT.bool               [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type logic      = GT.bool Logic.logic   [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
-@type bool       = ground               with show, html, eq, compare, foldr, foldl, gmap, fmt
-@type bool_logic = logic                with show, html, eq, compare, foldr, foldl, gmap, fmt
+type bool       = ground                [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type bool_logic = logic                 [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 type groundi   = ground ilogic
 

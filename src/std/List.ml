@@ -23,12 +23,12 @@ open Core
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
 
-@type ('a, 'l) t = Nil | Cons of 'a * 'l with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ('a, 'l) t = Nil | Cons of 'a * 'l  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
-@type 'a ground     = 'a GT.list with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type 'a logic      = ('a, 'a logic) t Logic.logic with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type 'a list       = 'a ground with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type 'a list_logic = 'a logic with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a ground     = 'a GT.list  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type 'a logic      = ('a, 'a logic) t Logic.logic  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type 'a list       = 'a ground  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type 'a list_logic = 'a logic  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 let logic = {
   logic with

@@ -34,7 +34,12 @@
  (preprocess
   (per_module
    ((pps GT.ppx_all)
-    Triple)
+    Bool
+    Pair
+    Triple
+    Option
+    List
+    Nat)
    ((action
      (run
       %{project_root}/camlp5/pp5+gt+plugins+dump.exe
@@ -43,11 +48,6 @@
     Core
     Stream
     Subst
-    Option
-    Bool
-    Nat
-    Pair
-    List
     Logic
     Peep
     OCanren))))

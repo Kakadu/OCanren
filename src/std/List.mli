@@ -23,22 +23,22 @@ open Logic
 open Core
 
 (** Abstract list type *)
-@type ('a, 'l) t =
+type ('a, 'l) t =
 | Nil
 | Cons of 'a * 'l
-with show, gmap, html, eq, compare, foldl, foldr, fmt
+ [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** {2 GT-related API} *)
 
 (** Ground lists (isomorphic to regular ones) *)
-@type 'a ground = 'a GT.list with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a ground = 'a GT.list  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** Logic lists (with the tails as logic lists) *)
-@type 'a logic  = ('a, 'a logic) t Logic.logic with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a logic  = ('a, 'a logic) t Logic.logic  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** Type synonyms to comply with the generic naming scheme *)
-@type 'a list       = 'a ground with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type 'a list_logic = 'a logic with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a list       = 'a ground  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type 'a list_logic = 'a logic  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** {2 Relational API} *)
 
@@ -114,19 +114,19 @@ val prj_exn_list : ('a, 'b) Reifier.t -> ('a injected, 'b ground) Reifier.t
 
 (** Relational foldr *)
 val foldro :
-  ('x ilogic as 'a -> 'acc ilogic -> 'acc ilogic -> goal) ->
+  (('x ilogic as 'a) -> 'acc ilogic -> 'acc ilogic -> goal) ->
   'acc ilogic ->
   'a groundi ->
   'acc ilogic -> goal
 
 (** Relational map *)
-val mapo : ('x ilogic as 'a -> ('y ilogic as 'b) -> goal) -> 'a groundi -> 'b groundi -> goal
+val mapo : (('x ilogic as 'a) -> ('y ilogic as 'b) -> goal) -> 'a groundi -> 'b groundi -> goal
 
 (** Relational filter *)
-val filtero : ('x ilogic as 'a -> Bool.groundi -> goal) -> 'a groundi -> 'a groundi -> goal
+val filtero : (('x ilogic as 'a) -> Bool.groundi -> goal) -> 'a groundi -> 'a groundi -> goal
 
 (** Relational lookup *)
-val lookupo : ('x ilogic as 'a -> Bool.groundi -> goal) -> 'a groundi -> 'a Option.groundi -> goal
+val lookupo : (('x ilogic as 'a) -> Bool.groundi -> goal) -> 'a groundi -> 'a Option.groundi -> goal
 
 (** Relational association list lookup *)
 val assoco : 'a ilogic -> ('a ilogic, 'c ilogic ) Pair.groundi groundi -> 'c ilogic -> goal

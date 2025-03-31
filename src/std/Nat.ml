@@ -23,16 +23,16 @@ open Core
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
 
-@type 'a t = O | S of 'a with show, gmap, html, eq, compare, foldl, foldr, fmt
+type 'a t = O | S of 'a  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
-@type ground  = ground t
-with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type logic   = logic t Logic.logic
-with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type nat  = ground
-with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type nat_logic   = logic
-with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ground  = ground t
+ [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type logic   = logic t Logic.logic
+ [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type nat  = ground
+ [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type nat_logic   = logic
+ [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 type groundi = groundi t Logic.ilogic
 

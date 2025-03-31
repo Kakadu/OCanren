@@ -20,20 +20,15 @@
 open Logic
 open Core
 
-(* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
 
-@type 'a logic'                = 'a logic                                   with show, gmap, html, eq, compare, foldl, foldr, fmt
-
-let logic' = logic;;
-
-@type ('a, 'b) t = 'a * 'b with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ('a, 'b) t = 'a * 'b [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 let fmap f g x = GT.gmap(t) f g x;;
 
-@type ('a, 'b) ground          = 'a * 'b                                    with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type ('a, 'b) logic           = ('a * 'b) logic'                           with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type ('a, 'b) pair            = ('a, 'b) ground                            with show, gmap, html, eq, compare, foldl, foldr, fmt
-@type ('a, 'b) pair_logic      = ('a, 'b) logic                             with show, gmap, html, eq, compare, foldl, foldr, fmt
+type ('a, 'b) ground          = 'a * 'b  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type ('a, 'b) logic           = ('a * 'b) Logic.logic  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type ('a, 'b) pair            = ('a, 'b) ground  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type ('a, 'b) pair_logic      = ('a, 'b) logic   [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 type ('a, 'b) groundi = ('a * 'b) ilogic
 
@@ -50,7 +45,7 @@ let logic = {
       method foldr         = logic.GT.plugins#foldr
       method html          = logic.GT.plugins#html
       method fmt           = logic.GT.plugins#fmt
-      method show    fa fb = GT.show(logic') (fun l -> GT.show(ground) fa fb l)
+      method show    fa fb = GT.show(Logic.logic) (fun l -> GT.show(ground) fa fb l)
     end
 }
 

@@ -23,20 +23,20 @@ open Logic
 open Core
 
 (** Abstract nat type *)
-@type 'a t =
+type 'a t =
 | O
-| S of 'a with show, html, eq, compare, foldl, foldr, gmap, fmt
+| S of 'a  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** Ground nat are ismorphic for regular one *)
-@type ground = ground t with show, html, eq, compare, foldl, foldr, gmap, fmt
+type ground = ground t  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** Logic nat *)
-@type logic = logic t Logic.logic with show, html, eq, compare, foldl, foldr, gmap, fmt
+type logic = logic t Logic.logic  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 (** Type synonyms to comply with the generic naming scheme *)
-@type nat       = ground with show, html, eq, compare, foldl, foldr, gmap, fmt
-@type nat_logic = logic  with show, html, eq, compare, foldl, foldr, gmap, fmt
-                      
+type nat       = ground  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+type nat_logic = logic   [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
+
 (** Logic injection (for reification) *)
 val inj : ground -> logic
 
@@ -58,7 +58,7 @@ val prj_exn : (groundi, ground) Reifier.t
 (** Synonyms to comply with the generic naming scheme *)
 val reify_nat   : (groundi, logic) Reifier.t
 val prj_exn_nat : (groundi, ground) Reifier.t
-  
+
 (** [of_int n] converts integer [n] into [ground]; negative integers become [O] *)
 val of_int : int -> ground
 
@@ -113,4 +113,4 @@ val (<)  : groundi -> groundi -> goal
 
 (** Minimum/maximum *)
 val maxo : groundi -> groundi -> groundi -> goal
-val mino : groundi -> groundi -> groundi -> goal                                   
+val mino : groundi -> groundi -> groundi -> goal
