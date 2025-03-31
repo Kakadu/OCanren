@@ -16,7 +16,14 @@
  * (enclosed in the file COPYING).
  *)
 
-IFDEF STATS THEN
+[%%if not_defined_permissive stats]
+
+[@@@ocaml.alert deprecated "Statistics is disabled"]
+
+[%% else]
+
+[@@@ocaml.alert deprecated "Statistics is ENABLED"]
+
 let unification_counter      = Core.unification_counter
 let unification_time         = Core.unification_time
 let walk_counter             = Subst.walk_counter
@@ -28,4 +35,5 @@ let force_counter            = Stream.force_counter
 let from_fun_counter         = Stream.from_fun_counter
 let bind_counter             = Stream.bind_counter
 let mplus_counter            = Stream.mplus_counter
-END
+
+[%%endif]

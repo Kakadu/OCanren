@@ -20,7 +20,9 @@
   To enable statistics' counters add STATS macro switch for pa_macro camlp5
   rewriter in file '../../src/dune'.
 *)
-IFDEF STATS THEN
+
+[%%if not_defined_permissive stats]
+[%%else]
 val unification_counter      : unit -> int
 val unification_time         : unit -> Timer.span
 val walk_counter             : unit -> int
@@ -32,4 +34,4 @@ val force_counter            : unit -> int
 val from_fun_counter         : unit -> int
 val bind_counter             : unit -> int
 val mplus_counter            : unit -> int
-END
+[%%endif]

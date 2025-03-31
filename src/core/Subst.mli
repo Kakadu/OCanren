@@ -91,7 +91,10 @@ module Answer :
 
 val reify : Env.t -> t -> 'a -> Answer.t
 
-IFDEF STATS THEN
+[%%if not_defined_permissive stats]
+[%%else]
+
 (** Walk counter *)
 val walk_counter : unit -> int
-END
+
+[%%endif]

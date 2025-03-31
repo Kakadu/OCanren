@@ -16,14 +16,19 @@
  * See the GNU Library General Public License version 2 for more details
  * (enclosed in the file COPYING).
  *)
-IFDEF STATS THEN
+
+[%%if not_defined_permissive stats]
+[%%else]
+
 type stat = {mutable walk_count : int}
 
 let stat = {walk_count = 0}
 
 let walk_counter () = stat.walk_count
 let walk_incr () = stat.walk_count <- stat.walk_count + 1
-END
+
+[%%endif]
+
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
 

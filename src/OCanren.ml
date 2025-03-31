@@ -91,10 +91,14 @@ module Std =
     let debug_var = Core.debug_var
     let only_head = Core.only_head
 
-
+    (* let _ = Peep.unification_counter *)
   end
-IFDEF STATS THEN
+
+[%%if not_defined_permissive stats]
+[%% else]
+
 module Peep = Peep
 
 let _ = Peep.unification_counter
-END
+
+[%%endif]

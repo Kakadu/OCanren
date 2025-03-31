@@ -31,6 +31,7 @@
   (:standard -rectypes -short-paths -w -49))
  ; Below we use PPX rewriter to preprocess module Triple and old school camlp5 for everything else.
  ; Later we are going to use PPX everywhere.
+ (preprocessor_deps optcomp-cookie.cfg)
  (preprocess
   (per_module
    ((pps GT.ppx_all)
@@ -40,17 +41,28 @@
     Option
     List
     Nat)
+   ((pps
+     ppx_optcomp
+     --
+     -cookie
+     %{read-lines:./optcomp-cookie.cfg}
+     ;ppx_optcomp.env=     'env     ~stats:     (Defined 1)     '
+     ;-cookie     stats=1
+     )
+    Core
+    Peep
+    Subst
+    OCanren)
    ((action
      (run
       %{project_root}/camlp5/pp5+gt+plugins+dump.exe
       %{read-lines:../config/instrumentalization.cfg}
       %{input-file}))
-    Core
     Stream
-    Subst
     Logic
-    Peep
-    OCanren))))
+    ; Peep
+    ;OCanren
+    ))))
 
 (documentation
  (package OCanren)
