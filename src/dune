@@ -44,11 +44,10 @@
    ((pps
      ppx_optcomp
      --
-     -cookie
-     %{read-lines:./optcomp-cookie.cfg}
-     ;ppx_optcomp.env=     'env     ~stats:     (Defined 1)     '
-     ;-cookie     stats=1
+     ;  -cookie
+     ;  %{read-lines:./optcomp-cookie.cfg}
      )
+    Stream
     Core
     Peep
     Subst
@@ -58,10 +57,8 @@
       %{project_root}/camlp5/pp5+gt+plugins+dump.exe
       %{read-lines:../config/instrumentalization.cfg}
       %{input-file}))
-    Stream
     Logic
-    ; Peep
-    ;OCanren
+    ;
     ))))
 
 (documentation

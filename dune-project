@@ -33,6 +33,7 @@
     (>= 0.26.1)
     (< 0.27)))
   ppx_inline_test_nobase
+  ppx_optcomp
   (mtime
    (>= 2.0.0)))
  (authors

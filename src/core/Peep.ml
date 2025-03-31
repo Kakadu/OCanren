@@ -18,11 +18,7 @@
 
 [%%if not_defined_permissive stats]
 
-[@@@ocaml.alert deprecated "Statistics is disabled"]
-
 [%% else]
-
-[@@@ocaml.alert deprecated "Statistics is ENABLED"]
 
 let unification_counter      = Core.unification_counter
 let unification_time         = Core.unification_time

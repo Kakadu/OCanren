@@ -92,11 +92,12 @@ val tl : 'a t -> 'a t
 
 val msplit: 'a t -> ('a * 'a t) option
 
-IFDEF STATS THEN
+[%%if not_defined_permissive stats]
+[%% else]
 (* Gets a counter *)
 val unwrap_suspended_counter : unit -> int
 val force_counter            : unit -> int
 val from_fun_counter         : unit -> int
 val bind_counter             : unit -> int
 val mplus_counter            : unit -> int
-END
+[%%endif]

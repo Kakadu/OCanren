@@ -90,7 +90,12 @@ type lterm = Var of Term.Var.t | Value of Term.t | WC of Term.Var.t
 let walk env subst x =
   (* walk var *)
   let rec walkv env subst v =
-    let () = IFDEF STATS THEN walk_incr () ELSE () END in
+    let module _ = struct
+      [%%if not_defined_permissive stats]
+      [%% else]
+      let () = walk_incr ()
+      [%%endif]
+    end in
     Env.check_exn env v;
     if Term.Var.is_wildcard v
     then WC v
@@ -101,7 +106,12 @@ let walk env subst x =
         with Not_found -> Var v
   (* walk term *)
   and walkt env subst t =
-    let () = IFDEF STATS THEN walk_incr () ELSE () END in
+    let module _ = struct
+      [%%if not_defined_permissive stats]
+      [%% else]
+      let () = walk_incr ()
+      [%%endif]
+    end in
     match Env.var env t with
     | Some v when Term.Var.is_wildcard v -> WC v
     | Some v -> walkv env subst v

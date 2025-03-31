@@ -17,7 +17,10 @@
  * (enclosed in the file COPYING).
  *)
 
-IFDEF STATS THEN
+[%%if not_defined_permissive stats]
+
+[%% else]
+
 type stat = {
     mutable unwrap_suspended_counter : int;
     mutable force_counter            : int;
@@ -49,7 +52,7 @@ let bind_counter_incr () = stat.bind_counter <- stat.bind_counter + 1
 let mplus_counter () = stat.mplus_counter
 let mplus_counter_incr () = stat.mplus_counter <- stat.mplus_counter + 1
 
-END
+[%%endif]
 
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
@@ -68,7 +71,12 @@ let nil         = Nil
 let single x    = Cons (x, Nil)
 let cons x s    = Cons (x, s)
 let from_fun zz =
-  let () = IFDEF STATS THEN from_fun_counter_incr () ELSE () END in
+  let module _ = struct
+    [%%if not_defined_permissive stats]
+    [%% else]
+    let () = from_fun_counter_incr ()
+    [%%endif]
+  end in
   Thunk zz
 
 let suspend ~is_ready f = Waiting [{is_ready; zz=f}]
@@ -78,13 +86,23 @@ let rec of_list = function
 | x::xs -> Cons (x, of_list xs)
 
 let force x =
-  let () = IFDEF STATS THEN force_counter_incr () ELSE () END in
+  let module _ = struct
+    [%%if not_defined_permissive stats]
+    [%% else]
+    let () = force_counter_incr ()
+    [%%endif]
+  end in
   match x with
   | Thunk zz  -> zz ()
   | xs        -> xs
 
 let rec mplus xs ys =
-  let () = IFDEF STATS THEN mplus_counter_incr () ELSE () END in
+  let module _ = struct
+    [%%if not_defined_permissive stats]
+    [%% else]
+    let () = mplus_counter_incr ()
+    [%%endif]
+  end in
   match xs with
   | Nil           -> force ys
   | Cons (x, xs)  -> cons x (from_fun @@ fun () -> mplus (force ys) xs)
@@ -102,7 +120,12 @@ let rec mplus xs ys =
     | xs', _ -> mplus xs' ys
 
 and unwrap_suspended ss =
-  let () = IFDEF STATS THEN unwrap_suspended_counter_incr () ELSE () END in
+  let module _ = struct
+    [%%if not_defined_permissive stats]
+    [%% else]
+    let () = unwrap_suspended_counter_incr ()
+    [%%endif]
+  end in
   let rec find_ready prefix = function
     | ({is_ready; zz} as s)::ss ->
       if is_ready ()
@@ -116,7 +139,12 @@ and unwrap_suspended ss =
     | None , ss  -> Waiting ss
 
 let rec bind s f =
-  let () = IFDEF STATS THEN bind_counter_incr () ELSE () END in
+  let module _ = struct
+    [%%if not_defined_permissive stats]
+    [%% else]
+    let () = bind_counter_incr ()
+    [%%endif]
+  end in
   match s with
   | Nil           -> Nil
   | Cons (x, s)   -> mplus (f x) (from_fun (fun () -> bind (force s) f))
@@ -124,7 +152,7 @@ let rec bind s f =
   | Waiting ss    ->
     match unwrap_suspended ss with
     | Waiting ss ->
-      let helper {zz} as s = {s with zz = fun () -> bind (zz ()) f} in
+      let helper ({zz} as s) = {s with zz = fun () -> bind (zz ()) f} in
       Waiting (List.map helper ss)
     | s          -> bind s f
 
@@ -147,7 +175,7 @@ let rec map f = function
 | Cons (x, xs) -> Cons (f x, map f xs)
 | Thunk zzz    -> from_fun (fun () -> map f @@ zzz ())
 | Waiting ss   ->
-  let helper {zz} as s = {s with zz = fun () -> map f (zz ())} in
+  let helper ({zz} as s) = {s with zz = fun () -> map f (zz ())} in
   Waiting (List.map helper ss)
 
 let mapi f =
