@@ -24,9 +24,9 @@ open Printf
 *)
 module List = Stdlib.List
 
-@type 'a logic =
+type 'a logic =
 | Var   of GT.int * 'a logic GT.list
-| Value of 'a with show, gmap, html, eq, compare, foldl, foldr, fmt
+| Value of 'a [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
 let logic = {logic with
   plugins =
@@ -48,7 +48,7 @@ let logic = {logic with
       method show fa x =
         GT.transform(logic)
           (fun fself -> object
-             inherit ['a, _] @logic[show]  (GT.lift fa) fself
+             inherit ['a, _] show_logic_t (GT.lift fa) fself
              method! c_Var _ s i cs =
                let c = match cs with
                | [] -> ""
