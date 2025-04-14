@@ -42,6 +42,8 @@ val wc : ('a ilogic -> goal) -> goal
 (** [x === y] creates a goal, which performs a unification of [x] and [y] *)
 val (===) : 'a ilogic -> 'a ilogic -> goal
 
+val rat_unify : 'a ilogic -> 'a ilogic -> goal
+
 (** [unify x y] is a prefix synonym for [x === y] *)
 val unify : 'a ilogic -> 'a ilogic -> goal
 

@@ -26,7 +26,7 @@
   Timer
   Peep
   OCanren)
- (libraries GT)
+ (libraries GT unionFind)
  (flags
   (:standard -rectypes -short-paths))
  (preprocessor_deps optcomp-cookie.cfg)

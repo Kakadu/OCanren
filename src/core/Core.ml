@@ -318,9 +318,11 @@ module State =
 
     (* returns always non-empty list *)
     let reify x {env; subst; ctrs} =
-      let answ = Subst.reify env subst x in
+      let answ = Subst.reify_rational env subst x in
       match Disequality.reify env subst ctrs x with
-      | [] -> [Answer.make env answ]
+      | [] ->
+        Printf.printf "\n%s %d\n" __FUNCTION__ __LINE__;
+        [Answer.make env answ]
       | diseqs ->
         ListLabels.map diseqs ~f:(fun diseq ->
           let rec helper forbidden t =
@@ -361,6 +363,13 @@ let only_head g st =
   let stream = g st in
   try Stream.single @@ Stream.hd stream
   with Failure _ -> Stream.nil
+
+let rat_unify x y : goal = fun st ->
+  match Subst.rat_unify (State.env st) (State.subst st) x y with
+    | None -> Stream.nil
+    | Some (prefix, subst) ->
+      Stream.single {st with subst}
+
 
 let (===) x y st =
   let _t =

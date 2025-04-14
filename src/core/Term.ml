@@ -19,6 +19,13 @@
 
 open Printf
 
+
+let log fmt =
+  if false
+  then Format.kasprintf (Format.printf "%s\n%!") fmt
+  else Format.ifprintf Format.std_formatter fmt
+
+
 (* to avoid clash with Std.List (i.e. logic list) *)
 module List = Stdlib.List
 
@@ -146,12 +153,63 @@ let var x =
     if has_var_structure tx sx x then Some (Obj.magic x) else None
   else None
 
+let describe_var ppf Var.{ index } = Format.fprintf ppf "_.%d" index
+
+let pp =
+  let open Format in
+  let rec helper ppf x =
+    let tx = Obj.tag x in
+    if is_box tx
+    then (
+      let sx = Obj.size x in
+      if has_var_structure tx sx x
+      then (
+        let v = Obj.magic x in
+        match v.Var.constraints with
+        | [] -> describe_var ppf v
+        | cs ->
+          fprintf
+            ppf
+            "%a{=/= %a}"
+            describe_var
+            v
+            (pp_print_list ~pp_sep:(fun ppf () -> fprintf ppf "; ") helper)
+            cs)
+      else (
+        let rec inner i : unit =
+          if i < sx
+          then (
+            if i > 0 then fprintf ppf ", ";
+            helper ppf (Obj.field x i);
+            inner (i + 1))
+        in
+        fprintf ppf "boxed %d <" tx;
+        inner 0;
+        fprintf ppf ">"))
+    else (
+      is_valid_tag_exn tx;
+      if tx = Obj.int_tag
+      then fprintf ppf "int<%d>" @@ Obj.magic x
+      else if tx = Obj.string_tag
+      then fprintf ppf "string<%s>" @@ Obj.magic x
+      else if tx = Obj.double_tag
+      then fprintf ppf "double<%e>" @@ Obj.magic x
+      else failwith "Dynamic pretty printing of some special tags is not supported")
+  in
+  fun ppf x -> helper ppf (Obj.repr x)
+;;
+
+let show x = Format.asprintf "%a" pp x
+
 let rec map ~fvar ~fval x =
+  log "%s: %a" __FUNCTION__ pp x;
   let tx = Obj.tag x in
   if (is_box tx) then
     let sx = Obj.size x in
     if has_var_structure tx sx x then
-      fvar @@ Obj.magic x
+      (let ans = fvar @@ Obj.magic x in
+      let () = log "exit from Term.map with %a" pp ans in
+      ans)
     else
       let y = Obj.dup x in
       for i = 0 to sx - 1 do
@@ -297,50 +355,3 @@ let rec hash x = fold x ~init:1
   ~fvar:(fun acc v -> Hashtbl.hash (Var.hash v, List.fold_left (fun acc x -> Hashtbl.hash (acc, hash x)) acc v.Var.constraints))
   ~fval:(fun acc x -> Hashtbl.hash (acc, Hashtbl.hash x))
 
-let describe_var ppf Var.{ index } = Format.fprintf ppf "_.%d" index
-
-let pp =
-  let open Format in
-  let rec helper ppf x =
-    let tx = Obj.tag x in
-    if is_box tx
-    then (
-      let sx = Obj.size x in
-      if has_var_structure tx sx x
-      then (
-        let v = Obj.magic x in
-        match v.Var.constraints with
-        | [] -> describe_var ppf v
-        | cs ->
-          fprintf
-            ppf
-            "%a{=/= %a}"
-            describe_var
-            v
-            (pp_print_list ~pp_sep:(fun ppf () -> fprintf ppf "; ") helper)
-            cs)
-      else (
-        let rec inner i : unit =
-          if i < sx
-          then (
-            if i > 0 then fprintf ppf ", ";
-            helper ppf (Obj.field x i);
-            inner (i + 1))
-        in
-        fprintf ppf "boxed %d <" tx;
-        inner 0;
-        fprintf ppf ">"))
-    else (
-      is_valid_tag_exn tx;
-      if tx = Obj.int_tag
-      then fprintf ppf "int<%d>" @@ Obj.magic x
-      else if tx = Obj.string_tag
-      then fprintf ppf "string<%s>" @@ Obj.magic x
-      else if tx = Obj.double_tag
-      then fprintf ppf "double<%e>" @@ Obj.magic x
-      else failwith "Dynamic pretty printing of some special tags is not supported")
-  in
-  fun ppf x -> helper ppf (Obj.repr x)
-;;
-
-let show x = Format.asprintf "%a" pp x

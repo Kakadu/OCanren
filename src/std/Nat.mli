@@ -37,6 +37,8 @@ type logic = logic t Logic.logic  [@@deriving gt ~plugins:{ show; gmap; html; eq
 type nat       = ground  [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 type nat_logic = logic   [@@deriving gt ~plugins:{ show; gmap; html; eq; compare; foldl; foldr; fmt }]
 
+val rat_show: logic -> string
+
 (** Logic injection (for reification) *)
 val inj : ground -> logic
 

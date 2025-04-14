@@ -159,11 +159,12 @@ let rec occurs env subst var term =
     ~fvar:(fun v -> if Term.Var.equal v var then raise Occurs_check)
     ~fval:(fun x -> ())
 
-let extend ~scope env subst var term  =
+let extend ?(skip_occurs=false) ~scope env subst var term  =
   (* if occurs env subst var term then raise Occurs_check *)
-  if Runconf.do_occurs_check () then occurs env subst var term;
+  (* if Runconf.do_occurs_check () then occurs env subst var term; *)
     (* assert (VarEnv.var env var <> VarEnv.var env term); *)
-  occurs env subst var term;
+  if not skip_occurs
+  then occurs env subst var term;
 
   (* It is safe to modify variables destructively if the case of scopes match.
    * There are two cases:
@@ -172,12 +173,12 @@ let extend ~scope env subst var term  =
    * 2) If we do unification after a fresh, then in case of failure it doesn't matter if
    *    the variable is be distructively substituted: we will not look on it in future.
    *)
-  if (scope = var.Term.Var.scope) && (scope <> Term.Var.non_local_scope)
+  (* if (scope = var.Term.Var.scope) && (scope <> Term.Var.non_local_scope)
   then begin
     var.subst <- Some (Obj.repr term);
     subst
   end
-    else
+    else *)
       Term.VarMap.add var (Term.repr term) subst
 
 exception Unification_failed
@@ -287,3 +288,109 @@ let reify env subst x =
   map env subst (Term.repr x)
     ~fvar:(fun v -> Term.repr v)
     ~fval:(fun x -> Term.repr x)
+
+let visited_vars = ref Term.VarSet.empty
+let walk_rational env subst x =
+  let rec walkv env subst v =
+    log "%s %d, vis.size = %d, v = %a" __FUNCTION__ __LINE__ (Term.VarSet.cardinal !visited_vars) Term.pp v;
+    Env.check_exn env v;
+    if Term.Var.is_wildcard v
+    then WC v
+    else if Term.VarSet.mem v !visited_vars then Var v
+    else match v.Term.Var.subst with
+    | Some term ->
+        visited_vars := Term.VarSet.add v !visited_vars;
+        walkt  env subst (Obj.magic term)
+    | None ->
+        if Term.VarSet.mem v !visited_vars then Var v
+        else
+        (visited_vars := Term.VarSet.add v !visited_vars;
+        log "Mark var %a as visited" Term.pp v;
+        try walkt env subst (Term.VarMap.find v subst)
+        with Not_found -> Var v)
+  (* walk term *)
+  and walkt env subst t =
+    log "%s %d, vis.size = %d" __FUNCTION__ __LINE__ (Term.VarSet.cardinal !visited_vars);
+    match Env.var env t with
+    | Some v when Term.Var.is_wildcard v -> WC v
+    | Some v when Term.VarSet.mem v !visited_vars ->
+        Var v
+    | Some v -> walkv env subst v
+    | None   -> Value t
+  in
+  walkv env subst x
+
+let reify_rational env subst x : Answer.t =
+  log "%s %d, x = %a" __FUNCTION__ __LINE__ Term.pp x;
+  visited_vars := Term.VarSet.empty;
+  let rec deepfvar v =
+    log "%s %d, x = %a" __FUNCTION__ __LINE__ Term.pp v;
+    Env.check_exn env v;
+    if Term.VarSet.mem v !visited_vars
+      then
+        let() = log "%s %d Early exit" __FUNCTION__ __LINE__  in
+        Term.repr v
+    else
+      match walk_rational env subst v with
+      | WC v -> assert false
+      (* | (Var v as ans) when Term.VarSet.mem v !seen  -> v *)
+      | Var v -> Term.repr v
+      | Value x ->
+        log "%s %d" __FUNCTION__ __LINE__;
+        Term.map x ~fval:Term.repr ~fvar:deepfvar
+  in
+  let ans = Term.map ~fval:Term.repr ~fvar:deepfvar (Term.repr x) in
+  let () = log "exit from %s with %a" __FUNCTION__ Term.pp ans  in
+  ans
+
+module UF = struct
+  include UnionFind.StoreMap.Make(Map.Make(Int))
+end
+
+let rat_unify env subst x y =
+  log "%s %d" __FILE__ __LINE__;
+  (* The idea is to do the unification and collect the unification prefix during the process *)
+  let extend var term (prefix, subst) =
+    let subst = extend ~skip_occurs:true ~scope:Term.Var.non_local_scope env subst var term in
+    (Binding.({var; term})::prefix, subst)
+  in
+  let uf = UF.new_store () in
+  let rec helper x y acc =
+    let open Term in
+    fold2 x y ~init:acc
+      ~fvar:(fun ((_, subst) as acc) x y ->
+        (* Got two variables *)
+        match walk env subst x, walk env subst y with
+        | WC _, WC _ ->
+          (* TODO(Kakadu): explain why we return substitution as is *)
+          acc
+        | Var z, WC v | WC v, Var z -> extend (Obj.magic v) (Obj.repr z) acc
+        | Value z, WC v | WC v, Value z -> extend (Obj.magic v) (Obj.repr z) acc
+        | Var x, Var y      ->
+          (* if Var.equal x y then acc else extend x (Term.repr y) acc *)
+         let cmp = Term.Var.compare x y in
+          if cmp < 0 then extend x (Term.repr y) acc
+          else if cmp > 0 then extend y (Term.repr x) acc
+          else acc
+          | Var x, Value y    -> extend x y acc
+        | Value x, Var y    -> extend y x acc
+        | Value x, Value y  -> helper x y acc
+      )
+      ~fval:(fun acc x y ->
+          (* two primitive non-boxed values *)
+          if x = y then acc else raise Unification_failed
+      )
+      ~fk:(fun ((_, subst) as acc) l v y ->
+          (* Variable and term  *)
+          if Term.Var.is_wildcard v
+          then acc
+          else match walk env subst v with
+          | Var v    -> extend v y acc
+          | Value x  -> helper x y acc
+          | WC _ -> failwith "Wildcards should not appear in unifications"
+      )
+  in
+  try
+    let x, y = Term.(repr x, repr y) in
+    Some (helper x y ([], subst))
+  with Term.Different_shape _ | Unification_failed | Occurs_check -> None
