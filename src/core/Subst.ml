@@ -321,14 +321,14 @@ let walk_rational env subst x =
   walkv env subst x
 
 let reify_rational env subst x : Answer.t =
-  log "%s %d, x = %a" __FUNCTION__ __LINE__ Term.pp x;
+  (* log "%s %d, x = %a" __FUNCTION__ __LINE__ Term.pp x; *)
   visited_vars := Term.VarSet.empty;
   let rec deepfvar v =
-    log "%s %d, x = %a" __FUNCTION__ __LINE__ Term.pp v;
+    (* log "%s %d, x = %a" __FUNCTION__ __LINE__ Term.pp v; *)
     Env.check_exn env v;
     if Term.VarSet.mem v !visited_vars
       then
-        let() = log "%s %d Early exit" __FUNCTION__ __LINE__  in
+        (* let() = log "%s %d Early exit" __FUNCTION__ __LINE__  in *)
         Term.repr v
     else
       match walk_rational env subst v with
@@ -336,55 +336,74 @@ let reify_rational env subst x : Answer.t =
       (* | (Var v as ans) when Term.VarSet.mem v !seen  -> v *)
       | Var v -> Term.repr v
       | Value x ->
-        log "%s %d" __FUNCTION__ __LINE__;
+        (* log "%s %d" __FUNCTION__ __LINE__; *)
         Term.map x ~fval:Term.repr ~fvar:deepfvar
   in
   let ans = Term.map ~fval:Term.repr ~fvar:deepfvar (Term.repr x) in
   let () = log "exit from %s with %a" __FUNCTION__ Term.pp ans  in
   ans
 
-module UF = struct
-  include UnionFind.StoreMap.Make(Map.Make(Int))
-end
+module UF = UnionFindBasic
+let pp_elem ppf el =
+  Format.fprintf ppf "%a" Term.pp (UF.get el)
 
 let rat_unify env subst x y =
-  log "%s %d" __FILE__ __LINE__;
+  log "%s %d" __FUNCTION__ __LINE__;
   (* The idea is to do the unification and collect the unification prefix during the process *)
   let extend var term (prefix, subst) =
     let subst = extend ~skip_occurs:true ~scope:Term.Var.non_local_scope env subst var term in
     (Binding.({var; term})::prefix, subst)
   in
-  let uf = UF.new_store () in
+  (* let uf = UF.new_store () in *)
+  let var2uf_keys_store = ref Term.VarMap.empty in
+  let key_of_var var =
+    if Term.VarMap.mem var !var2uf_keys_store
+    then Term.VarMap.find var !var2uf_keys_store
+    else
+      let new_key = UF.make var in
+      var2uf_keys_store := Term.VarMap.add var new_key !var2uf_keys_store;
+      log "Added for key %d elem %d" var.Term.Var.index (Obj.magic new_key);
+      log "\t %a" Term.pp new_key;
+      new_key
+  in
+  (* let uf_lookup var = UF.find (key_of_var var) in *)
+  let are_same_vars x y : bool =
+    let xkey, ykey = key_of_var x, key_of_var y in
+    (UF.find xkey) = (UF.find ykey)
+     (* UF.eq uf x.Term.Var.index y.Term.Var.index *)
+  in
   let rec helper x y acc =
+    log "Helper: %a and %a" Term.pp x Term.pp y;
     let open Term in
     fold2 x y ~init:acc
       ~fvar:(fun ((_, subst) as acc) x y ->
-        (* Got two variables *)
-        match walk env subst x, walk env subst y with
-        | WC _, WC _ ->
-          (* TODO(Kakadu): explain why we return substitution as is *)
-          acc
-        | Var z, WC v | WC v, Var z -> extend (Obj.magic v) (Obj.repr z) acc
-        | Value z, WC v | WC v, Value z -> extend (Obj.magic v) (Obj.repr z) acc
-        | Var x, Var y      ->
+        log "  Got two vars: %a and %a" Term.pp x Term.pp y;
+          log "\t%s %d" __FUNCTION__ __LINE__;
           (* if Var.equal x y then acc else extend x (Term.repr y) acc *)
-         let cmp = Term.Var.compare x y in
-          if cmp < 0 then extend x (Term.repr y) acc
-          else if cmp > 0 then extend y (Term.repr x) acc
-          else acc
-          | Var x, Value y    -> extend x y acc
-        | Value x, Var y    -> extend y x acc
-        | Value x, Value y  -> helper x y acc
-      )
+          let xkey, ykey = key_of_var x, key_of_var y in
+          if (UF.find xkey) = (UF.find ykey)
+          then
+            let () = log "In the same class" in
+            acc
+          else
+            (log "    %a j+ %a " pp_elem xkey pp_elem ykey ;
+            let _joined = UF.union xkey ykey in
+            log "             ==> %a\n"  pp_elem _joined;
+            helper (Obj.repr @@ VarMap.find x subst )
+               (Obj.repr @@ VarMap.find y subst)
+               acc)
+        )
       ~fval:(fun acc x y ->
+          log "Got two values: %a and %a" Term.pp x Term.pp y;
           (* two primitive non-boxed values *)
           if x = y then acc else raise Unification_failed
       )
       ~fk:(fun ((_, subst) as acc) l v y ->
+          log "Got var %a and term %a" Term.pp v Term.pp y;
           (* Variable and term  *)
           if Term.Var.is_wildcard v
           then acc
-          else match walk env subst v with
+          else match walk_rational env subst v with
           | Var v    -> extend v y acc
           | Value x  -> helper x y acc
           | WC _ -> failwith "Wildcards should not appear in unifications"

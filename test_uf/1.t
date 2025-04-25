@@ -1,5 +1,5 @@
-  $ export OCAMLRUNPARAM="b,l=1000"
-  $ ./demo_rat.exe
+  $ export OCAMLRUNPARAM="b,l=10"
+  $ ./demo_rat.exe 2>&1 | nl -ba  | head -n 60
   fun x ->
     fun y ->
       fresh () (rat_unify x (Std.Nat.succ (Std.Nat.succ x)))

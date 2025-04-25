@@ -69,6 +69,7 @@ val freevars : Env.t -> t -> 'a -> Term.VarSet.t
  *)
 val unify : ?subsume:bool -> ?scope:Term.Var.scope -> Env.t -> t -> 'a -> 'a -> (Binding.t list * t) option
 
+(* val lookup_exn: Term.Var.t -> t -> Term.t *)
 
 val rat_unify : Env.t -> t -> 'a -> 'a -> (Binding.t list * t) option
 

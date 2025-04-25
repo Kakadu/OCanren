@@ -17,6 +17,7 @@
   Env
   Runconf
   Disequality
+  UnionFindBasic
   Option
   Bool
   Nat
