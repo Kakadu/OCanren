@@ -289,57 +289,55 @@ let reify env subst x =
     ~fvar:(fun v -> Term.repr v)
     ~fval:(fun x -> Term.repr x)
 
-let visited_vars = ref Term.VarSet.empty
-let walk_rational env subst x =
-  let rec walkv env subst v =
-    log "%s %d, vis.size = %d, v = %a" __FUNCTION__ __LINE__ (Term.VarSet.cardinal !visited_vars) Term.pp v;
+
+let walk_rational _visited_vars env subst x: _ * _ =
+  let rec walkv vis env subst v =
+    log "%s %d, vis.size = %d, v = %a" __FUNCTION__ __LINE__ (Term.VarSet.cardinal vis) Term.pp v;
     Env.check_exn env v;
     if Term.Var.is_wildcard v
-    then WC v
-    else if Term.VarSet.mem v !visited_vars then Var v
+    then (vis, WC v)
+    else if Term.VarSet.mem v vis then (vis, Var v)
     else match v.Term.Var.subst with
     | Some term ->
-        visited_vars := Term.VarSet.add v !visited_vars;
-        walkt  env subst (Obj.magic term)
+        let vis = Term.VarSet.add v vis in
+        walkt vis env subst (Obj.magic term)
     | None ->
-        if Term.VarSet.mem v !visited_vars then Var v
+        if Term.VarSet.mem v vis then vis, Var v
         else
-        (visited_vars := Term.VarSet.add v !visited_vars;
+        (let vis = Term.VarSet.add v vis in
         log "Mark var %a as visited" Term.pp v;
-        try walkt env subst (Term.VarMap.find v subst)
-        with Not_found -> Var v)
+        try walkt vis env subst (Term.VarMap.find v subst)
+        with Not_found -> vis, Var v)
   (* walk term *)
-  and walkt env subst t =
-    log "%s %d, vis.size = %d" __FUNCTION__ __LINE__ (Term.VarSet.cardinal !visited_vars);
+  and walkt vis env subst t : _*_ =
+    log "%s %d, vis.size = %d" __FUNCTION__ __LINE__ (Term.VarSet.cardinal vis);
     match Env.var env t with
-    | Some v when Term.Var.is_wildcard v -> WC v
-    | Some v when Term.VarSet.mem v !visited_vars ->
-        Var v
-    | Some v -> walkv env subst v
-    | None   -> Value t
+    | Some v when Term.Var.is_wildcard v -> vis, WC v
+    | Some v when Term.VarSet.mem v vis ->
+        vis, Var v
+    | Some v -> 
+      log "%s %d" __FUNCTION__ __LINE__;
+      walkv vis env subst v
+    | None   -> vis, Value t
   in
-  walkv env subst x
+  walkv _visited_vars env subst x
 
 let reify_rational env subst x : Answer.t =
-  (* log "%s %d, x = %a" __FUNCTION__ __LINE__ Term.pp x; *)
-  visited_vars := Term.VarSet.empty;
-  let rec deepfvar v =
+  log "\t%s %d, x = %a" __FUNCTION__ __LINE__ Term.pp x;
+  (* visited_vars := Term.VarSet.empty; *)
+  let rec deepfvar curenv v =
     (* log "%s %d, x = %a" __FUNCTION__ __LINE__ Term.pp v; *)
     Env.check_exn env v;
-    if Term.VarSet.mem v !visited_vars
-      then
-        (* let() = log "%s %d Early exit" __FUNCTION__ __LINE__  in *)
-        Term.repr v
+    if Term.VarSet.mem v curenv
+    then Term.repr v
     else
-      match walk_rational env subst v with
-      | WC v -> assert false
-      (* | (Var v as ans) when Term.VarSet.mem v !seen  -> v *)
-      | Var v -> Term.repr v
-      | Value x ->
-        (* log "%s %d" __FUNCTION__ __LINE__; *)
-        Term.map x ~fval:Term.repr ~fvar:deepfvar
+      match walk_rational curenv env subst v with
+      | _, WC v -> assert false
+      | _, Var v -> Term.repr v
+      | vis, Value x ->
+        Term.eval vis x ~fval:Term.repr ~fvar:deepfvar
   in
-  let ans = Term.map ~fval:Term.repr ~fvar:deepfvar (Term.repr x) in
+  let ans = Term.eval Term.VarSet.empty ~fval:Term.repr ~fvar:deepfvar (Term.repr x) in
   let () = log "exit from %s with %a" __FUNCTION__ Term.pp ans  in
   ans
 
@@ -403,10 +401,10 @@ let rat_unify env subst x y =
           (* Variable and term  *)
           if Term.Var.is_wildcard v
           then acc
-          else match walk_rational env subst v with
-          | Var v    -> extend v y acc
-          | Value x  -> helper x y acc
-          | WC _ -> failwith "Wildcards should not appear in unifications"
+          else match walk_rational VarSet.empty env subst v with
+          | _, Var v    -> extend v y acc
+          | _, Value x  -> helper x y acc
+          | _, WC _ -> failwith "Wildcards should not appear in unifications"
       )
   in
   try
