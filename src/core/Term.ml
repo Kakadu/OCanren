@@ -221,6 +221,27 @@ let rec map ~fvar ~fval x =
     fval x
   end
 
+
+let rec eval env ~fvar ~fval x =
+  log "%s: %a" __FUNCTION__ pp x;
+  let tx = Obj.tag x in
+  if (is_box tx) then
+    let sx = Obj.size x in
+    if has_var_structure tx sx x then
+      (let ans = fvar env (Obj.magic x) in
+      let () = log "exit from Term.eval with %a" pp ans in
+      ans)
+    else
+      let y = Obj.dup x in
+      for i = 0 to sx - 1 do
+        Obj.set_field y i @@ eval env ~fvar ~fval (Obj.field x i)
+      done;
+      y
+  else begin
+    is_valid_tag_exn tx;
+    fval x
+  end
+
 let rec iter ~fvar ~fval x =
   let tx = Obj.tag x in
   if (is_box tx) then
