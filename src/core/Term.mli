@@ -91,6 +91,8 @@ val var : 'a -> Var.t option
  *)
 val map : fvar:(Var.t -> t) -> fval:(value -> t) -> t -> t
 
+val eval : 'env -> fvar:('env -> Var.t -> t) -> fval:(value -> t) -> t -> t
+
 (* [iter ~fvar ~fval x] iteration over OCaml's value extended with logic variables;
  *   handles primitive types with the help of [fval] and logic variables with the help of [fvar]
  *)

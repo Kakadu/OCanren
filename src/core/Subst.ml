@@ -64,6 +64,7 @@ let varmap_of_bindings : Binding.t list -> Term.t Term.VarMap.t =
   Term.VarMap.empty
 
 type t = Term.t Term.VarMap.t
+type subst = t
 
 let empty = Term.VarMap.empty
 
@@ -159,11 +160,12 @@ let rec occurs env subst var term =
     ~fvar:(fun v -> if Term.Var.equal v var then raise Occurs_check)
     ~fval:(fun x -> ())
 
-let extend ~scope env subst var term  =
+let extend ?(skip_occurs=false) ~scope env subst var term  =
   (* if occurs env subst var term then raise Occurs_check *)
-  if Runconf.do_occurs_check () then occurs env subst var term;
+  (* if Runconf.do_occurs_check () then occurs env subst var term; *)
     (* assert (VarEnv.var env var <> VarEnv.var env term); *)
-  occurs env subst var term;
+  if not skip_occurs
+  then occurs env subst var term;
 
   (* It is safe to modify variables destructively if the case of scopes match.
    * There are two cases:
@@ -172,12 +174,12 @@ let extend ~scope env subst var term  =
    * 2) If we do unification after a fresh, then in case of failure it doesn't matter if
    *    the variable is be distructively substituted: we will not look on it in future.
    *)
-  if (scope = var.Term.Var.scope) && (scope <> Term.Var.non_local_scope)
+  (* if (scope = var.Term.Var.scope) && (scope <> Term.Var.non_local_scope)
   then begin
     var.subst <- Some (Obj.repr term);
     subst
   end
-    else
+    else *)
       Term.VarMap.add var (Term.repr term) subst
 
 exception Unification_failed
@@ -287,3 +289,149 @@ let reify env subst x =
   map env subst (Term.repr x)
     ~fvar:(fun v -> Term.repr v)
     ~fval:(fun x -> Term.repr x)
+
+
+let walk_rational _visited_vars env subst x: _ * _ =
+  let rec walkv vis env subst v =
+    log "%s %d, vis.size = %d, v = %a" __FUNCTION__ __LINE__ (Term.VarSet.cardinal vis) Term.pp v;
+    Env.check_exn env v;
+    if Term.Var.is_wildcard v
+    then (vis, WC v)
+    else if Term.VarSet.mem v vis then (vis, Var v)
+    else match v.Term.Var.subst with
+    | Some term ->
+        let vis = Term.VarSet.add v vis in
+        walkt vis env subst (Obj.magic term)
+    | None ->
+        if Term.VarSet.mem v vis then vis, Var v
+        else
+        (let vis = Term.VarSet.add v vis in
+        log "Mark var %a as visited" Term.pp v;
+        try walkt vis env subst (Term.VarMap.find v subst)
+        with Not_found -> vis, Var v)
+  (* walk term *)
+  and walkt vis env subst t : _*_ =
+    log "%s %d, vis.size = %d" __FUNCTION__ __LINE__ (Term.VarSet.cardinal vis);
+    match Env.var env t with
+    | Some v when Term.Var.is_wildcard v -> vis, WC v
+    | Some v when Term.VarSet.mem v vis ->
+        vis, Var v
+    | Some v ->
+      log "%s %d" __FUNCTION__ __LINE__;
+      walkv vis env subst v
+    | None   -> vis, Value t
+  in
+  walkv _visited_vars env subst x
+
+let reify_rational env subst x : Answer.t =
+  log "\t%s %d, x = %a" __FUNCTION__ __LINE__ Term.pp x;
+  (* visited_vars := Term.VarSet.empty; *)
+  let rec deepfvar curenv v =
+    (* log "%s %d, x = %a" __FUNCTION__ __LINE__ Term.pp v; *)
+    Env.check_exn env v;
+    if Term.VarSet.mem v curenv
+    then Term.repr v
+    else
+      match walk_rational curenv env subst v with
+      | _, WC v -> assert false
+      | _, Var v -> Term.repr v
+      | vis, Value x ->
+        Term.eval vis x ~fval:Term.repr ~fvar:deepfvar
+  in
+  let ans = Term.eval Term.VarSet.empty ~fval:Term.repr ~fvar:deepfvar (Term.repr x) in
+  let () = log "exit from %s with %a" __FUNCTION__ Term.pp ans  in
+  ans
+
+module UF = UnionFindBasic
+let pp_elem ppf el =
+  Format.fprintf ppf "%a" Term.pp (UF.get el)
+
+let rat_unify env subst x y =
+  log "%s %d" __FUNCTION__ __LINE__;
+  (* The idea is to do the unification and collect the unification prefix during the process *)
+  let extend0 var term (prefix, subst) =
+    let subst = extend ~skip_occurs:true ~scope:Term.Var.non_local_scope env subst var term in
+    (Binding.({var; term})::prefix, subst)
+  in
+  (* let uf = UF.new_store () in *)
+  let var2uf_keys_store = ref Term.VarMap.empty in
+  let key_of_var var =
+    if Term.VarMap.mem var !var2uf_keys_store
+    then Term.VarMap.find var !var2uf_keys_store
+    else
+      let new_key = UF.make var in
+      var2uf_keys_store := Term.VarMap.add var new_key !var2uf_keys_store;
+      log "Added for key %d elem %d" var.Term.Var.index (Obj.magic new_key);
+      log "\t %a" Term.pp new_key;
+      new_key
+  in
+  (* let uf_lookup var = UF.find (key_of_var var) in *)
+  (* let are_same_vars x y : bool =
+    let xkey, ykey = key_of_var x, key_of_var y in
+    (UF.find xkey) = (UF.find ykey)
+  in *)
+  let rec helper x y acc =
+    log "\nHelper: %a and %a" Term.pp x Term.pp y;
+    (* let open Term in *)
+    Term.fold2 x y ~init:acc
+      ~fvar:(fun ((_, subst) as acc) x y ->
+        log "  Got two vars: %a and %a" Term.pp x Term.pp y;
+        log "  subst = %a" pp subst;
+          log "\t%s %d" __FUNCTION__ __LINE__;
+          (* if Var.equal x y then acc else extend x (Term.repr y) acc *)
+          let xkey, ykey = key_of_var x, key_of_var y in
+          if (UF.find xkey) = (UF.find ykey)
+          then
+            (* let () = log "In the same class" in *)
+            acc
+          else
+            (log "    %a j+ %a " pp_elem xkey pp_elem ykey ;
+            let _joined = UF.union xkey ykey in
+            log "             ==> %a\n"  pp_elem _joined;
+            helper (Obj.repr @@ Term.VarMap.find x subst )
+               (Obj.repr @@ Term.VarMap.find y subst)
+               acc)
+        )
+      ~fval:(fun acc x y ->
+          log "Got two values: %a and %a" Term.pp x Term.pp y;
+          (* two primitive non-boxed values *)
+          if x = y then acc else raise Unification_failed
+      )
+      ~fk:(fun (bnds, subst) l v y ->
+          log "Got var %a and term %a (%s %d)" Term.pp v Term.pp y __FILE__ __LINE__;
+          let subst,y =
+            assert (Obj.is_block (Obj.repr y));
+            let y = Obj.repr y in
+            let yy = Obj.dup y in
+            let sz = Obj.size y in
+            let subst = ref subst in
+            (* TODO: Don't copy term if changes are not needed. *)
+            for i=0 to sz-1 do
+              let fi = Obj.field yy i in
+              if Env.is_var env fi
+              then ()
+              else (
+                let newvar = Env.fresh ~scope:Term.Var.non_local_scope env  in
+                let s0: subst = extend ~skip_occurs:true ~scope:Term.Var.non_local_scope env !subst newvar fi in
+                Obj.set_field yy i newvar;
+                subst := s0;
+                log "\t\tintermediate s0 = %a" pp s0;
+              )
+            done;
+            !subst, yy
+          in
+          log "\tnew term  = %a (%s %d)" Term.pp y __FILE__ __LINE__;
+          log "\tnew subst = %a" pp subst;
+          (* Variable and term  *)
+          if Term.Var.is_wildcard v
+          then (bnds, subst)
+          else match walk_rational Term.VarSet.empty env subst v with
+          | _, Var v    -> extend0 v y (bnds, subst)
+          | _, Value x  -> helper x y (bnds, subst)
+          | _, WC _ -> failwith "Wildcards should not appear in unifications"
+      )
+  in
+  try
+    let x, y = Term.(repr x, repr y) in
+    Some (helper x y ([], subst))
+  with Term.Different_shape _ | Unification_failed | Occurs_check -> None

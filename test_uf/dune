@@ -1,0 +1,19 @@
+(library
+ (name test_uf)
+ (modules test_uf)
+ (inline_tests)
+ (libraries unionFind)
+ (preprocess
+  (pps ppx_expect)))
+
+(executable
+ (name demo_rat)
+ (modules demo_rat)
+ (flags
+  (:standard -rectypes))
+ (libraries OCanren OCanren.tester)
+ (preprocess
+  (pps OCanren-ppx.ppx_fresh OCanren-ppx.ppx_repr)))
+
+(cram
+ (deps ./demo_rat.exe))

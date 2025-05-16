@@ -53,6 +53,20 @@ let logic = {
     end
 }
 
+let rat_show: logic -> string = fun n ->
+  (* Printf.printf "\n%s %d\n" __FUNCTION__ __LINE__; *)
+  let buf = Buffer.create 100 in
+  let rec helper vis = function
+  | Value O -> Buffer.add_char buf 'O'
+  | Value (S p) ->
+      Buffer.add_string buf "S (";
+      helper vis p;
+      Buffer.add_string buf ")"
+  | Var (v,_) -> Printf.bprintf buf "_.%d" v
+  in
+  helper Term.VarSet.empty n;
+  Buffer.contents buf
+
 let rec of_int n = if n <= 0 then O else S (of_int (n-1))
 let rec to_int   = function O -> 0 | S n -> 1 + to_int n
 

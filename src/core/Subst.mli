@@ -69,6 +69,10 @@ val freevars : Env.t -> t -> 'a -> Term.VarSet.t
  *)
 val unify : ?subsume:bool -> ?scope:Term.Var.scope -> Env.t -> t -> 'a -> 'a -> (Binding.t list * t) option
 
+(* val lookup_exn: Term.Var.t -> t -> Term.t *)
+
+val rat_unify : Env.t -> t -> 'a -> 'a -> (Binding.t list * t) option
+
 val unify_map: Env.t -> t -> Term.t Term.VarMap.t -> (Binding.t list * t) option
 
 val merge_disjoint : Env.t -> t -> t -> t
@@ -90,6 +94,7 @@ module Answer :
   end
 
 val reify : Env.t -> t -> 'a -> Answer.t
+val reify_rational : Env.t -> t -> 'a -> Answer.t
 
 [%%if not_defined_permissive stats]
 [%%else]

@@ -17,6 +17,7 @@
   Env
   Runconf
   Disequality
+  UnionFindBasic
   Option
   Bool
   Nat
@@ -26,7 +27,7 @@
   Timer
   Peep
   OCanren)
- (libraries GT)
+ (libraries GT unionFind)
  (flags
   (:standard -rectypes -short-paths))
  (preprocessor_deps optcomp-cookie.cfg)

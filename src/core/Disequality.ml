@@ -463,5 +463,7 @@ let recheck env subst cstore bs =
 let project env subst cstore fv =
   Conjunct.(split @@ project env subst (combine env subst cstore) fv)
 
-let reify env subst cstore x =
-  Conjunct.reify env subst (combine env subst cstore) x
+let reify env subst cstore x : Answer.t list =
+  if Term.VarMap.is_empty cstore
+  then [Answer.empty]
+  else Conjunct.reify env subst (combine env subst cstore) x
