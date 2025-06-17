@@ -17,11 +17,11 @@ let rec mylen2 xs rez =
 
 
 
-let make_list n : _ ilogic =
+let make_list n : (_,_) OCanren.injected =
   assert (n>0);
   let rec helper acc n =
     if n<= 0 then acc
-    else helper (Std.List.cons !!1 acc) (n-1)
+    else helper (Std.List.cons OCanren.(inj (lift 1)) acc) (n-1)
   in
   helper (Std.nil ()) n
 

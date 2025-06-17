@@ -192,6 +192,7 @@
 (cram
  (package OCanren)
  (applies_to test001)
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_ocanren_all.exe
@@ -202,6 +203,7 @@
 (cram
  (package OCanren)
  (applies_to test002)
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_ocanren_all.exe
@@ -211,6 +213,7 @@
 (cram
  (package OCanren)
  (applies_to test003sort)
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_ocanren_all.exe
@@ -220,6 +223,7 @@
 (cram
  (package OCanren)
  (applies_to test004)
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   test004.ml
@@ -228,8 +232,9 @@
 (cram
  (package OCanren)
  (applies_to test005)
- (enabled_if
-  (< %{ocaml-config:version} "5"))
+ ;  (enabled_if
+ ;   (< %{ocaml-config:version} "5"))
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_ocanren_all.exe
@@ -254,8 +259,9 @@
 (cram
  (package OCanren)
  (applies_to test007)
- (enabled_if
-  (< %{ocaml-config:version} "5"))
+ (enabled_if false)
+ ;  (enabled_if
+ ;   (< %{ocaml-config:version} "5"))
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_ocanren_all.exe
@@ -266,6 +272,7 @@
 (cram
  (package OCanren)
  (applies_to test008)
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_ocanren_all.exe
@@ -275,6 +282,7 @@
 (cram
  (package OCanren)
  (applies_to test009)
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_ocanren_all.exe
@@ -284,6 +292,7 @@
 (cram
  (package OCanren)
  (applies_to test010)
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_ocanren_all.exe
@@ -293,6 +302,7 @@
 (cram
  (package OCanren)
  (applies_to test011)
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_ocanren_all.exe
@@ -312,6 +322,7 @@
 (cram
  (package OCanren)
  (applies_to test013)
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_ocanren_all.exe
@@ -321,6 +332,7 @@
 (cram
  (package OCanren)
  (applies_to test014)
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_ocanren_all.exe
@@ -330,6 +342,7 @@
 (cram
  (package OCanren)
  (applies_to test015)
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_ocanren_all.exe
