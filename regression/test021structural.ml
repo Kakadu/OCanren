@@ -3,6 +3,8 @@ open OCanren
 open OCanren.Std
 open Tester
 
+let (!!) x = inj (lift x)
+
 (* all lists that contain ones *)
 let rec ones out =
   conde

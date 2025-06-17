@@ -68,7 +68,7 @@ val logic_to_ground_exn: ('a -> 'b) -> 'a logic -> 'b ground
 (** Make injected [list] from ground one of injected elements. The reverse conversion
     is availble only through reifiers (see {!section-reifiers} for details). *)
 (* val list : 'a GT.list -> 'a injected *)
-(* val list : ('a, 'b) Logic.injected GT.list -> ('a, 'b) injected *)
+val list : ('a, 'b) Logic.injected GT.list -> ('a, 'b) injected
 
 val to_logic: ('a -> 'b) -> 'a ground -> 'b logic
 

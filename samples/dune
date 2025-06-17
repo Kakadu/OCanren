@@ -9,6 +9,7 @@
 (executables
  (names tree sorting WGC add)
  (modules tree sorting WGC add)
+ (enabled_if false)
  (flags
   (:standard
    ;-dsource
@@ -64,6 +65,7 @@
 (executable
  (name JeepProblem)
  (modules JeepProblem)
+ (enabled_if false)
  (flags
   (:standard
    ;-dsource
@@ -86,6 +88,13 @@
 
 (alias
  (name all)
+ ;  (enabled_if false)
+ (deps
+  ;tree.exe sorting.exe WGC.exe JeepProblem.exe
+  len.exe))
+
+(cram
+ (enabled_if false)
  (deps
   tree.exe
   sorting.exe

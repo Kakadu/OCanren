@@ -155,10 +155,10 @@ let rec inj = to_logic
 (* let rec list = function
 | []    -> nil ()
 | x::xs -> cons x (list xs) *)
-(* let rec list : 'a 'b . ('a, 'b) Logic.injected GT.list -> ('a, 'b) injected = function
+let rec list : 'a 'b . ('a, 'b) Logic.injected GT.list -> ('a, 'b) injected = function
 | []    -> nil ()
 | x::xs -> cons x (list xs)
-*)
+
 let rec logic_to_ground_exn f = function
   | Var (_, _) -> failwith "List.logic_to_ground_exn: variables inside"
   | Value Nil -> []

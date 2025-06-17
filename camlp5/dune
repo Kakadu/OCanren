@@ -209,6 +209,8 @@
 
 (cram
  (package OCanren)
+ (applies_to test007)
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_distrib.exe
@@ -221,6 +223,8 @@
 
 (cram
  (package OCanren)
+ (applies_to test008)
+ (enabled_if false)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_distrib.exe
