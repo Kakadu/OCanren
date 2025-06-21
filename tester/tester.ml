@@ -9,16 +9,16 @@ let wrap onOK i (name, x) =
   onOK i name x
 
 let qh onOK = fun q () ->
-  List.iteri (wrap onOK) @@ ["q", q]
+  Stdlib.List.iteri (wrap onOK) @@ ["q", q]
 
 let qrh onOK = fun q r () ->
-  List.iteri (wrap onOK) @@ ["q", q; "r", r]
+  Stdlib.List.iteri (wrap onOK) @@ ["q", q; "r", r]
 
 let qrsh onOK = fun q r s () ->
-  List.iteri (wrap onOK) @@ ["q", q; "r", r; "s", s]
+  Stdlib.List.iteri (wrap onOK) @@ ["q", q; "r", r; "s", s]
 
 let qrsth onOK = fun q r s t () ->
-  List.iteri (wrap onOK) @@ ["q", q; "r", r; "s", s; "t", t]
+  Stdlib.List.iteri (wrap onOK) @@ ["q", q; "r", r; "s", s; "t", t]
 
 let make_title n msg =
   printf "%s, %s answer%s {\n%!"

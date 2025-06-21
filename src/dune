@@ -40,7 +40,7 @@
      GT.ppx_all
      --
      -pp
-     camlp5/pp5+gt+plugins+dump.exe
+     OCanren/camlp5/pp5+gt+plugins+dump.exe
      ;%{read-lines:../config/instrumentalization.cfg}
      )
     ; Core
@@ -63,7 +63,24 @@
 (rule
  (deps
   (:tail OCanren_tail.ml)
+  core/Runconf.ml
+  core/Term.ml
+  core/Env.ml
+  core/Logic.mli
+  core/Logic.ml
+  core/Subst.ml
+  core/Disequality.ml
+  core/Stream.ml
+  core/Core.mli
+  core/Core.ml
+  core/Timer.ml
   std/Bool.ml
+  std/Nat.ml
+  std/Option.ml
+  std/Pair.ml
+  std/Triple.ml
+  std/List.mli
+  std/List.ml
   ;
   )
  (target OCanren.ml)
@@ -109,6 +126,10 @@
     (run echo "end= struct (* Core.ml *)")
     (run cat core/Core.ml)
     (run echo "end (* Core.ml *)\n")
+    ;
+    (run echo "module Timer = struct (* Timer.ml *)")
+    (run cat core/Timer.ml)
+    (run echo "end (* Timer.ml *)\n")
     ;
     (run echo "module Bool = struct (* Bool.ml *)")
     (run cat std/Bool.ml)

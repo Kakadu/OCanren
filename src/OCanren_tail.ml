@@ -24,7 +24,7 @@ include Core
 (* module Runconf = Runconf *)
 
 (** See also {!Install_timer} *)
-module Timer   = Timer
+(* module Timer   = Timer *)
 (* module Env = Env *)
 
 (** A standard library for logic programs. *)
