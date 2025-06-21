@@ -130,6 +130,7 @@ let discover_stats () =
   Sys.command (Printf.sprintf "rm -fr '%s'" filename) |> ignore;
   List.concat
     [
+      [ "" ];
       (match Unix.getenv "OCANREN_STATS" with
       | exception Not_found -> []
       | _ -> [ "-D"; "STATS" ]);

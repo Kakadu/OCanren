@@ -59,7 +59,7 @@ let falso = Logic.inj false
 let truo  = Logic.inj true
 
 let (|^) a b c =
-  conde [
+  Core.conde [
     (a === falso) &&& (b === falso) &&& (c === truo );
     (a === falso) &&& (b === truo ) &&& (c === truo );
     (a === truo ) &&& (b === falso) &&& (c === truo );

@@ -9,49 +9,132 @@
  (name OCanren)
  (public_name OCanren)
  (modules
-  Logic
-  Core
-  Stream
-  Subst
-  Term
-  Env
-  Runconf
-  Disequality
-  Option
-  Bool
-  Nat
-  Pair
-  Triple
-  List
-  Timer
-  Peep
+  ; Logic
+  ; Core
+  ; Stream
+  ; Subst
+  ; Term
+  ; Env
+  ; Runconf
+  ; Disequality
+  ; Option
+  ; Bool
+  ; Nat
+  ; Pair
+  ; Triple
+  ; List
+  ; Timer
+  ; Peep
   OCanren)
  (libraries GT)
  (flags
   (:standard -rectypes -short-paths -w -49))
  ; Below we use PPX rewriter to preprocess module Triple and old school camlp5 for everything else.
  ; Later we are going to use PPX everywhere.
+ (preprocessor_deps %{project_root}/camlp5/pp5+gt+plugins+dump.exe)
  (preprocess
   (per_module
-   ((pps GT.ppx_all)
-    Triple)
-   ((action
-     (run
-      %{project_root}/camlp5/pp5+gt+plugins+dump.exe
-      %{read-lines:../config/instrumentalization.cfg}
-      %{input-file}))
-    Core
-    Stream
-    Subst
-    Option
-    Bool
-    Nat
-    Pair
-    List
-    Logic
-    Peep
+   ;  ((pps GT.ppx_all)
+   ;   Triple)
+   ((pps
+     GT.ppx_all
+     --
+     -pp
+     camlp5/pp5+gt+plugins+dump.exe
+     ;%{read-lines:../config/instrumentalization.cfg}
+     )
+    ; Core
+    ; Stream
+    ; Subst
+    ; Option
+    ; Bool
+    ; Nat
+    ; Pair
+    ; Triple
+    ; List
+    ; Logic
+    ; Peep
     OCanren))))
 
 (documentation
  (package OCanren)
  (mld_files index))
+
+(rule
+ (deps
+  (:tail OCanren_tail.ml)
+  std/Bool.ml
+  ;
+  )
+ (target OCanren.ml)
+ (mode
+  (promote (until-clean)))
+ (action
+  (with-stdout-to
+   %{target}
+   (progn
+    (run echo "")
+    (run echo "module Runconf = struct (* Runconf.ml *)")
+    (run cat core/Runconf.ml)
+    (run echo -e "end (* Runconf.ml *)\n")
+    ;
+    (run echo "module Term = struct (* Term.ml *)")
+    (run cat core/Term.ml)
+    (run echo -e "end (* Term.ml *)\n")
+    (run echo "module Env = struct (* Env.ml *)")
+    (run cat core/Env.ml)
+    (run echo "end (* Env.ml *)")
+    (run echo "module Logic : sig (* Logic.ml *)")
+    (run cat core/Logic.mli)
+    (run echo "end = struct (* Logic.ml *)")
+    (run cat core/Logic.ml)
+    (run echo "end")
+    ;
+    (run echo "module Subst = struct (* Subst.ml *)")
+    (run cat core/Subst.ml)
+    (run echo -e "end (* Subst.ml *)\n")
+    ;
+    (run echo "module Disequality = struct (* Disequality.ml *)")
+    (run cat core/Disequality.ml)
+    (run echo -e "end (* Disequality.ml *)\n")
+    ;
+    (run echo "module Stream = struct (* Stream.ml *)")
+    (run cat core/Stream.ml)
+    (run echo -e "end (* Stream.ml *)\n")
+    ;
+    ; N.B. We add a few interfaces because some modules define module List.
+    ; Get rid of it. Maybe interface affects performance?
+    (run echo "module Core : sig (* Core.ml *)")
+    (run cat core/Core.mli)
+    (run echo "end= struct (* Core.ml *)")
+    (run cat core/Core.ml)
+    (run echo "end (* Core.ml *)\n")
+    ;
+    (run echo "module Bool = struct (* Bool.ml *)")
+    (run cat std/Bool.ml)
+    (run echo "end (* Bool.ml *)\n")
+    ;
+    (run echo "module Nat = struct (* Nat.ml *)")
+    (run cat std/Nat.ml)
+    (run echo "end (* Nat.ml *)\n")
+    ;
+    (run echo "module Option = struct (* Option.ml *)")
+    (run cat std/Option.ml)
+    (run echo "end (* Option.ml *)\n")
+    ;
+    (run echo "module Pair = struct (* Pair.ml *)")
+    (run cat std/Pair.ml)
+    (run echo "end (* Pair.ml *)\n")
+    ;
+    (run echo "module Triple = struct (* Triple.ml *)")
+    (run cat std/Triple.ml)
+    (run echo "end (* Triple.ml *)\n")
+    ;
+    ;
+    (run echo "module List : sig  (* List.ml *)")
+    (run cat std/List.mli)
+    (run echo "end = struct (* List.ml *)")
+    (run cat std/List.ml)
+    (run echo "end (* List.ml *)\n")
+    ;
+    (run cat %{tail})))))

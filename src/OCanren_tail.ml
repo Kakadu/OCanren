@@ -20,12 +20,12 @@
 include Logic
 include Core
 
-module Stream  = Stream
-module Runconf = Runconf
+(* module Stream  = Stream *)
+(* module Runconf = Runconf *)
 
 (** See also {!Install_timer} *)
 module Timer   = Timer
-module Env = Env
+(* module Env = Env *)
 
 (** A standard library for logic programs. *)
 module Std =
