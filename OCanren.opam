@@ -21,19 +21,19 @@ authors: [
 ]
 license: "LGPL-2.1"
 homepage: "https://github.com/JetBrains-Research/OCanren"
-bug-reports: "https://github.com/JetBrains-Research/OCanren/issues"
+bug-reports: "https://github.com/PLTools/OCanren/issues"
 depends: [
   "dune" {>= "2.9"}
-  "ocaml" {>= "4.10"}
+  "ocaml" {>= "4.14.2"}
   "dune-configurator"
   "ocamlfind"
   "camlp5"
   "logger-p5"
-  "GT" {>= "0.5"}
+  "GT" {>= "0.5.4"}
   "benchmark" {with-test}
   "ocamlformat" {with-test & >= "0.22" & < "0.26"}
-  "ppx_inline_test"
-  "mtime" {< "2.0.0"}
+  "ppx_inline_test_nobase"
+  "mtime" {= "2.1.0"}
   "odoc" {with-doc}
 ]
 build: [

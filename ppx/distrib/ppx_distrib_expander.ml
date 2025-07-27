@@ -11,7 +11,7 @@ open Stdppx
 open Ppxlib.Ast_builder.Default
 open Ppxlib.Ast_helper
 open Printf
-module Format = Caml.Format
+module Format = Stdlib.Format
 open Myhelpers
 
 let use_logging = false
@@ -28,21 +28,20 @@ let notify fmt =
   Printf.ksprintf
     (fun s ->
       let _cmd = Printf.sprintf "notify-send %S" s in
-      let (_ : int) = Caml.Sys.command _cmd in
+      let (_ : int) = Stdlib.Sys.command _cmd in
       ())
     fmt
 ;;
 
-let ( @@ ) = Caml.( @@ )
+let ( @@ ) = Stdlib.( @@ )
 let nolabel = Asttypes.Nolabel
 
 let mangle_construct_name name =
   let low =
     String.mapi
-      ~f:
-        (function
-         | 0 -> Char.lowercase_ascii
-         | _ -> Fn.id)
+      ~f:(function
+        | 0 -> Char.lowercase_ascii
+        | _ -> Fn.id)
       name
   in
   match low with
@@ -286,8 +285,8 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
             (Exp.construct
                (Located.map_lident cd.pcd_name)
                (if List.is_empty args
-               then None
-               else Some (Exp.mytuple ~loc (List.map args ~f:(Exp.lident ~loc)))))
+                then None
+                else Some (Exp.mytuple ~loc (List.map args ~f:(Exp.lident ~loc)))))
         | Pcstr_record ls ->
           let add_args rhs =
             List.fold_right ~init:rhs ls ~f:(fun { pld_name = { txt } } acc ->
@@ -333,8 +332,8 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       failwiths
         ~loc:base_tdecl.ptype_loc
         "%s %d Open and abstract types are not supported"
-        Caml.__FILE__
-        Caml.__LINE__
+        Stdlib.__FILE__
+        Stdlib.__LINE__
   in
   let mk_arg_reifier s = sprintf "r%s" s in
   let make_reifier_gen ~kind ?(typ = None) _is_rec tdecl =
@@ -395,8 +394,8 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
         failwiths
           ~loc:manifest.ptyp_loc
           "should not happen %s %d"
-          Caml.__FILE__
-          Caml.__LINE__
+          Stdlib.__FILE__
+          Stdlib.__LINE__
     in
     let pat =
       match typ with
@@ -412,8 +411,8 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       ~kind:Reify
       ~typ:
         (if List.is_empty tdecl.ptype_params
-        then Some [%type: (_, [%t logic_typ]) OCanren.Reifier.t]
-        else None)
+         then Some [%type: (_, [%t logic_typ]) OCanren.Reifier.t]
+         else None)
       is_rec
       tdecl
   in
@@ -423,11 +422,11 @@ let process_main ~loc base_tdecl (rec_, tdecl) =
       ~kind:Prj_exn
       ~typ:
         (if List.is_empty tdecl.ptype_params
-        then
-          Some
-            [%type:
-              (_, [%t gtypify_exn ~ccompositional:true ~loc manifest]) OCanren.Reifier.t]
-        else None)
+         then
+           Some
+             [%type:
+               (_, [%t gtypify_exn ~ccompositional:true ~loc manifest]) OCanren.Reifier.t]
+         else None)
       is_rec
       tdecl
   in

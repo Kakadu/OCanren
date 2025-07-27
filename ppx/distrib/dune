@@ -12,7 +12,7 @@
   (:standard -linkall))
  (inline_tests)
  (preprocess
-  (pps ppxlib.metaquot ppx_inline_test ppx_expect)))
+  (pps ppxlib.metaquot ppx_inline_test_nobase ppx_expect_nobase)))
 
 (library
  (name prepare_fully_abstract)
@@ -21,4 +21,4 @@
  (libraries ppxlib myhelpers)
  (inline_tests)
  (preprocess
-  (pps ppxlib.metaquot ppx_expect)))
+  (pps ppxlib.metaquot ppx_expect_nobase)))

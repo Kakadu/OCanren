@@ -21,7 +21,7 @@
 open Ppxlib
 open Stdppx
 open Ppxlib.Ast_builder.Default
-module Format = Caml.Format
+module Format = Stdlib.Format
 open Myhelpers
 
 let failwiths ?(loc = Location.none) fmt = Location.raise_errorf ~loc fmt
@@ -184,7 +184,7 @@ let make_reifier_composition ~pat ?(typ = None) kind tdecl =
   let helper = reifier_of_core_type kind in
   let manifest =
     match tdecl.ptype_manifest with
-    | None -> failwiths "A type without manifest %s %d" Caml.__FILE__ Caml.__LINE__
+    | None -> failwiths "A type without manifest %s %d" Stdlib.__FILE__ Stdlib.__LINE__
     | Some m -> m
   in
   let body =
@@ -201,8 +201,8 @@ let make_reifier_composition ~pat ?(typ = None) kind tdecl =
       failwiths
         ~loc
         "This type is not expected as manifest %s %d"
-        Caml.__FILE__
-        Caml.__LINE__
+        Stdlib.__FILE__
+        Stdlib.__LINE__
   in
   let loc = tdecl.ptype_loc in
   let pat =
@@ -222,8 +222,8 @@ let process1 tdecl =
         Reify
         ~typ:
           (if List.is_empty tdecl.ptype_params
-          then Some [%type: (_, [%t ltypify_exn ~ccompositional:true ~loc m]) Reifier.t]
-          else None)
+           then Some [%type: (_, [%t ltypify_exn ~ccompositional:true ~loc m]) Reifier.t]
+           else None)
         ~pat:
           (ppat_var
              ~loc
@@ -233,8 +233,8 @@ let process1 tdecl =
         Prj_exn
         ~typ:
           (if List.is_empty tdecl.ptype_params
-          then Some [%type: (_, [%t gtypify_exn ~ccompositional:true ~loc m]) Reifier.t]
-          else None)
+           then Some [%type: (_, [%t gtypify_exn ~ccompositional:true ~loc m]) Reifier.t]
+           else None)
         ~pat:
           (ppat_var
              ~loc

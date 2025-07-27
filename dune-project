@@ -19,29 +19,29 @@
   "The family of miniKanren derivatives has many implementations. This\none is typed embedding to OCaml. The original implementation for\nthis is in scheme and can be found at https://github.com/michaelballantyne/faster-miniKanren .\n\nFeatures:\n1) disequality constraints\n2) relational standard library: lists, nats\n")
  (depends
   (ocaml
-   (>= 4.10))
+   (>= 4.14.2))
   dune-configurator
   ocamlfind
   camlp5
   logger-p5
   (GT
-   (>= 0.5))
+   (>= 0.5.4))
   (benchmark :with-test)
   (ocamlformat
    (and
     :with-test
     (>= 0.22)
     (< 0.26)))
-  ppx_inline_test
+  ppx_inline_test_nobase
   (mtime
-   (< 2.0.0)))
+   (= 2.1.0)))
  (authors
   "Dmitrii Boulytchev https://github.com/dboulytchev"
   "Dmitrii Kosarev https://github.com/Kakadu"
   "Evgenii Moiseenko https://github.com/eupp"
   "Petr Lozov https://github.com/Lozov-Petr"
   "JetBrains Research https://research.jetbrains.org")
- (bug_reports "https://github.com/JetBrains-Research/OCanren/issues")
+ (bug_reports "https://github.com/PLTools/OCanren/issues")
  (maintainers "Dmitrii Kosarev Kakadu@pm.me"))
 
 (package
@@ -60,8 +60,8 @@
     (>= 0.22)
     (<= 0.26.0)))
   base
-  ppx_inline_test
-  ppx_expect)
+  ppx_inline_test_nobase
+  ppx_expect_nobase)
  (authors
   "Dmitrii Kosarev https://github.com/Kakadu"
   "JetBrains Research https://research.jetbrains.org")

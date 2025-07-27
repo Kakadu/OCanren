@@ -42,8 +42,8 @@ let classify_name ~f e =
 
 let need_insert_fname ~name e = classify_name e ~f:(Stdlib.( = ) (Lident name))
 (* match e.pexp_desc with
-  | Pexp_ident i when i.txt = Lident name -> true
-  | _ -> false *)
+   | Pexp_ident i when i.txt = Lident name -> true
+   | _ -> false *)
 
 let is_defer = need_insert_fname ~name:"defer"
 
@@ -61,7 +61,7 @@ let is_conj = need_insert_fname ~name:"conj"
 let is_disj e = need_insert_fname ~name:"disj" e || need_insert_fname ~name:"|||" e
 
 (*
-let rec walkthrough ~fname (expr: expression) =
+   let rec walkthrough ~fname (expr: expression) =
 
   let add_fname () =
     [%expr [%e Ast_helper.Exp.constant (Pconst_string (fname,None))] <=>
@@ -138,9 +138,9 @@ let reconstruct_args e =
   | Pexp_apply ({ pexp_desc = Pexp_ident { txt = Longident.Lident arg1; _ } }, ys) ->
     (* fresh (var1 var2 var3) body *)
     option_map (are_all_idents ys) ~f:(fun xs -> arg1 :: xs)
-  (* no fresh variables: just for geting rid of &&&  *)
+  (* no fresh variables: just for geting rid of &&& *)
   | Pexp_construct ({ txt = Lident "()" }, None) -> Some []
-  (* [fresh arg0 body] -- single fresh variable  *)
+  (* [fresh arg0 body] -- single fresh variable *)
   | Pexp_ident { txt = Lident arg1; _ } -> Some [ arg1 ]
   | _ -> None
 ;;
@@ -205,21 +205,21 @@ let mapper =
                  [%expr
                    Fresh.one
                      (fun [%p Pat.var ~loc (Ast_builder.Default.Located.mk ident ~loc)] ->
-                     [%e acc])])
+                        [%e acc])])
                ~init:[%expr delay (fun () -> [%e new_body])]
            in
            ans
          | None ->
-           Caml.Format.eprintf "Can't reconstruct args of 'fresh'";
+           Stdlib.Format.eprintf "Can't reconstruct args of 'fresh'";
            { e with pexp_desc = Pexp_apply (e1, [ Nolabel, new_body ]) })
       | Pexp_apply (d, [ (_, body) ]) when is_defer d ->
         let ans = [%expr delay (fun () -> [%e self#expression body])] in
         ans
       | Pexp_apply (d, body) when is_unif d ->
         (* let loc_str =
-          Caml.Format.asprintf "%a" Selected_ast.Ast.Location.print_compact e.pexp_loc;
-        in
-        let body = (Labelled "loc", Exp.constant (Pconst_string (loc_str,None))) :: body in *)
+           Stdlib.Format.asprintf "%a" Selected_ast.Ast.Location.print_compact e.pexp_loc;
+           in
+           let body = (Labelled "loc", Exp.constant (Pconst_string (loc_str,None))) :: body in *)
         Exp.apply ~loc:e.pexp_loc d body
       | Pexp_apply (e, xs) ->
         let ans =
@@ -317,8 +317,8 @@ let mapper =
       | Pexp_open (_od, ee) -> { e with pexp_desc = Pexp_open (_od, self#expression ee) }
       | Pexp_letop _ | Pexp_extension _ | Pexp_pack _ -> e
     (*    | _ ->
-      Caml.Format.printf "%a\n%a\n%!" Location.print loc Pprintast.expression e;
-      assert false*)
+          Stdlib.Format.printf "%a\n%a\n%!" Location.print loc Pprintast.expression e;
+          assert false*)
   end
 ;;
 
