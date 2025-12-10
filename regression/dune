@@ -7,3 +7,10 @@
    (:standard -rectypes))))
 
 (include dune.tests)
+
+(cram
+ (deps
+  test023ulc.ml
+  %{project_root}/camlp5/pp5+ocanren+o.exe
+  %{project_root}/ppx/pp_ocanren_all.exe)
+ (applies_to test023))

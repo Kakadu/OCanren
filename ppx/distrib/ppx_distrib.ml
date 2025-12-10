@@ -467,5 +467,12 @@ let () =
   Ppxlib.Driver.add_arg
     "-new-typenames"
     (Stdlib.Arg.Unit (fun () -> Reify_impl.config.naming_style <- New_naming))
-    ~doc:" Doc here"
+    ~doc:"Mangle type names by adding _logic/_ground suffix"
+;;
+
+let () =
+  Ppxlib.Driver.add_arg
+    "-no-new-typenames"
+    (Stdlib.Arg.Unit (fun () -> Reify_impl.config.naming_style <- Old_naming))
+    ~doc:"Old naming scheme: creates types t, ground and logic. User types named t are forbidden"
 ;;
