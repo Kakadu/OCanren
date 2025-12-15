@@ -55,11 +55,11 @@ let has_name_attr (xs : attributes) =
   let exception Found of string in
   try
     List.iter xs ~f:(function
-        | { attr_loc; attr_name = { txt = "name" }; attr_payload = PStr [ si ] } ->
-            let open Ast_pattern in
-            let p = pstr_eval (pexp_constant (pconst_string __ __ none)) nil in
-            parse p attr_loc ~on_error:(fun _ -> ()) si (fun s -> raise (Found s))
-        | _ -> ());
+      | { attr_loc; attr_name = { txt = "name" }; attr_payload = PStr [ si ] } ->
+          let open Ast_pattern in
+          let p = pstr_eval (pexp_constant (pconst_string __ __ none)) nil in
+          parse p attr_loc ~on_error:(fun _ -> ()) si (fun s -> raise (Found s))
+      | _ -> ());
     None
   with
   | Found s -> Some s
@@ -523,6 +523,92 @@ let pp_attributes ppf attrs =
     | _ -> Format.fprintf ppf "pprinting is not implemented")
 ;;
 
+let make_fmapt ~loc base_tdecl tdecl =
+  let names =
+    extract_names (name_type_params_in_td tdecl).ptype_params
+    |> List.map ~f:(fun prefix -> gen_symbol ~prefix ())
+  in
+  let gt_fuly_expr =
+    [%expr
+      GT.gmap
+        [%e
+          if Reify_impl.is_old ()
+          then [%expr t]
+          else pexp_ident ~loc (Located.mk ~loc (Lident base_tdecl.ptype_name.txt))]]
+  in
+  let expr = Reify_impl.make_fmapt_body ~loc gt_fuly_expr (List.length names) in
+  let pat =
+    ppat_var
+      ~loc
+      (if Reify_impl.is_new ()
+       then Located.sprintf ~loc "%s_fmapt" tdecl.ptype_name.txt
+       else Located.sprintf ~loc "fmapt")
+  in
+  value_binding ~loc ~pat ~expr
+;;
+
+let add_typ ~loc ~injected_name ~result_type_name ~params ri =
+  (* let g =
+    match kind with
+    | Reify_impl.Reify -> logic_decl
+    | Prj_exn -> ground_decl
+  in *)
+  let injected_typ =
+    let lident = Located.mk ~loc (Lident injected_name) in
+    let lident_g = Located.mk ~loc (Lident result_type_name) in
+    let names = extract_names params in
+    let mangle = sprintf "%s_2" in
+    let names_2 = List.map names ~f:mangle in
+    let rez =
+      [%type:
+        ( [%t ptyp_constr ~loc lident (List.map names ~f:(ptyp_var ~loc))]
+        , [%t ptyp_constr ~loc lident_g (List.map names_2 ~f:(ptyp_var ~loc))] )
+        OCanren.Reifier.t]
+    in
+    List.fold_right names ~init:rez ~f:(fun name acc ->
+        [%type:
+          ([%t ptyp_var ~loc name], [%t ptyp_var ~loc (mangle name)]) OCanren.Reifier.t -> [%t acc]])
+  in
+  { ri with Reifier_info.typ = Some injected_typ }
+;;
+
+let on_fully_abstract tdecl : (type_declaration, value_binding, Reifier_info.t) the_result option =
+  let () =
+    if Prepare_fully_abstract.is_fully_abstract tdecl
+    then ()
+    else (
+      let () =
+        Format.eprintf "Type declaration is not fully anstract\n%a" Pprintast.type_declaration tdecl
+      in
+      assert false)
+  in
+  (* empty_rez [] [] [] *)
+  let logic = tdecl in
+  Some
+    { t = tdecl
+    ; ground = tdecl
+    ; logic
+    ; injected = tdecl
+    ; fmapt = make_fmapt ~loc:tdecl.ptype_loc tdecl tdecl
+    ; prj_exn =
+        add_typ
+          ~loc:tdecl.ptype_loc
+          ~params:tdecl.ptype_params
+          ~injected_name:"injected_fuck"
+          ~result_type_name:"FUCKUCK"
+          (make_reifier_gen ~kind:Prj_exn false tdecl)
+    ; reify =
+        add_typ
+          ~loc:tdecl.ptype_loc
+          ~params:tdecl.ptype_params
+          ~injected_name:"injected_fuck"
+          ~result_type_name:"logic_guck"
+          (make_reifier_gen ~kind:Reify false tdecl)
+    ; other = []
+    ; other_sigs = []
+    }
+;;
+
 let process_main ~loc rec_ (base_tdecl, tdecl) =
   let (module S) = make_strat () in
   let is_rec =
@@ -701,61 +787,27 @@ let process_main ~loc rec_ (base_tdecl, tdecl) =
               | Ptyp_var _v -> t
               | _ -> assert false))
      in *)
-  let make_fmapt decl =
-    let names =
-      extract_names (name_type_params_in_td decl).ptype_params
-      |> List.map ~f:(fun prefix -> gen_symbol ~prefix ())
-    in
-    let gt_fuly_expr =
-      [%expr
-        GT.gmap
-          [%e
-            if Reify_impl.is_old ()
-            then [%expr t]
-            else pexp_ident ~loc (Located.mk ~loc (Lident base_tdecl.ptype_name.txt))]]
-    in
-    let expr = Reify_impl.make_fmapt_body ~loc gt_fuly_expr (List.length names) in
-    let pat =
-      ppat_var
-        ~loc
-        (if Reify_impl.is_new ()
-         then Located.sprintf ~loc "%s_fmapt" tdecl.ptype_name.txt
-         else Located.sprintf ~loc "fmapt")
-    in
-    value_binding ~loc ~pat ~expr
-  in
-  let add_typ ~kind ri =
-    let g =
-      match kind with
-      | Reify_impl.Reify -> ltyp
-      | Prj_exn -> tdecl
-    in
-    let injected_typ =
-      let lident = Located.mk ~loc (Lident ityp.ptype_name.txt) in
-      let lident_g = Located.mk ~loc (Lident g.ptype_name.txt) in
-      let names = extract_names tdecl.ptype_params in
-      let mangle = sprintf "%s_2" in
-      let names_2 = List.map names ~f:mangle in
-      let rez =
-        [%type:
-          ( [%t ptyp_constr ~loc lident (List.map names ~f:(ptyp_var ~loc))]
-          , [%t ptyp_constr ~loc lident_g (List.map names_2 ~f:(ptyp_var ~loc))] )
-          OCanren.Reifier.t]
-      in
-      List.fold_right names ~init:rez ~f:(fun name acc ->
-          [%type:
-               ([%t ptyp_var ~loc name], [%t ptyp_var ~loc (mangle name)]) OCanren.Reifier.t
-            -> [%t acc]])
-    in
-    { ri with Reifier_info.typ = Some injected_typ }
-  in
   { t = base_tdecl
   ; ground = decorate_with_attributes tdecl base_tdecl.ptype_attributes
   ; logic = ltyp
   ; injected = ityp
-  ; fmapt = make_fmapt base_tdecl
-  ; prj_exn = add_typ ~kind:Prj_exn (make_reifier_gen ~kind:Prj_exn is_rec tdecl)
-  ; reify = add_typ ~kind:Reify (make_reifier_gen ~kind:Reify is_rec tdecl)
+  ; fmapt = make_fmapt ~loc base_tdecl base_tdecl
+  ; prj_exn =
+      add_typ
+        ~loc
+        ~injected_name:ityp.ptype_name.txt
+        ~result_type_name:tdecl.ptype_name.txt
+        ~params:tdecl.ptype_params
+        (* ~logic_decl:ltyp
+        ~ground_decl:tdecl *)
+        (make_reifier_gen ~kind:Prj_exn is_rec tdecl)
+  ; reify =
+      add_typ
+        ~loc
+        ~injected_name:ityp.ptype_name.txt
+        ~result_type_name:ltyp.ptype_name.txt
+        ~params:tdecl.ptype_params
+        (make_reifier_gen ~kind:Reify is_rec tdecl)
   ; other = creators
   ; other_sigs = [] (* TODO: signatures of creators will be added later *)
   }

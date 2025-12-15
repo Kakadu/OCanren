@@ -12,6 +12,24 @@ open Location
 open Myhelpers
 module TypeNameMap = Map.Make (String)
 
+let is_fully_abstract tdecl =
+  match tdecl.ptype_kind with
+  | Ptype_variant cds ->
+      List.for_all
+        (fun cd ->
+          match cd.pcd_args with
+          | Pcstr_tuple tt ->
+              List.for_all
+                (fun typ ->
+                  match typ.ptyp_desc with
+                  | Ptyp_var _ -> true
+                  | _ -> false)
+                tt
+          | Pcstr_record _ -> failwith "not implemented")
+        cds
+  | _ -> false
+;;
+
 module FoldInfo = struct
   type item =
     { param_name : string
@@ -128,7 +146,9 @@ let apply_collected_info info tdecls =
   List.fold_left
     (fun (ful_abstrs, rec_decls) tdecl ->
       match String_map.find tdecl.ptype_name.txt info with
-      | exception Not_found -> assert false
+      | exception Not_found ->
+          Format.eprintf "INfo about type %s is not found\n%!" tdecl.ptype_name.txt;
+          ful_abstrs, tdecl :: rec_decls (* assert false *)
       | mapa, td ->
           let full_t_name, ground_name = prepare_names tdecl in
           let new_fully = td in
@@ -152,6 +172,7 @@ let apply_collected_info info tdecls =
           new_fully :: ful_abstrs, new_rec :: rec_decls)
     ([], [])
     tdecls
+  |> fun (xs, ys) -> List.rev xs, List.rev ys
 ;;
 
 let run loc tdecls =

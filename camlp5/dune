@@ -203,6 +203,7 @@
 
 (cram
  (package OCanren)
+ (applies_to test007)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_distrib.exe
@@ -215,6 +216,7 @@
 
 (cram
  (package OCanren)
+ (applies_to test008)
  (deps
   (package OCanren-ppx)
   %{project_root}/ppx/pp_distrib.exe
@@ -273,3 +275,11 @@
    -pp
    %{read:../config/delta-path.cfg}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe))
  (libraries OCanren OCanren.tester))
+
+(cram
+ (applies_to 1)
+ (deps
+  (package OCanren-ppx)
+  test006.ml
+  %{project_root}/ppx/pp_distrib.exe
+  %{project_root}/camlp5/pp5+ocanren+o.exe))

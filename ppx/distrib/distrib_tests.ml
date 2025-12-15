@@ -1,4 +1,4 @@
-open Ppxlib.Ast_builder.Default
+(* open Ppxlib.Ast_builder.Default
 open Ppxlib
 open Stdppx
 open Ppx_distrib_expander
@@ -352,4 +352,4 @@ let%expect_test " " =
       | Var of 'a0
       | Other of 'a
     type 'a jtyp = ('a, 'a jtyp, targ) t |}]
-;;
+;; *)

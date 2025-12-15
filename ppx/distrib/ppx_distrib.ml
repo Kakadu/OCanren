@@ -332,16 +332,27 @@ let () =
         | Other (_is_rec, [ { ptype_manifest = Some _ } ]) ->
             (* TODO *)
             failwith "Should not happen, don't remember why"
-        | Other (is_rec, [ tdecl ]) ->
+        | Other (is_rec, tdecls) ->
             (* ADT or record *)
             let fuly, ground =
-              match Prepare_fully_abstract.run loc [ tdecl ] with
-              | [ p ] -> p
-              | _ -> assert false
+              match Prepare_fully_abstract.run loc tdecls with
+              | p -> p
             in
-            let rez = Ppx_distrib_expander.process_main ~loc is_rec (fuly, ground) in
+            let rez =
+              List.filter_map
+                ~f:Ppx_distrib_expander.on_fully_abstract
+                (* ~f:(fun x ->
+                  match Ppx_distrib_expander.on_fully_abstract x with
+                  | None -> assert false
+                  | Some h -> h) *)
+                fuly
+            in
+            (* let rez = Ppx_distrib_expander.process_main ~loc is_rec (fuly, fuly) in *)
             let open Ppxlib.Ast_builder.Default in
             let stru =
+              List.concat [ List.map ~f:(fun rez -> of_tdecl ~loc Nonrecursive [ rez.t ]) rez ]
+            in
+            (* let stru =
               List.concat
                 [ [ of_tdecl ~loc Nonrecursive [ rez.t ] ]
                 ; [ of_tdecl ~loc is_rec [ rez.ground ] ]
@@ -352,9 +363,9 @@ let () =
                 ; knot_reifiers ~loc ~kind:Reify [ rez.reify ] [ ground ]
                 ; other_stuff Ppx_distrib_expander.(cons_results rez (empty_rez [] [] []))
                 ]
-            in
+            in *)
             group_items ~loc stru
-        | Other (is_rec, (_ :: _ :: _ as tdecls)) ->
+        (* | Other (is_rec, (_ :: _ :: _ as tdecls)) ->
             (* Mutual recursion *)
             let fully_abstract_types, abbreviaions = Prepare_fully_abstract.run loc tdecls in
             let rez =
@@ -383,7 +394,7 @@ let () =
                 ; other_stuff rez
                 ]
             in
-            group_items ~loc items
+            group_items ~loc items *)
         | Explicit
             ( (attributes1, (params1, kind1, private1, manifest1))
             , (rec_2, (params2, kind2, private2, manifest2))

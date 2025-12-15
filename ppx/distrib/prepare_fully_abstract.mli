@@ -10,3 +10,5 @@ val run :
      Warnings.loc
   -> Ppxlib.type_declaration list
   -> Ppxlib.type_declaration list * Ppxlib.type_declaration list
+
+val is_fully_abstract : Ppxlib.type_declaration -> bool
