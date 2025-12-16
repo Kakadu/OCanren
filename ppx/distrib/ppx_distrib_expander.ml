@@ -66,6 +66,7 @@ let has_name_attr (xs : attributes) =
 ;;
 
 module type STRAT = sig
+  val ground_typ_name : type_declaration -> label with_loc
   val logic_typ_name : type_declaration -> label with_loc
   val injected_typ_name : type_declaration -> label with_loc
 end
@@ -187,6 +188,9 @@ let make_injected_strat_2 tdecl =
   (module I : STRAT2)
 ;;
 
+let oca_logic_ident ~loc = Located.mk ~loc (lident_of_list [ "OCanren"; "logic" ])
+let oca_ilogic_ident ~loc = Located.mk ~loc (lident_of_list [ "OCanren"; "ilogic" ])
+
 include struct
   let make_typ_exn ~loc oca_logic_ident st typ =
     let (module S : STRAT2) = st in
@@ -260,13 +264,11 @@ include struct
   ;;
 
   let ltypify_exn ~loc =
-    let oca_logic_ident ~loc = Located.mk ~loc (lident_of_list [ "OCanren"; "logic" ]) in
     make_typ_exn ~loc (fun ~loc t -> ptyp_constr ~loc (oca_logic_ident ~loc:t.ptyp_loc) [ t ])
   ;;
 
   let injectify ~loc =
-    let oca_logic_ident ~loc = Located.mk ~loc (lident_of_list [ "OCanren"; "ilogic" ]) in
-    make_typ_exn ~loc (fun ~loc t -> ptyp_constr ~loc (oca_logic_ident ~loc:t.ptyp_loc) [ t ])
+    make_typ_exn ~loc (fun ~loc t -> ptyp_constr ~loc (oca_ilogic_ident ~loc:t.ptyp_loc) [ t ])
   ;;
 
   let gtypify_exn ~loc = make_typ_exn ~loc (fun ~loc:_ t -> t)
@@ -280,6 +282,13 @@ let manifest_of_tdecl_exn tdecl =
 
 let make_strat () =
   let module M = struct
+    let ground_typ_name tdecl =
+      let loc = tdecl.ptype_loc in
+      if Reify_impl.is_old ()
+      then Located.mk ~loc "ground"
+      else Located.sprintf ~loc "%s_ground" tdecl.ptype_name.txt
+    ;;
+
     let logic_typ_name tdecl =
       let loc = tdecl.ptype_loc in
       if Reify_impl.is_old ()
@@ -469,11 +478,15 @@ let make_reifier_gen ~kind is_rec tdecl : Reifier_info.t =
                              | Reify ->
                                  [%expr OCanren.Reifier.zed (OCanren.Reifier.rework ~fv:[%e fmapt])]
                              | Prj_exn -> fmapt])]
-        | _ ->
+        | other ->
+            Format.eprintf "@[%a@]\n%!" Pprintast.core_type manifest;
             failwiths ~loc:manifest.ptyp_loc "Not supported %s %d" Stdlib.__FILE__ Stdlib.__LINE__
       in
       { Reifier_info.typ = None; body = body (); name = pat_name; decl = tdecl }
-  | None -> assert false
+  | None ->
+      Printexc.print_backtrace stderr;
+      Format.eprintf "%a\n%!" Pprintast.type_declaration tdecl;
+      failwiths ~loc "Manifest is missing %s %d" __FILE__ __LINE__
 ;;
 
 let reifier_for_fully_abstract ~kind tdecl =
@@ -573,6 +586,8 @@ let add_typ ~loc ~injected_name ~result_type_name ~params ri =
 ;;
 
 let on_fully_abstract tdecl : (type_declaration, value_binding, Reifier_info.t) the_result option =
+  let (module S) = make_strat () in
+  let loc = tdecl.ptype_loc in
   let () =
     if Prepare_fully_abstract.is_fully_abstract tdecl
     then ()
@@ -582,12 +597,52 @@ let on_fully_abstract tdecl : (type_declaration, value_binding, Reifier_info.t) 
       in
       assert false)
   in
-  (* empty_rez [] [] [] *)
-  let logic = tdecl in
+  let ltyp =
+    let ptype_manifest =
+      let open Ppxlib.Ast_builder.Default in
+      ptyp_constr
+        ~loc
+        (oca_logic_ident ~loc)
+        [ ptyp_constr
+            ~loc
+            (Located.mk ~loc (Lident tdecl.ptype_name.txt))
+            (List.map tdecl.ptype_params ~f:(fun (t, _) ->
+                 match t.ptyp_desc with
+                 | Ptyp_var _ -> t
+                 | _ ->
+                     Format.eprintf "typ = @[%a@]\n%!" Pprintast.core_type t;
+                     failwiths ~loc "Unsupported case in %s %d" __FILE__ __LINE__))
+        ]
+    in
+    { tdecl with
+      ptype_name = S.logic_typ_name tdecl
+    ; ptype_kind = Ptype_abstract
+    ; ptype_manifest = Some ptype_manifest
+    ; ptype_attributes = tdecl.ptype_attributes
+    }
+  in
+  let gtyp =
+    let ptype_manifest =
+      let open Ppxlib.Ast_builder.Default in
+      ptyp_constr
+        ~loc
+        (Located.mk ~loc (Lident tdecl.ptype_name.txt))
+        (List.map tdecl.ptype_params ~f:(fun (t, _) ->
+             match t.ptyp_desc with
+             | Ptyp_var _ -> t
+             | _ -> failwiths ~loc "Unsupported case in %s %d" __FILE__ __LINE__))
+    in
+    { tdecl with
+      ptype_name = S.ground_typ_name tdecl
+    ; ptype_kind = Ptype_abstract
+    ; ptype_manifest = Some ptype_manifest
+    ; ptype_attributes = tdecl.ptype_attributes
+    }
+  in
   Some
     { t = tdecl
-    ; ground = tdecl
-    ; logic
+    ; ground = gtyp
+    ; logic = ltyp
     ; injected = tdecl
     ; fmapt = make_fmapt ~loc:tdecl.ptype_loc tdecl tdecl
     ; prj_exn =
@@ -596,14 +651,14 @@ let on_fully_abstract tdecl : (type_declaration, value_binding, Reifier_info.t) 
           ~params:tdecl.ptype_params
           ~injected_name:"injected_fuck"
           ~result_type_name:"FUCKUCK"
-          (make_reifier_gen ~kind:Prj_exn false tdecl)
+          (make_reifier_gen ~kind:Prj_exn false gtyp)
     ; reify =
         add_typ
           ~loc:tdecl.ptype_loc
           ~params:tdecl.ptype_params
           ~injected_name:"injected_fuck"
           ~result_type_name:"logic_guck"
-          (make_reifier_gen ~kind:Reify false tdecl)
+          (make_reifier_gen ~kind:Reify false ltyp)
     ; other = []
     ; other_sigs = []
     }

@@ -338,20 +338,24 @@ let () =
               match Prepare_fully_abstract.run loc tdecls with
               | p -> p
             in
-            let rez =
-              List.filter_map
-                ~f:Ppx_distrib_expander.on_fully_abstract
-                (* ~f:(fun x ->
-                  match Ppx_distrib_expander.on_fully_abstract x with
-                  | None -> assert false
-                  | Some h -> h) *)
-                fuly
-            in
+            let rez = List.filter_map ~f:Ppx_distrib_expander.on_fully_abstract fuly in
             (* let rez = Ppx_distrib_expander.process_main ~loc is_rec (fuly, fuly) in *)
             let open Ppxlib.Ast_builder.Default in
             let stru =
-              List.concat [ List.map ~f:(fun rez -> of_tdecl ~loc Nonrecursive [ rez.t ]) rez ]
+              List.concat
+                [ List.concat_map
+                    ~f:(fun rez ->
+                      [ of_tdecl ~loc Nonrecursive [ rez.t ]
+                      ; of_tdecl ~loc Nonrecursive [ rez.ground ]
+                      ; of_tdecl ~loc Nonrecursive [ rez.logic ]
+                      ])
+                    rez
+                ]
             in
+            (* let stru2 =
+              let rez = Ppx_distrib_expander.on_abbrev_pack grounds in
+              List.concat [ List.map ~f:(fun rez -> of_tdecl ~loc Nonrecursive [ rez.t ]) rez ]
+            in *)
             (* let stru =
               List.concat
                 [ [ of_tdecl ~loc Nonrecursive [ rez.t ] ]

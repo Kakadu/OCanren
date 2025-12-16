@@ -1,16 +1,19 @@
 (* SPDX-License-Identifier: LGPL-2.1-or-later *)
 (*
  * OCanren PPX
- * Copyright (C) 2016-2024
+ * Copyright (C) 2016-2026
  *   Dmitrii Kosarev aka Kakadu
  * St.Petersburg State University, JetBrains Research
  *)
+
 open Ppxlib
 open Printf
 open Parsetree
 open Location
 open Myhelpers
 module TypeNameMap = Map.Make (String)
+
+let make_simple_arg x = x, (Asttypes.NoVariance, Asttypes.NoInjectivity)
 
 let is_fully_abstract tdecl =
   match tdecl.ptype_kind with
@@ -121,10 +124,19 @@ let collect_fully_abstracts tdecls =
       | Ptype_abstract, Some _ -> acc
       | Ptype_variant cds, _ ->
           let _, mapa, cs = on_variant_ctors cds in
-          String_map.add
-            tdecl.ptype_name.txt
-            (mapa, { tdecl with ptype_kind = Ptype_variant cs })
-            acc)
+          let fully_decl =
+            let default_params = tdecl.ptype_params in
+            let extra_params =
+              FoldInfo.map mapa ~f:(fun fi ->
+                  make_simple_arg
+                  @@ Ppxlib.Ast_builder.Default.ptyp_var ~loc:tdecl.ptype_loc fi.FoldInfo.param_name)
+            in
+            { tdecl with
+              ptype_kind = Ptype_variant cs
+            ; ptype_params = default_params @ extra_params
+            }
+          in
+          String_map.add tdecl.ptype_name.txt (mapa, fully_decl) acc)
     String_map.empty
     tdecls
 ;;
@@ -156,7 +168,8 @@ let apply_collected_info info tdecls =
             let default_params = tdecl.ptype_params |> List.map fst in
             let extra_params = FoldInfo.map mapa ~f:(fun fi -> fi.FoldInfo.rtyp) in
             { td with
-              ptype_params = tdecl.ptype_params
+              (* ptype_params = List.map make_simple_arg (default_params @ extra_params) *)
+              ptype_params = td.ptype_params
             ; ptype_name = { tdecl.ptype_name with txt = ground_name }
             ; ptype_kind = Ptype_abstract
             ; ptype_manifest =
@@ -240,7 +253,7 @@ let run loc tdecls =
             (0, FoldInfo.empty, [])
           |> fun (_, mapa, fields) -> mapa, { tdecl with ptype_kind = Ptype_record fields }
     in
-    let make_simple_arg x = x, (Asttypes.NoVariance, Asttypes.NoInjectivity) in
+
     let full_t_name, ground_name = prepare_names tdecl in
     let full_t =
       { full_t with
