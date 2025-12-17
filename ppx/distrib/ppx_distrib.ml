@@ -342,16 +342,21 @@ let () =
             (* let rez = Ppx_distrib_expander.process_main ~loc is_rec (fuly, fuly) in *)
             let open Ppxlib.Ast_builder.Default in
             let stru =
-              List.concat
-                [ List.concat_map
-                    ~f:(fun rez ->
-                      [ of_tdecl ~loc Nonrecursive [ rez.t ]
-                      ; of_tdecl ~loc Nonrecursive [ rez.ground ]
-                      ; of_tdecl ~loc Nonrecursive [ rez.logic ]
-                      ])
-                    rez
-                ]
+              List.concat_map
+                ~f:(fun rez ->
+                  List.concat
+                    [ [ of_tdecl ~loc Nonrecursive [ rez.t ] ]
+                    ; [ of_tdecl ~loc Nonrecursive [ rez.ground ] ]
+                    ; [ of_tdecl ~loc Nonrecursive [ rez.logic ] ]
+                    ; [ of_tdecl ~loc Nonrecursive [ rez.injected ] ]
+                    ; of_value ~loc Nonrecursive rez.fmapt
+                    ; knot_reifiers ~loc ~kind:Prj_exn [ rez.prj_exn ] [ rez.ground ]
+                    ; knot_reifiers ~loc ~kind:Reify [ rez.reify ] [ rez.ground ]
+                    ; other_stuff Ppx_distrib_expander.(cons_results rez (empty_rez [] [] []))
+                    ])
+                rez
             in
+            let stru = stru @ [ of_tdecl ~loc Recursive ground ] in
             (* let stru2 =
               let rez = Ppx_distrib_expander.on_abbrev_pack grounds in
               List.concat [ List.map ~f:(fun rez -> of_tdecl ~loc Nonrecursive [ rez.t ]) rez ]

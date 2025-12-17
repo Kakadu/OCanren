@@ -155,31 +155,44 @@ let prepare_names tdecl =
 ;;
 
 let apply_collected_info info tdecls =
+  assert (tdecls <> []);
+  let right_attrs =
+    let rec loop = function
+      | [ h ] -> h.ptype_attributes
+      | _ :: tl -> loop tl
+      | [] -> failwith "unreachable"
+    in
+    loop tdecls
+  in
   List.fold_left
     (fun (ful_abstrs, rec_decls) tdecl ->
       match String_map.find tdecl.ptype_name.txt info with
       | exception Not_found ->
-          Format.eprintf "INfo about type %s is not found\n%!" tdecl.ptype_name.txt;
+          Format.eprintf "> Info about type %s is not found\n%!" tdecl.ptype_name.txt;
           ful_abstrs, tdecl :: rec_decls (* assert false *)
       | mapa, td ->
           let full_t_name, ground_name = prepare_names tdecl in
-          let new_fully = td in
-          let new_rec =
-            let default_params = tdecl.ptype_params |> List.map fst in
-            let extra_params = FoldInfo.map mapa ~f:(fun fi -> fi.FoldInfo.rtyp) in
+          let new_fully =
             { td with
-              (* ptype_params = List.map make_simple_arg (default_params @ extra_params) *)
-              ptype_params = td.ptype_params
+              (* ptype_name = Located.mk ~loc:td.ptype_loc full_t_name *)
+              ptype_attributes = right_attrs
+            }
+          in
+          let new_rec =
+            { td with
+              ptype_params = tdecl.ptype_params
             ; ptype_name = { tdecl.ptype_name with txt = ground_name }
             ; ptype_kind = Ptype_abstract
             ; ptype_manifest =
-                Some
-                  (let open Ppxlib.Ast_builder.Default in
-                   let loc = td.ptype_loc in
-                   ptyp_constr
-                     ~loc
-                     (Located.mk ~loc @@ Lident full_t_name)
-                     (default_params @ extra_params))
+                (let default_params = tdecl.ptype_params |> List.map fst in
+                 let extra_params = FoldInfo.map mapa ~f:(fun fi -> fi.FoldInfo.rtyp) in
+                 Some
+                   (let open Ppxlib.Ast_builder.Default in
+                    let loc = td.ptype_loc in
+                    ptyp_constr
+                      ~loc
+                      (Located.mk ~loc @@ Lident full_t_name)
+                      (default_params @ extra_params)))
             }
           in
           new_fully :: ful_abstrs, new_rec :: rec_decls)
