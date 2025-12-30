@@ -271,7 +271,7 @@ let () =
            ctx:a Extension.Context.t
         -> of_tdecl:(loc:location -> rec_flag -> type_declaration list -> ai)
         -> (* TODO: maybe all arguments should return lists of values? *)
-           of_value:(loc:location -> rec_flag -> value_binding -> ai list)
+           of_value:(loc:location -> rec_flag -> value_binding list -> ai list)
         -> group_items:(loc:location -> ai list -> a)
         -> knot_reifiers:
              (   loc:location
@@ -349,14 +349,46 @@ let () =
                     ; [ of_tdecl ~loc Nonrecursive [ rez.ground ] ]
                     ; [ of_tdecl ~loc Nonrecursive [ rez.logic ] ]
                     ; [ of_tdecl ~loc Nonrecursive [ rez.injected ] ]
-                    ; of_value ~loc Nonrecursive rez.fmapt
+                    ; of_value ~loc Nonrecursive [ rez.fmapt ]
                     ; knot_reifiers ~loc ~kind:Prj_exn [ rez.prj_exn ] [ rez.ground ]
                     ; knot_reifiers ~loc ~kind:Reify [ rez.reify ] [ rez.ground ]
                     ; other_stuff Ppx_distrib_expander.(cons_results rez (empty_rez [] [] []))
                     ])
                 rez
             in
-            let stru = stru @ [ of_tdecl ~loc Recursive ground ] in
+            (* let stru = stru @ [ of_tdecl ~loc Recursive ground ] in *)
+            let stru =
+              stru
+              @ of_value
+                  ~loc
+                  Recursive
+                  (List.map
+                     ~f:(fun td ->
+                       match td.ptype_manifest with
+                       | None -> assert false
+                       | Some t ->
+                           let loc = td.ptype_loc in
+                           let open Ast_builder.Default in
+                           let reif_body =
+                             Reify_impl.reifier_of_core_type ~loc Reify_impl.Prj_exn t
+                           in
+                           value_binding
+                             ~loc
+                             ~pat:
+                               (ppat_var ~loc (Located.mk ~loc (Reify_impl.make_reifier_name td)))
+                             ~expr:
+                               (let pname = gen_symbol ~prefix:"eta" () in
+                                pexp_fun
+                                  ~loc
+                                  Nolabel
+                                  None
+                                  (ppat_var ~loc (Located.mk ~loc pname))
+                                  (pexp_apply
+                                     ~loc
+                                     reif_body
+                                     [ Nolabel, pexp_ident ~loc (Located.mk ~loc (lident pname)) ])))
+                     ground)
+            in
             (* let stru2 =
               let rez = Ppx_distrib_expander.on_abbrev_pack grounds in
               List.concat [ List.map ~f:(fun rez -> of_tdecl ~loc Nonrecursive [ rez.t ]) rez ]
@@ -445,7 +477,7 @@ let () =
                 ; [ of_tdecl ~loc is_rec [ rez.ground ] ]
                 ; [ of_tdecl ~loc is_rec [ rez.logic ] ]
                 ; [ of_tdecl ~loc is_rec [ rez.injected ] ]
-                ; of_value ~loc Nonrecursive rez.fmapt
+                ; of_value ~loc Nonrecursive [ rez.fmapt ]
                 ; knot_reifiers ~loc ~kind:Prj_exn [ rez.prj_exn ] [ rez.ground ]
                 ; knot_reifiers ~loc ~kind:Reify [ rez.reify ] [ rez.ground ]
                 ; other_stuff Ppx_distrib_expander.(cons_results rez (empty_rez [] [] []))
@@ -456,7 +488,7 @@ let () =
     let make_extension_str =
       make_extension_gen
         ~ctx:Extension.Context.Structure_item
-        ~of_value:(fun ~loc flg v -> [ pstr_value ~loc flg [ v ] ])
+        ~of_value:(fun ~loc flg v -> [ pstr_value ~loc flg v ])
         ~of_tdecl:Ast_builder.Default.pstr_type
         ~group_items:(fun ~loc stru ->
           pstr_include ~loc (include_infos ~loc (pmod_structure ~loc stru)))

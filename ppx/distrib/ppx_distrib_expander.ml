@@ -402,7 +402,7 @@ let filter_out_gmap_attr attrs =
 let decorate_with_attributes tdecl attrs = { tdecl with ptype_attributes = attrs }
 let mk_arg_reifier s = sprintf "r%s" s
 
-let make_reifier_gen ~kind is_rec tdecl : Reifier_info.t =
+let make_reifier_gen ~kind is_rec ~fully tdecl : Reifier_info.t =
   (* let names = extract_names tdecl.ptype_params in *)
   let loc = tdecl.ptype_loc in
   let _pat, base_reifier, name =
@@ -753,7 +753,9 @@ let on_fully_abstract tdecl : (type_declaration, value_binding, Reifier_info.t) 
       ptype_name = S.injected_typ_name tdecl
     ; ptype_kind = Ptype_abstract
     ; ptype_manifest = Some ptype_manifest
-    ; ptype_attributes = tdecl.ptype_attributes
+    ; ptype_attributes =
+        (* We don't put GT attributes here, and probably doesn't put any attributes here *)
+        []
     }
   in
   Some
@@ -768,14 +770,14 @@ let on_fully_abstract tdecl : (type_declaration, value_binding, Reifier_info.t) 
           ~params:tdecl.ptype_params
           ~injected_name:ityp.ptype_name.txt
           ~result_type_name:gtyp.ptype_name.txt
-          (make_reifier_gen ~kind:Prj_exn false gtyp)
+          (make_reifier_gen ~kind:Prj_exn false ~fully:tdecl gtyp)
     ; reify =
         add_typ
           ~loc:tdecl.ptype_loc
           ~params:tdecl.ptype_params
           ~injected_name:ityp.ptype_name.txt
           ~result_type_name:ltyp.ptype_name.txt
-          (make_reifier_gen ~kind:Reify false ltyp)
+          (make_reifier_gen ~kind:Reify false ~fully:tdecl ltyp)
     ; other = make_creators ~loc tdecl
     ; other_sigs = []
     }
@@ -889,14 +891,14 @@ let process_main ~loc rec_ (base_tdecl, tdecl) =
         ~params:tdecl.ptype_params
         (* ~logic_decl:ltyp
         ~ground_decl:tdecl *)
-        (make_reifier_gen ~kind:Prj_exn is_rec tdecl)
+        (make_reifier_gen ~kind:Prj_exn is_rec ~fully:tdecl tdecl)
   ; reify =
       add_typ
         ~loc
         ~injected_name:ityp.ptype_name.txt
         ~result_type_name:ltyp.ptype_name.txt
         ~params:tdecl.ptype_params
-        (make_reifier_gen ~kind:Reify is_rec tdecl)
+        (make_reifier_gen ~kind:Reify is_rec ~fully:tdecl tdecl)
   ; other = creators
   ; other_sigs = [] (* TODO: signatures of creators will be added later *)
   }

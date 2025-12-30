@@ -228,6 +228,30 @@
   ))
 
 (executables
+ (names test006)
+ (package OCanren)
+ (public_names -)
+ (modules test006)
+ (flags
+  (:standard
+   -rectypes
+   ;-dsource
+   ))
+ (preprocessor_deps
+  %{project_root}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe
+  %{project_root}/config/delta-path.cfg
+  (package OCanren-ppx))
+ (preprocess
+  (pps
+   OCanren-ppx.ppx_distrib
+   GT.ppx_all
+   --
+   -new-typenames ; With new type names
+   -pp
+   %{read:../config/delta-path.cfg}/camlp5/pp5+gt+plugins+ocanren+logger+dump.exe))
+ (libraries OCanren OCanren.tester))
+
+(executables
  (names test007)
  (package OCanren)
  (public_names -)
