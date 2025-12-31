@@ -4,9 +4,8 @@ type naming =
   | Old_naming
   | New_naming
 
-type config = { mutable naming_style : naming }
-
-val config : config
+val set_naming_style : naming -> unit
+val naming_style : unit -> naming
 val is_old : unit -> bool
 val is_new : unit -> bool
 
@@ -39,6 +38,7 @@ val ltypify_exn : loc:Warnings.loc -> string -> Parsetree.core_type -> Parsetree
 val gtypify_exn : loc:Warnings.loc -> string -> Parsetree.core_type -> Parsetree.core_type
 val make_fmapt_body : loc:Warnings.loc -> Parsetree.expression -> int -> Parsetree.expression
 val make_reifier_for_tuple : loc:Warnings.loc -> kind -> 'a list -> Parsetree.expression
+val make_fmapt_name : Longident.t -> Longident.t
 
 val create_lident_mangler :
      [< `Injected | `Prj_exn | `Reify ]

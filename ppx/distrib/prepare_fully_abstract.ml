@@ -142,7 +142,7 @@ let collect_fully_abstracts tdecls =
 ;;
 
 let prepare_names tdecl =
-  match Reify_impl.(config.naming_style) with
+  match Reify_impl.naming_style () with
   | Reify_impl.New_naming -> tdecl.ptype_name.txt ^ "_fuly", tdecl.ptype_name.txt
   | Old_naming ->
       if String.equal tdecl.ptype_name.txt "t"

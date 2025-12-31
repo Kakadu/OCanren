@@ -430,7 +430,7 @@ let make_reifier_gen ~kind is_rec ~fully tdecl : Reifier_info.t =
         | [%type: bool]
         | [%type: GT.string]
         | [%type: string] -> base_reifier
-        | [%type: GT.int Move.ground] -> assert false
+        (* | [%type: GT.int Move.ground] -> assert false *)
         | [%type: [%t? _arg] GT.list] ->
             failwiths
               ~loc
@@ -469,9 +469,11 @@ let make_reifier_gen ~kind is_rec ~fully tdecl : Reifier_info.t =
         | Ptyp_constr (_, args) ->
             let fmapt =
               let f =
-                if Reify_impl.is_new ()
+                notify "FUCK. old naming style = %b" (Reify_impl.is_old ());
+                Exp.ident ~loc (Reify_impl.make_fmapt_name (Lident tdecl.ptype_name.txt))
+                (* if Reify_impl.is_new ()
                 then Exp.lident ~loc (sprintf "%s_fmapt" tdecl.ptype_name.txt)
-                else [%expr fmapt]
+                else [%expr fmapt] *)
               in
               pexp_apply ~loc f (List.map args ~f:(fun t -> Nolabel, helper t))
             in

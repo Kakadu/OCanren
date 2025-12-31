@@ -37,6 +37,13 @@ let is_old () =
   | New_naming -> false
 ;;
 
+let naming_style () = config.naming_style
+
+let set_naming_style style =
+  config.naming_style <- style;
+  notify "Old naming style: %b" (is_old ())
+;;
+
 let is_new () = not (is_old ())
 
 type kind =
@@ -56,6 +63,38 @@ let string_of_kind = function
 let unwrap_kind ~loc = function
   | Reify -> [%expr OCanren.reify], "reify"
   | Prj_exn -> [%expr OCanren.prj_exn], "prj_exn"
+;;
+
+let make_fmapt_name =
+  let on_name s =
+    if is_old ()
+    then "fmapt"
+    else (
+      (* notify "NEW NAMING STYLE %s: %s\n" __FUNCTION__ s; *)
+      let check suffix s ~fk =
+        let suflen = String.length suffix in
+        if String.ends_with ~suffix s
+        then String.sub s ~pos:0 ~len:(String.length s - suflen) ^ "_fmapt"
+        else fk ()
+      in
+      check "_ground" s ~fk:(fun () -> check "_logic" s ~fk:(fun () -> s ^ "_fmapt")))
+    (* let suffix = "_ground" in
+      let suflen = String.length suffix in
+      if String.ends_with ~suffix s
+      then String.sub s ~pos:0 ~len:(String.length s - suflen)
+      else (
+        let suffix = "_logic" in
+        let suflen = String.length suffix in
+        if String.ends_with ~suffix s
+        then String.sub s ~pos:0 ~len:(String.length s - suflen) ^ "_fmapt"
+        else (
+          let _ = notify "%s: %s\n" __FUNCTION__ s in
+          s ^ "_fmapt"))) *)
+  in
+  function
+  | Lident s -> Lident (on_name s)
+  | Ldot (p, s) -> Ldot (p, on_name s)
+  | _ -> failwith "Should not happen"
 ;;
 
 module type NAME_MANGLER = sig
