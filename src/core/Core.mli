@@ -286,8 +286,8 @@ val trace_diseq: goal
 IFDEF NON_ABSTRACT_GOAL THEN
 val reify_in_state: State.t -> ('a, 'b) Reifier.t -> 'a -> 'b
 
-val is_ground : 'a ilogic -> State.t -> (bool -> unit) -> unit
+val is_ground : ('a, 'b) injected -> State.t -> (bool -> unit) -> unit
 
-val is_ground_bool : bool ilogic -> State.t -> onvar:(unit->unit) -> on_ground:(bool -> unit) -> unit
+val is_ground_bool : (bool, bool logic) injected -> State.t -> onvar:(unit->unit) -> on_ground:(bool -> unit) -> unit
 
 END
