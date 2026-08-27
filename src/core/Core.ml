@@ -693,7 +693,7 @@ let is_ground v st cb =
   cb (not(Term.is_var ans))
 
 let is_ground_bool
-  : bool ilogic -> State.t -> onvar:(unit->unit) -> on_ground:(bool -> unit) -> unit =
+  : (bool, _) injected -> State.t -> onvar:(unit->unit) -> on_ground:(bool -> unit) -> unit =
   fun v st ~onvar ~on_ground ->
     let ans = Subst.reify (State.env st) (State.subst st) (Obj.magic v) in
     if (Term.is_var ans) then onvar()

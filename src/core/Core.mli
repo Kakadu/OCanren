@@ -26,6 +26,7 @@ module State :
 
     IFDEF NON_ABSTRACT_GOAL THEN
     val last_introduced_var : t -> int
+    val fresh : t -> 'a ilogic
     END
   end
 
@@ -46,7 +47,7 @@ type goal = State.t Stream.t goal'
     parameter *)
 val call_fresh : ((_,_) injected -> goal) -> goal
 
-val wc : ('a ilogic -> goal) -> goal
+val wc : ((_,_) injected -> goal) -> goal
 
 (** [x === y] creates a goal, which performs a unification of [x] and [y] *)
 val (===) : ('a, 'b) injected -> ('a, 'b) injected -> goal
