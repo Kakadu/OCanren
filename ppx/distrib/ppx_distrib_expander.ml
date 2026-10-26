@@ -544,6 +544,7 @@ let process_main ~loc rec_ (base_tdecl, tdecl) =
         | Ptyp_constr (lident, ps) -> ptyp_constr ~loc:t.ptyp_loc lident (List.map ~f:helper ps)
         | Ptyp_tuple ps -> ptyp_tuple ~loc:t.ptyp_loc (List.map ~f:helper ps)
         | Ptyp_any | Ptyp_var _ -> t
+        | Ptyp_open _ -> t
         | Ptyp_arrow _ | Ptyp_alias _ | Ptyp_class _ | Ptyp_object _
         | Ptyp_variant (_, _, _)
         | Ptyp_poly (_, _)

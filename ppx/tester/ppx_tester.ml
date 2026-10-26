@@ -56,7 +56,8 @@ let () =
           let count =
             let rec helper acc e =
               match e.pexp_desc with
-              | Pexp_fun (_, _, _, body) -> helper (1 + acc) body
+              | Pexp_function (params, _, Pfunction_body body) ->
+                  helper (acc + List.length params) body
               | _ -> acc
             in
             helper 0 relation

@@ -251,9 +251,7 @@ let mapper =
           in
           let ans = { e with pexp_desc = ans } in
           ans
-      | Pexp_fun (l, opt, pat, e) ->
-          { e with pexp_desc = Pexp_fun (l, opt, pat, self#expression e) }
-      | Pexp_construct (_, None) -> e
+       | Pexp_construct (_, None) -> e
       | Pexp_construct (id, Some e1) ->
           { e with pexp_desc = Pexp_construct (id, Some (self#expression e1)) }
       (* kind of default mapping below *)
@@ -322,7 +320,14 @@ let mapper =
           let e1 = self#expression e1 in
           { e with pexp_desc = Pexp_poly (e1, t) }
       | Pexp_newtype (name, ee) -> { e with pexp_desc = Pexp_newtype (name, self#expression ee) }
-      | Pexp_function cases -> { e with pexp_desc = Pexp_function (List.map ~f:self#case cases) }
+       | Pexp_function (params, tc, body) ->
+           let body =
+             match body with
+             | Pfunction_body e -> Pfunction_body (self#expression e)
+             | Pfunction_cases (cs, loc, attrs) ->
+                 Pfunction_cases (List.map ~f:self#case cs, loc, attrs)
+           in
+           { e with pexp_desc = Pexp_function (params, tc, body) }
       | Pexp_match (s, cases) ->
           let scru = self#expression s in
           { e with pexp_desc = Pexp_match (scru, List.map ~f:self#case cases) }

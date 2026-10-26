@@ -55,12 +55,12 @@
   (ocaml
    (>= 4.14.2))
   dune-configurator
-  (ppxlib
-   (and
-    (>= 0.26.0)
-    (< 0.34.0)))
-  ppx_inline_test_nobase
-  ppx_expect_nobase)
+   (ppxlib
+    (and
+     (>= 0.26.0)
+     (< 0.40.0)))
+   ppx_inline_test_nobase
+   ppx_expect_nobase)
  (authors
   "Dmitrii Kosarev https://github.com/Kakadu"
   "JetBrains Research https://research.jetbrains.org")
